@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from os import path
 
 here = path.abspath(path.dirname(__file__))
@@ -12,7 +12,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='deepracer-utils',
     version='0.0.1',
-    packages=['deepracer'],
+    packages=find_packages(include=["deepracer.*"]),
     description='A set of tools for working with DeepRacer training',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -33,7 +33,13 @@ setup(
     ],
     keywords='aws deepracer awsdeepracer',
     python_requires='>=3.5.*, <4',
-    install_requires=[],
+    install_requires=[
+        'boto3>=1.12.0',
+        'python-dateutil<3.0.0,>=2.1',
+        'numpy>=1.18.0',
+        'shapely>=1.7.0',
+        'matplotlib>=3.1.0'
+    ],
     extras_require={
         'dev': ['check-manifest'],
         'test': ['coverage'],
