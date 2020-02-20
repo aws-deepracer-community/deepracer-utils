@@ -58,8 +58,8 @@ class TrackInfo:
 class GeometryUtils:
     @staticmethod
     def get_angle(p0, p1, p2):
-        v0 = np.array(p0) - np.array(p1)
-        v1 = np.array(p2) - np.array(p1)
+        v0 = np.subtract(p0, p1)
+        v1 = np.subtract(p2, p1)
 
         angle = np.math.atan2(np.linalg.det([v0, v1]), np.dot(v0, v1))
         return np.degrees(angle)
@@ -81,7 +81,7 @@ class GeometryUtils:
 
 
     @staticmethod
-    def perpendicular_vector_to_straight_line(point1, point2):
+    def perpendicular_normalized_vector_to_straight_line(point1, point2):
         v = np.array(point1) - np.array(point2)
 
         p_v = GeometryUtils.perpendicular_vector(v)
@@ -119,7 +119,7 @@ class GeometryUtils:
 
     @staticmethod
     def get_a_point_on_a_line_closest_to_point(l1_p1, l1_p2, p):
-        vector = GeometryUtils.perpendicular_vector_to_straight_line((l1_p1[0], l1_p1[1]),
+        vector = GeometryUtils.perpendicular_normalized_vector_to_straight_line((l1_p1[0], l1_p1[1]),
                                                         (l1_p2[0], l1_p2[1]))
         p2 = np.array([p[0], p[1]]) + vector
         crossing_point = GeometryUtils.crossing_point_for_two_lines(l1_p1, l1_p2, p, p2)
