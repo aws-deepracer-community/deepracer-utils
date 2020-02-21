@@ -55,39 +55,34 @@ class TrackInfo:
         self.road_poly = Polygon(
             np.vstack((l_outer_border, np.flipud(l_inner_border))))
 
+
 class GeometryUtils:
     @staticmethod
-    def get_angle(p0, p1, p2):
-        v0 = np.subtract(p0, p1)
-        v1 = np.subtract(p2, p1)
+    def vector(p1, p2):
+        return np.subtract(p1, p2)
 
-        angle = np.math.atan2(np.linalg.det([v0, v1]), np.dot(v0, v1))
+    @staticmethod
+    def get_angle(v1, v2):
+        angle = np.math.atan2(np.linalg.det([v1, v2]), np.dot(v1, v2))
         return np.degrees(angle)
-
 
     @staticmethod
     def get_vector_length(v):
         return np.linalg.norm(v)
 
-
     @staticmethod
     def normalize_vector(v):
         return v / GeometryUtils.get_vector_length(v)
 
-
     @staticmethod
     def perpendicular_vector(v):
-        return np.cross(v, [0, 0, 1])[:2]
-
+        return np.cross(v, [0, 0, -1])[:2]
 
     @staticmethod
-    def perpendicular_normalized_vector_to_straight_line(point1, point2):
-        v = np.array(point1) - np.array(point2)
-
+    def perpendicular_normalized_vector_to_straight_line(v):
         p_v = GeometryUtils.perpendicular_vector(v)
 
         return GeometryUtils.normalize_vector(p_v)
-
 
     @staticmethod
     def crossing_point_for_two_lines(l1_p1, l1_p2, l2_p1, l2_p2):
@@ -101,7 +96,7 @@ class GeometryUtils:
         l2_p2: [x, y] another point on the second line
         """
         s = np.vstack([l1_p1, l1_p2, l2_p1, l2_p2])        # s for stacked
-        h = np.hstack((s, np.ones((4, 1)))) # h for homogeneous
+        h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
         l1 = np.cross(h[0], h[1])           # get first line
         l2 = np.cross(h[2], h[3])           # get second line
         x, y, z = np.cross(l1, l2)          # point of intersection
@@ -109,27 +104,32 @@ class GeometryUtils:
             return (float('inf'), float('inf'))
         return (x/z, y/z)
 
-
     @staticmethod
     def get_a_and_b_for_line(p1, p2):
         a1 = (p1[1] - p2[1]) / (p1[0] - p2[0])
         b1 = p2[1] - a1 * p2[0]
         return a1, b1
 
-
     @staticmethod
     def get_a_point_on_a_line_closest_to_point(l1_p1, l1_p2, p):
-        vector = GeometryUtils.perpendicular_normalized_vector_to_straight_line((l1_p1[0], l1_p1[1]),
-                                                        (l1_p2[0], l1_p2[1]))
-        p2 = np.array([p[0], p[1]]) + vector
-        crossing_point = GeometryUtils.crossing_point_for_two_lines(l1_p1, l1_p2, p, p2)
+        vector = GeometryUtils.perpendicular_normalized_vector_to_straight_line(
+            GeometryUtils.vector(l1_p1, l1_p2))
+        p2 = p + vector
+        crossing_point = GeometryUtils.crossing_point_for_two_lines(
+            l1_p1, l1_p2, p, p2)
         return crossing_point
 
-
     @staticmethod
-    def is_point_on_the_line(l1_x1, l1_y1, l1_x2, l1_y2, x1, x2):
-        a1 = GeometryUtils.get_angle([l1_x1, l1_y1], [l1_x2, l1_y2], [x1, x2])
-        a2 = GeometryUtils.get_angle([l1_x1, l1_y1], [l1_x2, l1_y2], [x1, x2])
+    def is_point_on_the_line(lp1, lp2, p):
+        a1 = GeometryUtils.get_angle(
+            GeometryUtils.vector(lp1, lp2),
+            GeometryUtils.vector(lp1, p)
+        )
+
+        a2 = GeometryUtils.get_angle(
+            GeometryUtils.vector(lp2, p),
+            GeometryUtils.vector(lp2, p)
+        )
         return a1 < 5 and a2 < 5
 
 
