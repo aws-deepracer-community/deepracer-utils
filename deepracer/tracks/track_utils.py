@@ -85,6 +85,65 @@ class TrackIO:
         return Track(track_name, waypoints)
 
 
+class TrackBreakdown:
+    """Track info available to enrich the action breakdown graphs.
+    Not essential, but can help find interesting sections to pay attention to.
+    """
+
+    def __init__(self, vert_lines, track_segments, segment_x, segment_y,
+                 segment_xerr, segment_yerr):
+        # vert_lines are indices of waypoints put on the track in squares to mark a section
+        self.vert_lines = vert_lines
+        # track segments determine location of descriptions on the right graph, formed of tuple
+        # (location along the x axis, location along the y axis, description)
+        self.track_segments = track_segments
+
+        # marking of a bottom-left pixel of a segment on the right graph
+        self.segment_x = segment_x
+        self.segment_y = segment_y
+
+        # boundaries of red rectangles on the right graph
+        # how many pixels wide before and after the bottom-left pixel x coordinate
+        self.segment_xerr = segment_xerr
+        # how many pixels tall below and above the bottom-left pixel y coordinate
+        self.segment_yerr = segment_yerr
+
+
+reinvent2018 = TrackBreakdown(
+    vert_lines=[10, 25, 32, 33, 40, 45, 50, 53, 61, 67],
+    track_segments=[(15, 100, 'hairpin'),
+                    (32, 100, 'right'),
+                    (42, 100, 'left'),
+                    (51, 100, 'left'),
+                    (63, 100, 'left')],
+
+    segment_x=np.array([15, 32, 42, 51, 63]),
+    segment_y=np.array([0, 0, 0, 0, 0]),
+
+    segment_xerr=np.array([[5, 1, 2, 1, 2], [10, 1, 3, 2, 4]]),
+    segment_yerr=np.array([[0, 0, 0, 0, 0], [150, 150, 150, 150, 150]]))
+
+london_loop = TrackBreakdown(
+    vert_lines=[0, 15, 17, 30, 33, 45, 75, 105, 120, 132, 150, 180, 190, 210],
+    track_segments=[(0, 100, 'long sharp left'),
+                    (17, 90, 'mild right'),
+                    (33, 80, 'tight left'),
+                    (75, 100, 'mild chicane'),
+                    (120, 100, 'short sharp left'),
+                    (150, 90, 'left'),
+                    (190, 100, 'right')],
+
+    segment_x=np.array([0, 17, 33, 75, 120, 150, 190]),
+    segment_y=np.array([0, 0, 0, 0, 0, 0, 0]),
+
+    segment_xerr=np.array(
+        [[0, 0, 0, 0, 0, 0, 0], [15, 13, 12, 30, 12, 30, 20]]),
+    segment_yerr=np.array(
+        [[0, 0, 0, 0, 0, 0, 0], [150, 150, 150, 150, 150, 150, 150]]))
+
+track_breakdown = {'reinvent2018': reinvent2018, 'london_loop': london_loop}
+
+
 class Track:
     """Track object represents a track.
 
@@ -96,6 +155,7 @@ class Track:
     center_line - waypoints along the center of the track with coordinates in centimeters
     inner_border - waypoints along the inner border of the track with coordinates in centimeters
     outer_border - waypoints along the outer border of the track with coordinates in centimeters
+    road_poly - a polygon representing the track
     """
 
     def __init__(self, name, waypoints):
