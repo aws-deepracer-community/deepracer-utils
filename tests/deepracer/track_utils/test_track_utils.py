@@ -41,14 +41,6 @@ class TestGeometryUtils:
         assert np.all(
             [0.0, 1.0] == GeometryUtils.perpendicular_vector([1.0, 0.0]))
 
-    def test_perpendicular_normalized_vector_to_straight_line(self):
-        assert np.all(
-            [0.0, 1.0] ==
-            GeometryUtils.perpendicular_normalized_vector_to_straight_line(
-                [5.0, 0.0]
-            )
-        )
-
     def crossing_point_for_two_lines_1(self):
         assert np.all(
             [0.0, 0.0] == GeometryUtils.crossing_point_for_two_lines(
