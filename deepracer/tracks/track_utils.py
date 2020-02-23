@@ -23,16 +23,58 @@ from shapely.geometry import Polygon
 from shapely.geometry.polygon import LineString
 
 
-class TrackLoader:
+class TrackIO:
+    """Utility to help load npy files containing the track waypoints.
+
+    Track files are considered to contain a numpy array of threes of waypoint coordinates.
+    Each three consists of two coordinates in meters when transfered to real world tracks.
+    So effectively each element in waypoints list is a numpy array of six numbers:
+    [ center_x, center_y, inner_x, inner_y, outer_x, outer_y ]
+    The first and last waypoint are usually the same (closing the loop), but
+    it isn't a clear requirement in terms of tracks definiton.
+    Some of the waypoints may be identical, this is a state which is accepted by the simulator.
+    """
+
     def __init__(self, base_path="./tracks"):
+        """Create the TrackIO instance.
+
+        Arguments:
+        base_path - base path pointing to a folder containing the npy files.
+                    default value: "./tracks"
+        """
         self.base_path = base_path
 
     def get_track_waypoints(self, track_name):
+        """Load track waypoints as an array of coordinates
+        
+        Truth be told, it will load just about any npy file without checks,
+        as long as it has the npy extension.
+
+        Arguments:
+        track_name - name of the track to load. Both just the name and name.npy
+                     will be accepted
+
+        Returns:
+        A list of elements where each element is a numpy array of six float values
+        representing coordinates of track points in meters
+        """
         if track_name.endswith('.npy'):
             track_name = track_name[:-4]
         return np.load("%s/%s.npy" % (self.base_path, track_name))
 
     def load_track(self, track_name):
+        """Load track waypoints as a Track object
+        
+        No validation is being made on the input data, results of running on npy files
+        other than track info will provide undetermined results.
+
+        Arguments:
+        track_name - name of the track to load. Both just the name and name.npy
+                     will be accepted
+
+        Returns:
+        A Track instance representing the track
+        """
         if track_name.endswith('.npy'):
             track_name = track_name[:-4]
 
@@ -40,11 +82,30 @@ class TrackLoader:
 
         print("Loaded %s waypoints" % waypoints.shape[0])
 
-        return TrackInfo(waypoints)
+        return Track(track_name, waypoints)
 
 
-class TrackInfo:
-    def __init__(self, waypoints):
+class Track:
+    """Track object represents a track.
+
+    I know, right?
+
+    Fields:
+    name - name of the track loaded
+    waypoints - input list as received by constructor
+    center_line - waypoints along the center of the track with coordinates in centimeters
+    inner_border - waypoints along the inner border of the track with coordinates in centimeters
+    outer_border - waypoints along the outer border of the track with coordinates in centimeters
+    """
+
+    def __init__(self, name, waypoints):
+        """Create Track object
+
+        Arguments:
+        name - name of the track
+        waypoints - values from a npy file for the track
+        """
+        self.name = name
         self.waypoints = waypoints
         self.center_line = waypoints[:, 0:2] * 100
         self.inner_border = waypoints[:, 2:4] * 100
@@ -88,6 +149,7 @@ class GeometryUtils:
     def crossing_point_for_two_lines(l1_p1, l1_p2, l2_p1, l2_p2):
         """ 
         Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
+        Result is rounded to three decimal places
         Work by Norbu Tsering https://stackoverflow.com/a/42727584
 
         l1_p1: [x, y] a point on the first line
@@ -101,8 +163,8 @@ class GeometryUtils:
         l2 = np.cross(h[2], h[3])           # get second line
         x, y, z = np.cross(l1, l2)          # point of intersection
         if z == 0:                          # lines are parallel
-            return (float('inf'), float('inf'))
-        return (x/z, y/z)
+            return [float('inf'), float('inf')]
+        return [np.round(x/z, 3), np.round(y/z, 3)]
 
     @staticmethod
     def get_a_and_b_for_line(p1, p2):
@@ -120,7 +182,7 @@ class GeometryUtils:
         return crossing_point
 
     @staticmethod
-    def is_point_on_the_line(lp1, lp2, p):
+    def is_point_roughly_on_the_line(lp1, lp2, p, tolerated_angle = 5):
         a1 = GeometryUtils.get_angle(
             GeometryUtils.vector(lp1, lp2),
             GeometryUtils.vector(lp1, p)
