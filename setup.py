@@ -33,13 +33,18 @@ setup(
     ],
     keywords='aws deepracer awsdeepracer',
     python_requires='>=3.5.*, <4',
-    setup_requires=['setuptools-pep8'],
+    setup_requires=[
+        'setuptools-pep8',
+        'tox'
+    ],
     install_requires=[
         'boto3>=1.12.0',
         'python-dateutil<3.0.0,>=2.1',
         'numpy>=1.18.0',
         'shapely>=1.7.0',
-        'matplotlib>=3.1.0'
+        'matplotlib>=3.1.0',
+        'pandas>=1.0.0',
+        'scikit-learn>=0.22.0'
     ],
     extras_require={
         'dev': ['check-manifest'],

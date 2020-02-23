@@ -54,6 +54,9 @@ class CloudWatchLogs:
             download. Required if stream_name is None
         start_time - start time for stream's messages
         end_time - end time for stream's messages
+
+        Yields:
+        Subsequent portions of a streams list to iterate over
         """
         client = boto3.client('logs')
         if stream_name is None and stream_prefix is None:
@@ -163,6 +166,9 @@ class CloudWatchLogs:
             stream name will be overwritten if they exist and logs
             will be downloaded again. Handy for when you download
             the stream of a live training; False by default
+
+        Returns:
+        List of fetched files
         """
         client = boto3.client('logs')
 
@@ -211,6 +217,9 @@ class CloudWatchLogs:
         client - Boto3 client to use to fetch the descriptions
         log_group - which group to look in for the streams; required
         next_token - token value to fetch the next portion of descriptions
+
+        Returns:
+        A list of streams descriptions
         """
         if next_token:
             streams = client.describe_log_streams(logGroupName=log_group, orderBy='LastEventTime',
@@ -227,5 +236,8 @@ class CloudWatchLogs:
 
         Arguments:
         iso_date - ISO-8601 compliant date string. Example: "2020-02-20 02:02 UTC"
+
+        Returns:
+        A timestamp in miliseconds for a given iso_date or None if iso_date is None
         """
         return dateutil.parser.parse(iso_date).timestamp() * 1000 if iso_date else None
