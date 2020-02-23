@@ -39,6 +39,13 @@ tox
 ```
 This will package the project, install and run tests.
 
+### Verifying the style guide
+
+Run:
+```
+python setup.py pep8
+```
+
 ### Packaging, distribution
 
 TBC

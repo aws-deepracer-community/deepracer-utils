@@ -46,7 +46,7 @@ class TrackIO:
 
     def get_track_waypoints(self, track_name):
         """Load track waypoints as an array of coordinates
-        
+
         Truth be told, it will load just about any npy file without checks,
         as long as it has the npy extension.
 
@@ -64,7 +64,7 @@ class TrackIO:
 
     def load_track(self, track_name):
         """Load track waypoints as a Track object
-        
+
         No validation is being made on the input data, results of running on npy files
         other than track info will provide undetermined results.
 
@@ -147,8 +147,7 @@ class GeometryUtils:
 
     @staticmethod
     def crossing_point_for_two_lines(l1_p1, l1_p2, l2_p1, l2_p2):
-        """ 
-        Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
+        """Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
         Result is rounded to three decimal places
         Work by Norbu Tsering https://stackoverflow.com/a/42727584
 
@@ -182,7 +181,7 @@ class GeometryUtils:
         return crossing_point
 
     @staticmethod
-    def is_point_roughly_on_the_line(lp1, lp2, p, tolerated_angle = 5):
+    def is_point_roughly_on_the_line(lp1, lp2, p, tolerated_angle=5):
         a1 = GeometryUtils.get_angle(
             GeometryUtils.vector(lp1, lp2),
             GeometryUtils.vector(lp1, p)

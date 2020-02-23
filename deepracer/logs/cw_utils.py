@@ -20,6 +20,8 @@ import boto3
 import sys
 import dateutil.parser
 import os
+
+
 class CloudWatchLogs:
     '''
     Set of methods to fetch DeepRacer Simulation logs from Amazon CloudWatch.
@@ -34,11 +36,17 @@ class CloudWatchLogs:
     SAGEMAKER_GROUP = '/aws/sagemaker/TrainingJobs'
 
     @staticmethod
-    def get_log_events(log_group, stream_name=None, stream_prefix=None, start_time=None, end_time=None):
+    def get_log_events(
+        log_group,
+        stream_name=None,
+        stream_prefix=None,
+        start_time=None,
+        end_time=None
+    ):
         """
         Fetch the logs stream and yield its messages to caller.
 
-        Keyword arguments:
+        Arguments:
         log_group - which group to look in for the stream
         stream_name - name of the stream to download. Required if
             stream_prefix is None
@@ -85,7 +93,7 @@ class CloudWatchLogs:
         also downloads messages in the stream between 2016 and 2033 which is
         a very long period understood to save all messages in the stream.
 
-        Keyword arguments:
+        Arguments:
         fname - location and name of the file to save logs to
         stream_name - name of the stream to download. Required if
             stream_prefix is None
@@ -125,11 +133,17 @@ class CloudWatchLogs:
                 f.write("\n")
 
     @staticmethod
-    def download_all_logs(pathprefix, log_group, not_older_than=None, older_than=None, force=False):
+    def download_all_logs(
+        pathprefix,
+        log_group,
+        not_older_than=None,
+        older_than=None,
+        force=False
+    ):
         """
         Download all log streams between dates.
 
-        Keyword arguments:
+        Arguments:
         pathprefix - prefix for a path into which to save the logs;
             pathprefix will be concatenated with a stream name prefix
             which is the part of the name from start to first "/"
@@ -177,16 +191,23 @@ class CloudWatchLogs:
                         file_name, stream_prefix=stream_prefix, log_group=log_group)
 
                 fetched_files.append(
-                    (file_name, stream_prefix, stream['firstEventTimestamp'], stream['lastEventTimestamp']))
+                    (
+                        file_name,
+                        stream_prefix,
+                        stream['firstEventTimestamp'],
+                        stream['lastEventTimestamp']
+                    )
+                )
 
         return fetched_files
 
     @staticmethod
     def describe_log_streams(client, log_group, next_token=None):
         """
-        Fetch description of the log streams in a group. If next_token is supplied, include it in the call
+        Fetch description of the log streams in a group.
+        If next_token is supplied, include it in the call
 
-        Keyword arguments:
+        Arguments:
         client - Boto3 client to use to fetch the descriptions
         log_group - which group to look in for the streams; required
         next_token - token value to fetch the next portion of descriptions
@@ -204,7 +225,7 @@ class CloudWatchLogs:
         """
         Convert date from ISO String to a timestamp
 
-        Keyword arguments:
+        Arguments:
         iso_date - ISO-8601 compliant date string. Example: "2020-02-20 02:02 UTC"
         """
         return dateutil.parser.parse(iso_date).timestamp() * 1000 if iso_date else None

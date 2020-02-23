@@ -33,6 +33,7 @@ setup(
     ],
     keywords='aws deepracer awsdeepracer',
     python_requires='>=3.5.*, <4',
+    setup_requires=['setuptools-pep8'],
     install_requires=[
         'boto3>=1.12.0',
         'python-dateutil<3.0.0,>=2.1',
@@ -45,7 +46,9 @@ setup(
         'test': ['coverage'],
     },
     project_urls={
-        'Bug Reports': 'https://github.com/aws-deepracer-community/deepracer-utils/issues',
-        'Source': 'https://github.com/aws-deepracer-community/deepracer-utils/',
+        'Bug Reports':
+        'https://github.com/aws-deepracer-community/deepracer-utils/issues',
+        'Source':
+        'https://github.com/aws-deepracer-community/deepracer-utils/',
     },
 )
