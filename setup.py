@@ -12,7 +12,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='deepracer-utils',
     version='0.0.1',
-    packages=find_packages(include=["deepracer.*"]),
+    packages=find_packages(include=["deepracer", "deepracer.*"]),
     description='A set of tools for working with DeepRacer training',
     long_description=long_description,
     long_description_content_type='text/markdown',
