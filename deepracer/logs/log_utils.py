@@ -34,7 +34,7 @@ class SimulationLogsIO:
     """
 
     @staticmethod
-    def load_single_file(fname, data = None):
+    def load_single_file(fname, data=None):
         """Loads a single log file and remembers only the SIM_TRACE_LOG lines
 
         Arguments:
