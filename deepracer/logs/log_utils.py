@@ -30,27 +30,56 @@ from .cw_utils import CloudWatchLogs as cw
 
 
 class SimulationLogsIO:
+    """ Utilities for loading the logs
+    """
 
     @staticmethod
-    def load_file(fname, data):
+    def load_single_file(fname, data = None):
+        """Loads a single log file and remembers only the SIM_TRACE_LOG lines
+
+        Arguments:
+        fname - path to the file
+        data - list to populate with SIM_TRACE_LOG lines. Default: None
+
+        Returns:
+        List of loaded log lines. If data is not None, it is the reference returned
+        and the list referenced has new log lines appended
+        """
+        if not data:
+            data = []
+
         with open(fname, 'r') as f:
             for line in f.readlines():
                 if "SIM_TRACE_LOG" in line:
                     parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split(",")
                     data.append(",".join(parts))
 
+        return data
+
     @staticmethod
     def load_data(fname):
+        """Load all log files for a given simulation
+
+        Looks for all files for a given simulation and loads them. Takes the local training
+        into account where in some cases the logs are split when they reach a certain size,
+        and given a suffix .1, .2 etc.
+
+        Arguments:
+        fname - path to the file
+
+        Returns:
+        List of loaded log lines
+        """
         from os.path import isfile
         data = []
 
         i = 1
 
         while isfile('%s.%s' % (fname, i)):
-            SimulationLogsIO.load_file('%s.%s' % (fname, i), data)
+            SimulationLogsIO.load_single_file('%s.%s' % (fname, i), data)
             i += 1
 
-        SimulationLogsIO.load_file(fname, data)
+        SimulationLogsIO.load_single_file(fname, data)
 
         if i > 1:
             print("Loaded %s log files (logs rolled over)" % i)
@@ -59,7 +88,7 @@ class SimulationLogsIO:
 
     @staticmethod
     def convert_to_pandas(data, episodes_per_iteration=20):
-        """
+        """Load the log data to pandas dataframe
         stdout_ = 'SIM_TRACE_LOG:%d,%d,%.4f,%.4f,%.4f,%.2f,%.2f,%d,%.4f,%s,%s,%.4f,%d,%.2f,%s\n' % (
                 self.episodes, self.steps, model_location[0], model_location[1], model_heading,
                 self.steering_angle,
