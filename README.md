@@ -43,13 +43,13 @@ This will package the project, install and run tests.
 
 Run:
 ```
-python setup.py pep8
+pycodestyle
 ```
 
 ### Packaging, distribution
 
 TBC
-TODO: Add wheel
+TODO: Add wheel and twine
 
 ## License
 This project retains the license of the 

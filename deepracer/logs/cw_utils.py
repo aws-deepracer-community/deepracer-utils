@@ -168,7 +168,11 @@ class CloudWatchLogs:
             the stream of a live training; False by default
 
         Returns:
-        List of fetched files
+        List of fetched files in a tuple containing:
+        - file location
+        - stream name
+        - timestamp of the first event in the stream
+        - timestamp of the last event in the stream
         """
         client = boto3.client('logs')
 

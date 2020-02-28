@@ -27,6 +27,7 @@ from matplotlib.patches import Rectangle
 from shapely.geometry.polygon import LineString
 
 from .cw_utils import CloudWatchLogs as cw
+from ..tracks.track_utils import Track
 
 
 class SimulationLogsIO:
@@ -89,6 +90,9 @@ class SimulationLogsIO:
     @staticmethod
     def convert_to_pandas(data, episodes_per_iteration=20):
         """Load the log data to pandas dataframe
+
+        Reads the loaded log files and parses them according to this format of print:
+
         stdout_ = 'SIM_TRACE_LOG:%d,%d,%.4f,%.4f,%.4f,%.2f,%.2f,%d,%.4f,%s,%s,%.4f,%d,%.2f,%s\n' % (
                 self.episodes, self.steps, model_location[0], model_location[1], model_heading,
                 self.steering_angle,
@@ -102,6 +106,15 @@ class SimulationLogsIO:
                 self.track_length,
                 time.time())
             print(stdout_)
+
+        Currently only supports 2019 logs but is forwards compatible.
+
+        Arguments:
+        data - list of log lines to parse
+        episodes_per_iteration - value of the hyperparameter for a given training
+
+        Returns:
+        A pandas dataframe with loaded data
         """
 
         df_list = list()
@@ -138,15 +151,24 @@ class SimulationLogsIO:
         return df
 
     @staticmethod
-    def load_to_pandas(eval_fname):
-        eval_data = SimulationLogsIO.load_data(eval_fname)
-        return SimulationLogsIO.convert_to_pandas(eval_data)
+    def load_a_list_of_logs(logs):
+        """Loads multiple logs from the list of tuples
 
-    @staticmethod
-    def load_eval_logs(logs):
+        For each file being loaded additional info about the log stream is attached.
+        This way one can load multiple simulations for a given period and compare the outcomes.
+        This is particularly helpful when comparing multiple evaluations.
+
+        Arguments:
+        logs - a list of tuples describing the logs, compatible with the output of
+            CloudWatchLogs.download_all_logs
+
+        Returns:
+        A pandas dataframe containing all loaded logs data
+        """
         full_dataframe = None
         for log in logs:
-            dataframe = SimulationLogsIO.load_to_pandas(log[0])
+            eval_data = SimulationLogsIO.load_data(eval_fname)
+            dataframe = SimulationLogsIO.convert_to_pandas(eval_data)
             dataframe['stream'] = log[1]
             if full_dataframe is not None:
                 full_dataframe = full_dataframe.append(dataframe)
@@ -157,8 +179,28 @@ class SimulationLogsIO:
             ['stream', 'episode', 'steps']).reset_index()
 
     @staticmethod
+    def load_pandas(fname, episodes_per_iteration=20):
+        """Load from a file directly to pandas dataframe
+
+        Arguments:
+        fname - path to the file
+        episodes_per_iteration - value of the hyperparameter for a given training
+
+        Returns:
+        A pandas dataframe with loaded data
+        """
+        return SimulationLogsIO.convert_to_pandas(
+            SimulationLogsIO.load_data(fname),
+            episodes_per_iteration
+        )
+
+    @staticmethod
     def normalize_rewards(df):
-        # Normalize the rewards to a 0-1 scale
+        """Normalize the rewards to a 0-1 scale
+
+        Arguments:
+        df - pandas dataframe with the log data
+        """
         from sklearn.preprocessing import MinMaxScaler
 
         min_max_scaler = MinMaxScaler()
@@ -168,8 +210,45 @@ class SimulationLogsIO:
 
 
 class AnalysisUtils:
+    """Set of utilities to verify how the training is doing.
+
+    The general purpose is to extract information from the dataframe to visualize it
+    in form which allows drawing conclusions from them
+    """
     @staticmethod
     def simulation_agg(panda, firstgroup='iteration', add_timestamp=False, is_eval=False):
+        """Groups all log data by episodes and other information and returns
+        a pandas dataframe with aggregated information
+
+        The aggregated data includes:
+        * steps - amount of steps per episode,
+        * start_at - starting waypoint
+        * progress - how much of the track has been covered
+        * throttle - average throttle decision
+        * time - how much time elapsed from first to last step
+        * reward - how much reward has been aggregated in the iteration
+        * time_if_complete - scales time from given progress value to 100% to give
+            an idea of what time the car would have if the lap would be completed
+        Also if data is for training:
+        * new_reward - how much reward would have been aggregated if another
+            reward would be used (based on the NewRewardUtils usage)
+        * reward_if_complete - scales reward from given progress value to 100% to give
+            an idea of what time the car would have if the lap would be completed
+        * quintile - which training quintile the episode happened in
+            (first 20% of episodes are in 1st, second 20% in 2nd etc.)
+        Also if timestamp is requested:
+        * timestamp - when given episode ended
+
+        Arguments:
+        panda - panda dataframe with simulation data
+        firstgroup - first group to group by, by default iteration,
+        for multiple log files loaded stream would be preferred
+        add_timestamp - whether to add a timestamp, by default False
+        is_eval - is data for evaluation (training if False), default: False
+
+        Returns:
+        Aggregated dataframe
+        """
         grouped = panda.groupby([firstgroup, 'episode'])
 
         by_steps = grouped['steps'].agg(np.max).reset_index()
@@ -215,6 +294,17 @@ class AnalysisUtils:
 
     @staticmethod
     def scatter_aggregates(aggregate_df, title=None, is_eval=False):
+        """Scatter aggregated data in a set of charts.
+
+        If the data is for evaluation, fewer graphs are shown which makes
+        them more readable.
+        This set of charts is focused on dependencies other than on iteration/episode.
+
+        Arguments:
+        aggregate_df - aggregated data
+        title - what title to give to the charts (None by default)
+        is_eval - is it evaluation data (training if False), by default False
+        """
         fig, axes = plt.subplots(nrows=2 if is_eval else 3,
                                  ncols=2 if is_eval else 3, figsize=[15, 11])
         if title:
@@ -234,8 +324,21 @@ class AnalysisUtils:
         plt.clf()
 
     @staticmethod
-    def scatter_by_groups(panda, group_category='quintile', groupcount=5, title=None):
-        grouped = panda.groupby(group_category)
+    def scatter_by_groups(aggregate_df, group_category='quintile', title=None):
+        """Visualise aggregated training data grouping them by a given category.
+
+        Takes the aggregated dataframe and groups it by category.
+        By default quintile is being used which means all episodes are divided into
+        five buckets by time. This lets you observe how the training progressed
+        with time
+
+        Arguments:
+        aggregate_df - aggregated dataframe
+        group_category - what to group the data by, default: quintile
+        title - what title to put over the charts, default: None
+        """
+        grouped = aggregate_df.groupby(group_category)
+        groupcount = len(grouped.groups.keys())
 
         fig, axes = plt.subplots(nrows=groupcount, ncols=4, figsize=[15, 15])
 
@@ -256,6 +359,22 @@ class AnalysisUtils:
 
     @staticmethod
     def analyze_training_progress(aggregates, title=None):
+        """Analyze training progress based on iterations
+
+        Most of the charts have iteration as the x axis which shows how rewards,
+        times, progress and others have changed in time iteration by iteration.
+        The graphs present:
+        * mean reward with standard deviation
+        * total reward
+        * mean time with standard deviation
+        * mean time for completed laps
+        * mean progress with standard deviation
+        * completion rate (ratio of complete laps to all episodes in iteration, 0-1)
+
+        Arguments:
+        aggregates - aggregated dataframe to analyze
+        title - what title to put over the charts, default: None
+        """
         aggregates['complete'] = np.where(aggregates['progress'] == 100, 1, 0)
 
         grouped = aggregates.groupby('iteration')
@@ -307,6 +426,17 @@ class AnalysisUtils:
 
     @staticmethod
     def plot(ax, df, xval, xlabel, yval, ylabel, title=None):
+        """plot the data and put in the right place on charts image
+
+        Arguments:
+        ax - plot axes
+        df - dataframe to extract data from
+        xval - which data to extract for x axis
+        xlabel - what label to give the x axis
+        yval - which data to extract for y axis
+        ylabel - what label to give the y axis
+        title - what title to put over the chart, default: None
+        """
         df.plot.scatter(xval, yval, ax=ax, s=5, alpha=0.7)
         if title:
             ax.set_title(title)
@@ -317,64 +447,51 @@ class AnalysisUtils:
 
 
 class PlottingUtils:
+    """Utilities to visualise track and the episodes
+    """
     @staticmethod
-    def plot_coords(ax, ob):
-        x, y = ob.xy
-        ax.plot(x, y, '.', color='#999999', zorder=1)
+    def print_border(ax, track: Track, color='lightgrey'):
+        """Print track borders on the chart
 
-    @staticmethod
-    def plot_bounds(ax, ob):
-        x, y = zip(*list((p.x, p.y) for p in ob.boundary))
-        ax.plot(x, y, '.', color='#000000', zorder=1)
+        Arguments:
+        ax - axes to plot borders on
+        track - the track info to plot
+        color - what color to plot the border in, default: lightgrey
+        """
+        line = LineString(track.center_line)
+        PlottingUtils._plot_coords(ax, line)
+        PlottingUtils._plot_line(ax, line, color)
 
-    @staticmethod
-    def plot_line(ax, ob, color='cyan'):
-        x, y = ob.xy
-        ax.plot(x, y, color=color, alpha=0.7, linewidth=3, solid_capstyle='round',
-                zorder=2)
+        line = LineString(track.inner_border)
+        PlottingUtils._plot_coords(ax, line)
+        PlottingUtils._plot_line(ax, line, color)
 
-    @staticmethod
-    def print_border(ax, waypoints, inner_border_waypoints, outer_border_waypoints,
-                     color='lightgrey'):
-        line = LineString(waypoints)
-        PlottingUtils.plot_coords(ax, line)
-        PlottingUtils.plot_line(ax, line, color)
-
-        line = LineString(inner_border_waypoints)
-        PlottingUtils.plot_coords(ax, line)
-        PlottingUtils.plot_line(ax, line, color)
-
-        line = LineString(outer_border_waypoints)
-        PlottingUtils.plot_coords(ax, line)
-        PlottingUtils.plot_line(ax, line, color)
+        line = LineString(track.outer_border)
+        PlottingUtils._plot_coords(ax, line)
+        PlottingUtils._plot_line(ax, line, color)
 
     @staticmethod
-    def plot_top_laps(sorted_idx, episode_map, center_line, inner_border,
-                      outer_border, n_laps=5):
+    def plot_top_laps(sorted_idx, df, track: Track):
+        """Plot n laps in the training, referenced by episode ids
+
+        Arguments:
+        sorted_idx - a datagram with ids to be plotted
+        df - a datagram with all data
+        track - track info for plotting
+        """
         fig = plt.figure(n_laps, figsize=(12, n_laps * 10))
-        for i in range(n_laps):
-            idx = sorted_idx[i]
+        for i in len(sorted_idx):
+            idx = sorted_idx.at[i, 'episode']
 
-            episode_data = episode_map[idx]
+            episode_data = df[df['episode'] == idx]
+            episode_data['x'] = episode_data['x']*100
+            episode_data['y'] = episode_data['y']*100
 
             ax = fig.add_subplot(n_laps, 1, i + 1)
 
-            line = LineString(center_line)
-            PlottingUtils.plot_coords(ax, line)
-            PlottingUtils.plot_line(ax, line)
+            PlottingUtils.print_border(ax, track)
 
-            line = LineString(inner_border)
-            PlottingUtils.plot_coords(ax, line)
-            PlottingUtils.plot_line(ax, line)
-
-            line = LineString(outer_border)
-            PlottingUtils.plot_coords(ax, line)
-            PlottingUtils.plot_line(ax, line)
-
-            for idx in range(1, len(episode_data) - 1):
-                x1, y1, action, reward, angle, speed = episode_data[idx]
-                car_x2, car_y2 = x1 - 0.02, y1
-                plt.plot([x1 * 100, car_x2 * 100], [y1 * 100, car_y2 * 100], 'b.')
+            episode_data.plot.scatter(x, y, ax=ax, s=4, c='red')
 
         plt.show()
         plt.clf()
@@ -382,7 +499,9 @@ class PlottingUtils:
         return fig
 
     @staticmethod
-    def plot_evaluations(evaluations, inner, outer, graphed_value='throttle'):
+    def plot_evaluations(evaluations, track: Track, graphed_value='throttle'):
+        """Plot graphs for evaluations
+        """
         streams = evaluations.sort_values(
             'timestamp', ascending=False).groupby('stream', sort=False)
 
@@ -392,7 +511,7 @@ class PlottingUtils:
 
             for id, episode in stream.groupby('episode'):
                 PlottingUtils.plot_grid_world(
-                    episode, inner, outer, graphed_value, ax=axes[int(id / 3), id % 3])
+                    episode, track, graphed_value, ax=axes[int(id / 3), id % 3])
 
             plt.show()
             plt.clf()
@@ -400,14 +519,12 @@ class PlottingUtils:
     @staticmethod
     def plot_grid_world(
         episode_df,
-        inner,
-        outer,
+        track: Track,
         graphed_value='throttle',
         min_progress=None,
         ax=None
     ):
-        """
-        plot a scaled version of lap, along with throttle taken a each position
+        """Plot a scaled version of lap, along with throttle taken a each position
         """
 
         episode_df.loc[:, 'distance_diff'] = ((episode_df['x'].shift(1) - episode_df['x']) ** 2 + (
@@ -435,13 +552,13 @@ class PlottingUtils:
 
             ax.set_facecolor('midnightblue')
 
-            line = LineString(inner)
-            PlottingUtils.plot_coords(ax, line)
-            PlottingUtils.plot_line(ax, line)
+            line = LineString(track.inner_border)
+            PlottingUtils._plot_coords(ax, line)
+            PlottingUtils._plot_line(ax, line)
 
-            line = LineString(outer)
-            PlottingUtils.plot_coords(ax, line)
-            PlottingUtils.plot_line(ax, line)
+            line = LineString(track.outer_border)
+            PlottingUtils._plot_coords(ax, line)
+            PlottingUtils._plot_line(ax, line)
 
             episode_df.plot.scatter('x', 'y', ax=ax, s=3, c=graphed_value,
                                     cmap=plt.get_cmap('plasma'))
@@ -459,12 +576,14 @@ class PlottingUtils:
                 plt.clf()
 
     @staticmethod
-    def plot_track(df, center_line, inner_border, outer_border,
-                   track_size=(500, 800), x_shift=0, y_shift=0):
-        track = np.zeros(track_size)  # lets magnify the track by *100
+    def plot_track(df, track: Track, margin=10):
+        """Plot track with dots presenting the rewards for steps
+        """
+        track_size = np.add(track.size(), (2*margin, 2*margin))
+        track_img = np.zeros(track_size)
         for index, row in df.iterrows():
-            x = int(row["x"]) + x_shift
-            y = int(row["y"]) + y_shift
+            x = int(row["x"]) + margin
+            y = int(row["y"]) + margin
             reward = row["reward"]
 
             # clip values that are off track
@@ -474,51 +593,84 @@ class PlottingUtils:
             if x >= track_size[1]:
                 x = track_size[1] - 1
 
-            track[y, x] = reward
+            track_img[y, x] = reward
 
         fig = plt.figure(1, figsize=(12, 16))
         ax = fig.add_subplot(111)
 
-        shifted_center_line = [[point[0] + x_shift, point[1] + y_shift] for point
-                               in center_line]
-        shifted_inner_border = [[point[0] + x_shift, point[1] + y_shift] for point
-                                in inner_border]
-        shifted_outer_border = [[point[0] + x_shift, point[1] + y_shift] for point
-                                in outer_border]
+        shifted_center_line = [[point[0] + margin, point[1] + margin] for point
+                               in track.waypoints]
+        shifted_inner_border = [[point[0] + margin, point[1] + margin] for point
+                                in track.inner_border]
+        shifted_outer_border = [[point[0] + margin, point[1] + margin] for point
+                                in track.outer_border]
 
         PlottingUtils.print_border(ax, shifted_center_line, shifted_inner_border,
                                    shifted_outer_border)
 
-        return track
+        return track_img
+
+    @staticmethod
+    def _plot_coords(ax, ob):
+        x, y = ob.xy
+        ax.plot(x, y, '.', color='#999999', zorder=1)
+
+    @staticmethod
+    def _plot_bounds(ax, ob):
+        x, y = zip(*list((p.x, p.y) for p in ob.boundary))
+        ax.plot(x, y, '.', color='#000000', zorder=1)
+
+    @staticmethod
+    def _plot_line(ax, ob, color='cyan'):
+        x, y = ob.xy
+        ax.plot(x, y, color=color, alpha=0.7, linewidth=3, solid_capstyle='round',
+                zorder=2)
 
 
 class EvaluationUtils:
     @staticmethod
-    def analyse_single_evaluation(log_file, inner_border, outer_border, episodes=5,
+    def analyse_single_evaluation(eval_df, track: Track,
                                   min_progress=None):
-        eval_df = SimulationLogsIO.load_to_pandas(log_file)
-
-        for e in range(episodes):
+        """Plot all episodes of a single evaluation
+        """
+        for e in range(eval_df['episode'].max()+1):
             episode_df = eval_df[eval_df['episode'] == e]
-            PlottingUtils.plot_grid_world(episode_df, inner_border,
-                                          outer_border, min_progress=min_progress)
+            PlottingUtils.plot_grid_world(episode_df, track.inner_border,
+                                          track.outer_border, min_progress=min_progress)
 
     @staticmethod
-    def analyse_multiple_race_evaluations(logs, inner_border, outer_border, min_progress=None):
+    def analyse_multiple_race_evaluations(logs, track: Track, min_progress=None):
         for log in logs:
             EvaluationUtils.analyse_single_evaluation(
-                log[0], inner_border, outer_border, min_progress=min_progress)
+                SimulationLogsIO.load_pandas(log[0]), track, min_progress=min_progress)
 
     @staticmethod
     def download_and_analyse_multiple_race_evaluations(
         log_folder,
-        l_inner_border,
-        l_outer_border,
+        track: Track,
         not_older_than=None,
         older_than=None,
         log_group='/aws/deepracer/leaderboard/SimulationJobs',
         min_progress=None
     ):
+        """Download and analyse multiple race evaluations
+
+        Arguments:
+        log_folder - where should the logs be stored
+        track - track to plot
+        not_older_than - the oldest date at which a stream has to have
+            at least one message to be downloaded; unlimited if not
+            provided; ISO-8601 compliant date string. Example:
+            "2020-02-20 02:02 UTC"
+        older_than - the most recent date at which a stream has to have
+            at least one message to be downloaded; unlimited if not
+            provided; ISO-8601 compliant date string. Example:
+            "2020-02-20 02:02 UTC"
+        log_group - which group to look in for the streams; default:
+            '/aws/deepracer/leaderboard/SimulationJobs'
+        min_progress - minimum progres for an episode to be plotted, default: None
+
+        """
         logs = cw.download_all_logs("%s/deepracer-eval-" % log_folder,
                                     log_group, not_older_than, older_than)
 
@@ -527,8 +679,43 @@ class EvaluationUtils:
 
 
 class NewRewardUtils:
+    """New reward testing utility
+
+    This will not give you a newly trained model, but based on the logs you will
+    be able to check how your training would be marked with an alternative reward
+    function.
+
+    The reward needs to be wrapped in an object, so the absolute minimum would be:
+
+    class Reward:
+        def __init__(self, verbose=False):
+            self.verbose = verbose
+
+        def reward_function(self, params):
+            #reward calculation happens here
+            return float(reward)
+
+    You are allowed to use fields to hold state. If your reward function file also
+    contains:
+
+    reward = Reward()
+
+    def reward_function(params):
+        return reward.reward_function(params)
+
+    you can use it as is in the AWS DeepRacer Console.
+    """
     @staticmethod
     def df_to_params(df_row, waypoints):
+        """Convert log data to parameters to be passed to be passed to the reward function
+
+        Arguments:
+        df_row - single row to be converted to parameters
+        waypoints - waypoints to put into the parameters
+
+        Returns:
+        A dictionary of parameters
+        """
         from ..tracks.track_utils import GeometryUtils as gu
         waypoint = df_row['closest_waypoint']
         before = waypoint - 1
@@ -590,6 +777,14 @@ class NewRewardUtils:
 
     @staticmethod
     def new_reward(panda, center_line, reward_module, verbose=False):
+        """Calculate new reward for each step and add to the dataframe
+
+        Arguments:
+        panda - the dataframe to replay
+        center_line - waypoints along the track's center_line
+        reward_module - which module to load for calculation
+        verbose - should the reward function print extra info (if there is such option)
+        """
         import importlib
         importlib.invalidate_caches()
         rf = importlib.import_module(reward_module)
@@ -606,6 +801,8 @@ class NewRewardUtils:
 
 
 class ActionBreakdownUtils:
+    """Utilities to perform action breakdown analysis
+    """
     @staticmethod
     def determine_action_names(df):
         keys = sorted(df.groupby(["action", "steer", "throttle"]).keys(), lambda x: x[0])
@@ -618,8 +815,8 @@ class ActionBreakdownUtils:
         ) for key in keys]
 
     @staticmethod
-    def make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
-                         edgecolor='r', alpha=0.3):
+    def _make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
+                          edgecolor='r', alpha=0.3):
         # Create list for all the error patches
         errorboxes = []
 
@@ -638,10 +835,18 @@ class ActionBreakdownUtils:
         return 0
 
     @staticmethod
-    def action_breakdown(df, iteration_ids, track_breakdown, center_line,
-                         inner_border, outer_border,
+    def action_breakdown(df, iteration_ids, track: Track, track_breakdown=None,
                          action_names=None):
+        """Visualise action breakdown for the simulation data
 
+        Arguments:
+        df - dataframe to visualise
+        iteration_ids - which episodes to visualise
+        track - track info to plot
+        track_breakdown - interesting sections of the track to show,
+            default: None (no sections highlighted)
+        action_names - how to call the actions; default: None (names will be generated)
+        """
         if not action_names:
             action_names = ActionBreakdownUtils.determine_action_names(df)
 
@@ -650,7 +855,7 @@ class ActionBreakdownUtils:
         if type(iteration_ids) is not list:
             iteration_ids = [iteration_ids]
 
-        wpts_array = center_line
+        wpts_array = track.waypoints
 
         for iter_num in iteration_ids:
             # Slice the data frame to get all episodes in that iteration
@@ -661,18 +866,24 @@ class ActionBreakdownUtils:
             th = 0.8
             for idx in range(len(action_names)):
                 ax = fig.add_subplot(6, 2, 2 * idx + 1)
-                PlottingUtils.print_border(ax, center_line, inner_border, outer_border)
+                PlottingUtils.print_border(
+                    ax,
+                    track.waypoints,
+                    track.inner_border,
+                    track.outer_border
+                )
 
                 df_slice = df_iter[df_iter['reward'] >= th]
                 df_slice = df_slice[df_slice['action'] == idx]
 
                 ax.plot(df_slice['x'], df_slice['y'], 'b.')
 
-                for idWp in track_breakdown.vert_lines:
-                    ax.text(wpts_array[idWp][0],
-                            wpts_array[idWp][1] + 20,
-                            str(idWp),
-                            bbox=dict(facecolor='red', alpha=0.5))
+                if track_breakdown:
+                    for idWp in track_breakdown.vert_lines:
+                        ax.text(wpts_array[idWp][0],
+                                wpts_array[idWp][1] + 20,
+                                str(idWp),
+                                bbox=dict(facecolor='red', alpha=0.5))
 
                 # ax.set_title(str(log_name_id) + '-' + str(iter_num) + ' w rew >= '+str(th))
                 ax.set_ylabel(action_names[idx])
@@ -685,17 +896,20 @@ class ActionBreakdownUtils:
 
                 ax = fig.add_subplot(6, 2, 2 * idx + 2)
 
-                # Call function to create error boxes
-                _ = ActionBreakdownUtils.make_error_boxes(ax,
-                                                          track_breakdown.segment_x,
-                                                          track_breakdown.segment_y,
-                                                          track_breakdown.segment_xerr,
-                                                          track_breakdown.segment_yerr)
+                if track_breakdown:
+                    # Call function to create error boxes
+                    _ = ActionBreakdownUtils._make_error_boxes(
+                        ax,
+                        track_breakdown.segment_x,
+                        track_breakdown.segment_y,
+                        track_breakdown.segment_xerr,
+                        track_breakdown.segment_yerr
+                    )
 
-                for tt in range(len(track_breakdown.track_segments)):
-                    ax.text(track_breakdown.track_segments[tt][0],
-                            track_breakdown.track_segments[tt][1],
-                            track_breakdown.track_segments[tt][2])
+                    for tt in range(len(track_breakdown.track_segments)):
+                        ax.text(track_breakdown.track_segments[tt][0],
+                                track_breakdown.track_segments[tt][1],
+                                track_breakdown.track_segments[tt][2])
 
                 ax.bar(np.arange(len(wpts_array)), action_waypoint_distribution)
                 ax.set_xlabel('waypoint')
