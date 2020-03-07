@@ -46,7 +46,7 @@ class SimulationLogsIO:
         List of loaded log lines. If data is not None, it is the reference returned
         and the list referenced has new log lines appended
         """
-        if not data:
+        if data is None:
             data = []
 
         with open(fname, 'r') as f:
@@ -471,7 +471,7 @@ class PlottingUtils:
         PlottingUtils._plot_line(ax, line, color)
 
     @staticmethod
-    def plot_top_laps(sorted_idx, df, track: Track):
+    def plot_selected_laps(sorted_idx, df, track: Track):
         """Plot n laps in the training, referenced by episode ids
 
         Arguments:
@@ -479,24 +479,26 @@ class PlottingUtils:
         df - a datagram with all data
         track - track info for plotting
         """
+
+        n_laps = len(sorted_idx)
+        sorted_idx = sorted_idx.reset_index()
+
         fig = plt.figure(n_laps, figsize=(12, n_laps * 10))
-        for i in len(sorted_idx):
+        for i, _ in sorted_idx.iterrows():
             idx = sorted_idx.at[i, 'episode']
 
             episode_data = df[df['episode'] == idx]
-            episode_data['x'] = episode_data['x']*100
-            episode_data['y'] = episode_data['y']*100
 
             ax = fig.add_subplot(n_laps, 1, i + 1)
 
-            PlottingUtils.print_border(ax, track)
+            PlottingUtils.print_border(ax, track, color='cyan')
 
-            episode_data.plot.scatter(x, y, ax=ax, s=4, c='red')
+            episode_data.plot.scatter('x', 'y', ax=ax, s=10, c='blue')
 
         plt.show()
         plt.clf()
 
-        return fig
+        # return fig
 
     @staticmethod
     def plot_evaluations(evaluations, track: Track, graphed_value='throttle'):
@@ -576,39 +578,45 @@ class PlottingUtils:
                 plt.clf()
 
     @staticmethod
-    def plot_track(df, track: Track, margin=10):
+    def plot_track(df, track: Track, value_field="reward", margin=100):
         """Plot track with dots presenting the rewards for steps
         """
-        track_size = np.add(track.size(), (2*margin, 2*margin))
-        track_img = np.zeros(track_size)
+        track_size = (np.asarray(track.size()) + 2*margin).astype(int)
+        track_img = np.zeros(track_size).transpose()
+
+        x_coord = 0
+        y_coord = 1
+
+        # compensation moves car's coordinates in logs to start at 0 in each dimention
+        x_compensation = df['x'].min()
+        y_compensation = df['y'].min()
+
         for index, row in df.iterrows():
-            x = int(row["x"]) + margin
-            y = int(row["y"]) + margin
-            reward = row["reward"]
+            x = int(row["x"] - x_compensation + margin)
+            y = int(row["y"] - y_compensation + margin)
 
             # clip values that are off track
-            if y >= track_size[0]:
-                y = track_size[0] - 1
+            if y >= track_size[y_coord]:
+                y = track_size[y_coord] - 1
 
-            if x >= track_size[1]:
-                x = track_size[1] - 1
+            if x >= track_size[x_coord]:
+                x = track_size[x_coord] - 1
 
-            track_img[y, x] = reward
+            track_img[y, x] = row[value_field]
 
         fig = plt.figure(1, figsize=(12, 16))
         ax = fig.add_subplot(111)
 
-        shifted_center_line = [[point[0] + margin, point[1] + margin] for point
-                               in track.waypoints]
-        shifted_inner_border = [[point[0] + margin, point[1] + margin] for point
-                                in track.inner_border]
-        shifted_outer_border = [[point[0] + margin, point[1] + margin] for point
-                                in track.outer_border]
+        shifted_track = Track("shifted_track", (track.waypoints * 100 -
+                                                [x_compensation, y_compensation]*3 + margin) / 100.)
 
-        PlottingUtils.print_border(ax, shifted_center_line, shifted_inner_border,
-                                   shifted_outer_border)
+        PlottingUtils.print_border(ax, shifted_track)
 
-        return track_img
+        plt.title("Reward distribution for all actions ")
+        im = plt.imshow(track_img, cmap='hot', interpolation='bilinear', origin="lower")
+
+        plt.show()
+        plt.clf()
 
     @staticmethod
     def _plot_coords(ax, ob):
