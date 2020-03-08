@@ -46,10 +46,28 @@ Run:
 pycodestyle
 ```
 
-### Packaging, distribution
+### Releasing, Packaging, distribution
 
-TBC
-TODO: Add wheel and twine
+Marking new release:
+```
+git tag deepracer-utils-version
+git push origin deepracer-utils-version
+```
+
+Building the package:
+```
+python setup.py sdist bdist_wheel
+```
+
+Uploading to test.pypi.org:
+```
+python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+```
+
+Uploading to pypi.org:
+```
+python -m twine upload dist/*
+```
 
 ## License
 This project retains the license of the 
