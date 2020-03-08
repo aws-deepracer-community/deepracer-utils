@@ -2,6 +2,7 @@
 
 from setuptools import setup, find_packages
 from os import path
+import versioneer
 
 here = path.abspath(path.dirname(__file__))
 
@@ -11,7 +12,8 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='deepracer-utils',
-    version='0.0.1',
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     packages=find_packages(include=["deepracer", "deepracer.*"]),
     description='A set of tools for working with DeepRacer training',
     long_description=long_description,

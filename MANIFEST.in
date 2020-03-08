@@ -1,0 +1,2 @@
+include versioneer.py
+include deepracer/_version.py
