@@ -471,29 +471,34 @@ class PlottingUtils:
         PlottingUtils._plot_line(ax, line, color)
 
     @staticmethod
-    def plot_selected_laps(sorted_idx, df, track: Track):
+    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="episode"):
         """Plot n laps in the training, referenced by episode ids
 
         Arguments:
-        sorted_idx - a datagram with ids to be plotted
+        sorted_idx - a datagram with ids to be plotted or a list of ids
         df - a datagram with all data
         track - track info for plotting
+        secton_to_plot - what section of data to plot - episode/iteration
         """
 
-        n_laps = len(sorted_idx)
-        sorted_idx = sorted_idx.reset_index()
+        ids = sorted_idx
+
+        if type(sorted_idx) is not list:
+            ids = sorted_idx[section_to_plot].unique().tolist()
+
+        n_laps = len(ids)
 
         fig = plt.figure(n_laps, figsize=(12, n_laps * 10))
-        for i, _ in sorted_idx.iterrows():
-            idx = sorted_idx.at[i, 'episode']
+        for i in range(n_laps):
+            idx = ids[i]
 
-            episode_data = df[df['episode'] == idx]
+            data_to_plot = df[df[section_to_plot] == idx]
 
             ax = fig.add_subplot(n_laps, 1, i + 1)
 
             PlottingUtils.print_border(ax, track, color='cyan')
 
-            episode_data.plot.scatter('x', 'y', ax=ax, s=10, c='blue')
+            data_to_plot.plot.scatter('x', 'y', ax=ax, s=10, c='blue')
 
         plt.show()
         plt.clf()
@@ -813,14 +818,14 @@ class ActionBreakdownUtils:
     """
     @staticmethod
     def determine_action_names(df):
-        keys = sorted(df.groupby(["action", "steer", "throttle"]).keys(), lambda x: x[0])
+        keys = sorted(df.groupby(["action", "steer", "throttle"]).groups.keys(), key=lambda x: x[0])
 
-        return ["A:%s S:%s%s, T:%s" % (
+        return ["A:%d S:%s, T:%s%s" % (
             key[0],
+            key[2],
             abs(key[1]),
-            " left" if keys[1] > 0 else " right" if keys[1] < 0 else "",
-            key[2]
-        ) for key in keys]
+            " LEFT" if key[1] > 0 else " RIGHT" if key[1] < 0 else ""
+        ) for key in filter(lambda key: key[2] > 0, keys)]
 
     @staticmethod
     def _make_error_boxes(ax, xdata, ydata, xerror, yerror, facecolor='r',
@@ -858,12 +863,12 @@ class ActionBreakdownUtils:
         if not action_names:
             action_names = ActionBreakdownUtils.determine_action_names(df)
 
-        fig = plt.figure(figsize=(16, 32))
+        fig = plt.figure(figsize=(16, len(action_names)*6))
 
         if type(iteration_ids) is not list:
             iteration_ids = [iteration_ids]
 
-        wpts_array = track.waypoints
+        wpts_array = track.center_line
 
         for iter_num in iteration_ids:
             # Slice the data frame to get all episodes in that iteration
@@ -873,12 +878,10 @@ class ActionBreakdownUtils:
 
             th = 0.8
             for idx in range(len(action_names)):
-                ax = fig.add_subplot(6, 2, 2 * idx + 1)
+                ax = fig.add_subplot(len(action_names), 2, 2 * idx + 1)
                 PlottingUtils.print_border(
                     ax,
-                    track.waypoints,
-                    track.inner_border,
-                    track.outer_border
+                    track
                 )
 
                 df_slice = df_iter[df_iter['reward'] >= th]
@@ -902,7 +905,7 @@ class ActionBreakdownUtils:
                     action_waypoint_distribution.append(
                         len(df_slice[df_slice['closest_waypoint'] == idWp]))
 
-                ax = fig.add_subplot(6, 2, 2 * idx + 2)
+                ax = fig.add_subplot(len(action_names), 2, 2 * idx + 2)
 
                 if track_breakdown:
                     # Call function to create error boxes
