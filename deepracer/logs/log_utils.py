@@ -167,7 +167,7 @@ class SimulationLogsIO:
         """
         full_dataframe = None
         for log in logs:
-            eval_data = SimulationLogsIO.load_data(eval_fname)
+            eval_data = SimulationLogsIO.load_data(log[0])
             dataframe = SimulationLogsIO.convert_to_pandas(eval_data)
             dataframe['stream'] = log[1]
             if full_dataframe is not None:
@@ -509,16 +509,31 @@ class PlottingUtils:
     def plot_evaluations(evaluations, track: Track, graphed_value='throttle'):
         """Plot graphs for evaluations
         """
+        from math import ceil
+
         streams = evaluations.sort_values(
             'timestamp', ascending=False).groupby('stream', sort=False)
 
         for name, stream in streams:
-            fig, axes = plt.subplots(2, 3, figsize=(20, 10))
+            episodes = stream.groupby('episode')
+            ep_count = len(episodes)
+
+            rows = ceil(ep_count / 3)
+            columns = min(ep_count, 3)
+
+            fig, axes = plt.subplots(rows, columns, figsize=(7*columns, 5*rows))
             fig.tight_layout(pad=0.4, w_pad=0.5, h_pad=7.0)
 
-            for id, episode in stream.groupby('episode'):
+            for id, episode in episodes:
+                if rows == 1:
+                    ax = axes[id % 3]
+                elif columns == 1:
+                    ax = axes[int(id/3)]
+                else:
+                    ax = axes[int(id / 3), id % 3]
+
                 PlottingUtils.plot_grid_world(
-                    episode, track, graphed_value, ax=axes[int(id / 3), id % 3])
+                    episode, track, graphed_value, ax=ax)
 
             plt.show()
             plt.clf()
@@ -646,10 +661,10 @@ class EvaluationUtils:
                                   min_progress=None):
         """Plot all episodes of a single evaluation
         """
-        for e in range(eval_df['episode'].max()+1):
-            episode_df = eval_df[eval_df['episode'] == e]
-            PlottingUtils.plot_grid_world(episode_df, track.inner_border,
-                                          track.outer_border, min_progress=min_progress)
+        episodes = eval_df.groupby('episode').groups
+        for e in episodes:
+            PlottingUtils.plot_grid_world(
+                eval_df[eval_df['episode'] == e], track, min_progress=min_progress)
 
     @staticmethod
     def analyse_multiple_race_evaluations(logs, track: Track, min_progress=None):
