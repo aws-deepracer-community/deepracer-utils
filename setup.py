@@ -26,7 +26,6 @@ setup(
         # Pick your license as you wish
         'License :: OSI Approved :: Apache Software License',
 
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
@@ -34,7 +33,7 @@ setup(
         'Topic :: Internet :: Log Analysis'
     ],
     keywords='aws deepracer awsdeepracer',
-    python_requires='>=3.5.*, <4',
+    python_requires='>=3.6.*, <4',
     install_requires=[
         'boto3>=1.12.0',
         'python-dateutil<3.0.0,>=2.1',
