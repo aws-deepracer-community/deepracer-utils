@@ -639,6 +639,21 @@ class PlottingUtils:
         plt.clf()
 
     @staticmethod
+    def plot_trackpoints(track: Track):
+        fig, ax = plt.subplots(figsize=(20, 10))
+        PlottingUtils.plot_points(ax, track.center_line)
+        PlottingUtils.plot_points(ax, track.inner_border)
+        PlottingUtils.plot_points(ax, track.outer_border)
+        ax.axis('equal')
+        plt.show()
+
+    @staticmethod
+    def plot_points(ax, points):
+        ax.scatter(points[:-1, 0], points[:-1, 1], s=1)
+        for i, p in enumerate(points):
+            ax.annotate(i, (p[0], p[1]))
+
+    @staticmethod
     def _plot_coords(ax, ob):
         x, y = ob.xy
         ax.plot(x, y, '.', color='#999999', zorder=1)
