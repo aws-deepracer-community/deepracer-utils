@@ -124,8 +124,8 @@ class SimulationLogsIO:
             parts = d.rstrip().split(",")
             episode = int(parts[0])
             steps = int(parts[1])
-            x = 100 * float(parts[2])
-            y = 100 * float(parts[3])
+            x = float(parts[2])
+            y = float(parts[3])
             yaw = float(parts[4])
             steer = float(parts[5])
             throttle = float(parts[6])
@@ -552,7 +552,7 @@ class PlottingUtils:
         episode_df.loc[:, 'distance_diff'] = ((episode_df['x'].shift(1) - episode_df['x']) ** 2 + (
             episode_df['y'].shift(1) - episode_df['y']) ** 2) ** 0.5
 
-        distance = np.nansum(episode_df['distance_diff']) / 100
+        distance = np.nansum(episode_df['distance_diff'])
         lap_time = np.ptp(episode_df['timestamp'].astype(float))
         velocity = distance / lap_time
         average_throttle = np.nanmean(episode_df['throttle'])
@@ -598,10 +598,10 @@ class PlottingUtils:
                 plt.clf()
 
     @staticmethod
-    def plot_track(df, track: Track, value_field="reward", margin=100):
+    def plot_track(df, track: Track, value_field="reward", margin=1):
         """Plot track with dots presenting the rewards for steps
         """
-        track_size = (np.asarray(track.size()) + 2*margin).astype(int)
+        track_size = (np.asarray(track.size()) + 2*margin).astype(int) * 100
         track_img = np.zeros(track_size).transpose()
 
         x_coord = 0
@@ -612,8 +612,8 @@ class PlottingUtils:
         y_compensation = df['y'].min()
 
         for index, row in df.iterrows():
-            x = int(row["x"] - x_compensation + margin)
-            y = int(row["y"] - y_compensation + margin)
+            x = int((row["x"] - x_compensation + margin) * 100)
+            y = int((row["y"] - y_compensation + margin) * 100)
 
             # clip values that are off track
             if y >= track_size[y_coord]:
@@ -627,8 +627,8 @@ class PlottingUtils:
         fig = plt.figure(1, figsize=(12, 16))
         ax = fig.add_subplot(111)
 
-        shifted_track = Track("shifted_track", (track.waypoints * 100 -
-                                                [x_compensation, y_compensation]*3 + margin) / 100.)
+        shifted_track = Track("shifted_track", (track.waypoints -
+                                                [x_compensation, y_compensation]*3 + margin) * 100)
 
         PlottingUtils.print_border(ax, shifted_track)
 
@@ -793,21 +793,21 @@ class NewRewardUtils:
             )
 
         params = {
-            'x': df_row['x'] / 100,
-            'y': df_row['y'] / 100,
+            'x': df_row['x'],
+            'y': df_row['y'],
             'speed': df_row['throttle'],
             'steps': df_row['steps'],
             'progress': df_row['progress'],
             'heading': df_row['yaw'] * 180 / 3.14,
             'closest_waypoints': closest_waypoints,
             'steering_angle': df_row['steer'] * 180 / 3.14,
-            'waypoints': waypoints / 100,
+            'waypoints': waypoints,
             'distance_from_center':
                 gu.get_vector_length(
                     (
                         closest_point -
                         current_location
-                    ) / 100),
+                    )),
             'timestamp': df_row['timestamp'],
             # TODO I didn't need them yet. DOIT
             'track_width': 0.60,
@@ -922,7 +922,7 @@ class ActionBreakdownUtils:
                 if track_breakdown:
                     for idWp in track_breakdown.vert_lines:
                         ax.text(wpts_array[idWp][0],
-                                wpts_array[idWp][1] + 20,
+                                wpts_array[idWp][1] + 0.2,
                                 str(idWp),
                                 bbox=dict(facecolor='red', alpha=0.5))
 

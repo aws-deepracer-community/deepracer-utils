@@ -152,9 +152,9 @@ class Track:
     Fields:
     name - name of the track loaded
     waypoints - input list as received by constructor
-    center_line - waypoints along the center of the track with coordinates in centimeters
-    inner_border - waypoints along the inner border of the track with coordinates in centimeters
-    outer_border - waypoints along the outer border of the track with coordinates in centimeters
+    center_line - waypoints along the center of the track with coordinates in meters
+    inner_border - waypoints along the inner border of the track with coordinates in meters
+    outer_border - waypoints along the outer border of the track with coordinates in meters
     road_poly - a polygon representing the track
     """
 
@@ -167,9 +167,9 @@ class Track:
         """
         self.name = name
         self.waypoints = waypoints
-        self.center_line = waypoints[:, 0:2] * 100
-        self.inner_border = waypoints[:, 2:4] * 100
-        self.outer_border = waypoints[:, 4:6] * 100
+        self.center_line = waypoints[:, 0:2]
+        self.inner_border = waypoints[:, 2:4]
+        self.outer_border = waypoints[:, 4:6]
 
         l_inner_border = LineString(waypoints[:, 2:4])
         l_outer_border = LineString(waypoints[:, 4:6])
