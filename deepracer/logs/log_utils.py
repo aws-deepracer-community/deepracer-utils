@@ -601,7 +601,7 @@ class PlottingUtils:
     def plot_track(df, track: Track, value_field="reward", margin=1):
         """Plot track with dots presenting the rewards for steps
         """
-        track_size = (np.asarray(track.size()) + 2*margin).astype(int) * 100
+        track_size = ((np.asarray(track.size()) + 2*margin)*100).astype(int)
         track_img = np.zeros(track_size).transpose()
 
         x_coord = 0
