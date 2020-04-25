@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 import json
 import boto3
+import itertools  
 from io import BytesIO
 
 from matplotlib.collections import PatchCollection
@@ -194,6 +195,9 @@ class TrainingMetrics:
             "train_completed",
         ]
 
+        training_cnt = training_gb.count()
+        training_agg['train_episodes'] = training_cnt['complete']
+        
         eval_gb = eval_input.groupby(summary_index)
         eval_agg = getattr(eval_gb, method)()
         eval_agg.columns = [
@@ -202,6 +206,10 @@ class TrainingMetrics:
             "eval_time",
             "eval_completed",
         ]
+        
+        eval_cnt = eval_gb.count()
+        eval_agg['eval_episodes'] = eval_cnt['complete']
+        
         return pd.concat([training_agg, eval_agg], axis=1, sort=False)
 
     def plotProgress(
@@ -217,7 +225,7 @@ class TrainingMetrics:
         """Plots training progress. Allows selection of multiple 
         
         Arguments:
-        method - (str) Statistical value to be calculated. Examples are 'mean', 'median', 'min' & 'max'. Default: 'mean'.
+        method - (str / list) Statistical value to be calculated. Examples are 'mean', 'median', 'min' & 'max'. Default: 'mean'.
         rolling_average - (int) Plotted line will be averaged with last number of x iterations. Default: 5.
         figsize - (tuple) Matplotlib figsize definition.
         series - (list) List of series to plot, contains tuples containing column in summary to plot, the legend title and color of plot.
@@ -226,37 +234,49 @@ class TrainingMetrics:
         Returns:
         Pandas DataFrame containing the summary table.
         """
-        summary = self.getSummary(method=method)
-        labels = math.floor(summary.shape[0] / 15)
-        x = []
-        t = []
-        for i, a in enumerate(summary.index):
-            x.append(a[0])
-            if max(self.metrics["iteration"]) > 15:
+        
+        plot_methods = []
+        if type(method) is not list:
+            plot_methods.append(method)
+        else:
+            plot_methods = method
+
+        f, axarr_raw = plt.subplots(1,len(plot_methods), figsize=figsize, sharey=True)
+
+        axarr = []
+        if type(axarr_raw) is not np.ndarray:
+            axarr.append(axarr_raw)
+        else:
+            axarr = axarr_raw
+        
+        for (m, ax) in zip(plot_methods, axarr):
+            summary = self.getSummary(method=m)
+            labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))),1)
+            x = []
+            t = []
+            for i, a in enumerate(summary.index):
+                x.append(a[0])
                 if i % labels == 0:
                     t.append(a[0])
+                    
+            for s in series:
+                ax.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
+                ax.plot(
+                    x,
+                    summary[s[0]].rolling(rolling_average, min_periods=1, center=True).mean(),
+                    label=s[1],
+                    color=s[2],
+                )
+            ax.set_title("Completion per Iteration ({})".format(m))
+            ax.set_xlabel("Iteration")
+            ax.set_ylabel("Percent complete ({})".format(m))
+            ax.set_xticks(t)
 
-        f, axarr = plt.subplots(1, figsize=figsize, sharex=True)
-        for s in series:
-            axarr.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
-            axarr.plot(
-                x,
-                summary[s[0]].rolling(rolling_average, min_periods=1).mean(),
-                label=s[1],
-                color=s[2],
-            )
-        axarr.set_title("Completion per Iteration ({})".format(method))
-        axarr.set_xlabel("Iteration")
-        axarr.set_ylabel("Percent complete ({})".format(method))
+            ax.legend(loc='upper left')
 
-        if max(self.metrics["iteration"]) > 15:
-            axarr.set_xticks(t)
-
-        axarr.legend()
-
-        self.metrics["iteration"].unique()
-        for r in self.metrics["round"].unique()[1:]:
-            l = "{}-{}".format(r, "0".zfill(self.max_iteration_strlen))
-            axarr.axvline(x=l, dashes=[0.25, 0.75], linewidth=0.5, color="black")
+            self.metrics["iteration"].unique()
+            for r in self.metrics["round"].unique()[1:]:
+                l = "{}-{}".format(r, "0".zfill(self.max_iteration_strlen))
+                ax.axvline(x=l, dashes=[0.25, 0.75], linewidth=0.5, color="black")
 
         plt.show()
