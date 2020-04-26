@@ -346,7 +346,7 @@ class AnalysisUtils:
             fig.suptitle(title)
 
         row = 0
-        for name, group in grouped:
+        for _, group in grouped:
             group.plot.scatter('time', 'reward', ax=axes[row, 0])
             group.plot.scatter('time', 'new_reward', ax=axes[row, 1])
             group.hist(column=['time'], bins=20, ax=axes[row, 2])
@@ -514,7 +514,7 @@ class PlottingUtils:
         streams = evaluations.sort_values(
             'timestamp', ascending=False).groupby('stream', sort=False)
 
-        for name, stream in streams:
+        for _, stream in streams:
             episodes = stream.groupby('episode')
             ep_count = len(episodes)
 
@@ -611,7 +611,7 @@ class PlottingUtils:
         x_compensation = df['x'].min()
         y_compensation = df['y'].min()
 
-        for index, row in df.iterrows():
+        for _, row in df.iterrows():
             x = int((row["x"] - x_compensation + margin) * 100)
             y = int((row["y"] - y_compensation + margin) * 100)
 
@@ -633,14 +633,14 @@ class PlottingUtils:
         PlottingUtils.print_border(ax, shifted_track)
 
         plt.title("Reward distribution for all actions ")
-        im = plt.imshow(track_img, cmap='hot', interpolation='bilinear', origin="lower")
+        plt.imshow(track_img, cmap='hot', interpolation='bilinear', origin="lower")
 
         plt.show()
         plt.clf()
 
     @staticmethod
     def plot_trackpoints(track: Track, annotate_every_nth=1):
-        fig, ax = plt.subplots(figsize=(20, 10))
+        _, ax = plt.subplots(figsize=(20, 10))
         PlottingUtils.plot_points(ax, track.center_line, annotate_every_nth)
         PlottingUtils.plot_points(ax, track.inner_border, annotate_every_nth)
         PlottingUtils.plot_points(ax, track.outer_border, annotate_every_nth)
@@ -720,7 +720,7 @@ class EvaluationUtils:
                                     log_group, not_older_than, older_than)
 
         EvaluationUtils.analyse_multiple_race_evaluations(
-            logs, l_inner_border, l_outer_border, min_progress=min_progress)
+            logs, track, min_progress=min_progress)
 
 
 class NewRewardUtils:
@@ -838,7 +838,7 @@ class NewRewardUtils:
         reward = rf.Reward(verbose=verbose)
 
         new_rewards = []
-        for index, row in panda.iterrows():
+        for _, row in panda.iterrows():
             new_rewards.append(
                 reward.reward_function(NewRewardUtils.df_to_params(row, center_line)))
 
@@ -888,7 +888,7 @@ class ActionBreakdownUtils:
         track_breakdown=None,
         action_names=None,
         min_reward=0.0
-        ):
+    ):
         """Visualise action breakdown for the simulation data
 
         Arguments:

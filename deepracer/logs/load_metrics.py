@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import json
 import boto3
-import itertools  
+import itertools
 from io import BytesIO
 
 from matplotlib.collections import PatchCollection
@@ -32,6 +32,7 @@ from matplotlib.patches import Rectangle
 from shapely.geometry.polygon import LineString
 from os import listdir
 from os.path import isfile, join, basename
+
 
 class TrainingMetrics:
     """ Class used to load in training metrics from S3
@@ -47,14 +48,18 @@ class TrainingMetrics:
         training_round=1,
         display_digits=1,
     ):
-        """Creates a TrainingMetrics object. Loads the first metrics file into a DataFrame if model name is provided.
+        """Creates a TrainingMetrics object. Loads the first metrics file into a DataFrame if
+            model name is provided.
 
         Arguments:
         bucket - S3 bucket where the metrics file is stored
-        model_name - (str) Name of the model that will be loaded. Default None - returns empty object.
-        pattern - (str) Filename pattern that will be formatted with the model name to create the key.
+        model_name - (str) Name of the model that will be loaded. Default None - returns empty
+            object.
+        pattern - (str) Filename pattern that will be formatted with the model name to create
+            the key.
         training_round - (int) Integer value that will be used to distinguish data.
-        display_digits - (int) Number that will define the padding (e.g for round 1, iteration 25 the display_digits=3 would give unique index as 1-025)
+        display_digits - (int) Number that will define the padding (e.g for round 1, iteration 25
+            the display_digits=3 would give unique index as 1-025)
         s3_endpoint_url - (str) URL for the S3 endpoint
         region - (str) AWS Region for S3
 
@@ -114,7 +119,8 @@ class TrainingMetrics:
         )
         df["time"] = df["elapsed_time_in_milliseconds"] / 1000
         print(
-            "Successfully loaded training round %i: Iterations: %i, Training episodes: %i, Evaluation episodes: %i"
+            ("Successfully loaded training round %i: Iterations: %i, " +
+                "Training episodes: %i, Evaluation episodes: %i")
             % (
                 training_round,
                 max(df["iteration"]) + 1,
@@ -172,11 +178,13 @@ class TrainingMetrics:
 
     def getSummary(self, method="mean", summary_index=["r-i", "iteration"]):
         """Provides summary per iteration. Data for evaluation and training is separated.
-        
+
         Arguments:
-        method - (str) Statistical value to be calculated. Examples are 'mean', 'median', 'min' & 'max'. Default: 'mean'.
-        summary_index - (list) List of columns to be used as index of summary. Default ['r-i','iteration'].
-        
+        method - (str) Statistical value to be calculated. Examples are 'mean',
+            'median', 'min' & 'max'. Default: 'mean'.
+        summary_index - (list) List of columns to be used as index of summary.
+            Default ['r-i','iteration'].
+
         Returns:
         Pandas DataFrame containing the summary table.
         """
@@ -197,7 +205,7 @@ class TrainingMetrics:
 
         training_cnt = training_gb.count()
         training_agg['train_episodes'] = training_cnt['complete']
-        
+
         eval_gb = eval_input.groupby(summary_index)
         eval_agg = getattr(eval_gb, method)()
         eval_agg.columns = [
@@ -206,10 +214,10 @@ class TrainingMetrics:
             "eval_time",
             "eval_completed",
         ]
-        
+
         eval_cnt = eval_gb.count()
         eval_agg['eval_episodes'] = eval_cnt['complete']
-        
+
         return pd.concat([training_agg, eval_agg], axis=1, sort=False)
 
     def plotProgress(
@@ -222,43 +230,47 @@ class TrainingMetrics:
             ("train_completion", "Training", "blue"),
         ],
     ):
-        """Plots training progress. Allows selection of multiple 
-        
+        """Plots training progress. Allows selection of multiple
+
         Arguments:
-        method - (str / list) Statistical value to be calculated. Examples are 'mean', 'median', 'min' & 'max'. Default: 'mean'.
-        rolling_average - (int) Plotted line will be averaged with last number of x iterations. Default: 5.
+        method - (str / list) Statistical value to be calculated. Examples are 'mean',
+            'median', 'min' & 'max'. Default: 'mean'.
+        rolling_average - (int) Plotted line will be averaged with last number of x
+            iterations. Default: 5.
         figsize - (tuple) Matplotlib figsize definition.
-        series - (list) List of series to plot, contains tuples containing column in summary to plot, the legend title and color of plot.
-                Default: [('eval_completion','Evaluation','orange'),('train_completion','Training','blue')]
-        
+        series - (list) List of series to plot, contains tuples containing column in
+            summary to plot, the legend title and color of plot.
+                Default: [('eval_completion','Evaluation','orange'),
+                    ('train_completion','Training','blue')]
+
         Returns:
         Pandas DataFrame containing the summary table.
         """
-        
+
         plot_methods = []
         if type(method) is not list:
             plot_methods.append(method)
         else:
             plot_methods = method
 
-        f, axarr_raw = plt.subplots(1,len(plot_methods), figsize=figsize, sharey=True)
+        _, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
 
         axarr = []
         if type(axarr_raw) is not np.ndarray:
             axarr.append(axarr_raw)
         else:
             axarr = axarr_raw
-        
+
         for (m, ax) in zip(plot_methods, axarr):
             summary = self.getSummary(method=m)
-            labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))),1)
+            labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))), 1)
             x = []
             t = []
             for i, a in enumerate(summary.index):
                 x.append(a[0])
                 if i % labels == 0:
                     t.append(a[0])
-                    
+
             for s in series:
                 ax.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
                 ax.plot(
@@ -276,7 +288,7 @@ class TrainingMetrics:
 
             self.metrics["iteration"].unique()
             for r in self.metrics["round"].unique()[1:]:
-                l = "{}-{}".format(r, "0".zfill(self.max_iteration_strlen))
-                ax.axvline(x=l, dashes=[0.25, 0.75], linewidth=0.5, color="black")
+                line = "{}-{}".format(r, "0".zfill(self.max_iteration_strlen))
+                ax.axvline(x=line, dashes=[0.25, 0.75], linewidth=0.5, color="black")
 
         plt.show()
