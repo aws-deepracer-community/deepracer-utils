@@ -639,19 +639,21 @@ class PlottingUtils:
         plt.clf()
 
     @staticmethod
-    def plot_trackpoints(track: Track):
+    def plot_trackpoints(track: Track, annotate_every_nth=1):
         fig, ax = plt.subplots(figsize=(20, 10))
-        PlottingUtils.plot_points(ax, track.center_line)
-        PlottingUtils.plot_points(ax, track.inner_border)
-        PlottingUtils.plot_points(ax, track.outer_border)
+        PlottingUtils.plot_points(ax, track.center_line, annotate_every_nth)
+        PlottingUtils.plot_points(ax, track.inner_border, annotate_every_nth)
+        PlottingUtils.plot_points(ax, track.outer_border, annotate_every_nth)
         ax.axis('equal')
-        plt.show()
+
+        return ax
 
     @staticmethod
-    def plot_points(ax, points):
+    def plot_points(ax, points, annotate_every_nth=1):
         ax.scatter(points[:-1, 0], points[:-1, 1], s=1)
         for i, p in enumerate(points):
-            ax.annotate(i, (p[0], p[1]))
+            if i % annotate_every_nth == 0:
+                ax.annotate(i, (p[0], p[1]))
 
     @staticmethod
     def _plot_coords(ax, ob):
@@ -878,14 +880,21 @@ class ActionBreakdownUtils:
         return 0
 
     @staticmethod
-    def action_breakdown(df, iteration_ids, track: Track, track_breakdown=None,
-                         action_names=None):
+    def action_breakdown(
+        df,
+        track: Track,
+        iteration_ids=None,
+        episode_ids=None,
+        track_breakdown=None,
+        action_names=None,
+        min_reward=0.0
+        ):
         """Visualise action breakdown for the simulation data
 
         Arguments:
         df - dataframe to visualise
-        iteration_ids - which episodes to visualise
         track - track info to plot
+        iteration_ids - which episodes to visualise
         track_breakdown - interesting sections of the track to show,
             default: None (no sections highlighted)
         action_names - how to call the actions; default: None (names will be generated)
@@ -895,68 +904,70 @@ class ActionBreakdownUtils:
 
         fig = plt.figure(figsize=(16, len(action_names)*6))
 
-        if type(iteration_ids) is not list:
+        if iteration_ids is not None and type(iteration_ids) is not list:
             iteration_ids = [iteration_ids]
+
+        if episode_ids is not None and type(episode_ids) is not list:
+            episode_ids = [episode_ids]
 
         wpts_array = track.center_line
 
-        for iter_num in iteration_ids:
-            # Slice the data frame to get all episodes in that iteration
-            df_iter = df[(iter_num == df['iteration'])]
-            n_steps_in_iter = len(df_iter)
-            print('Number of steps in iteration=', n_steps_in_iter)
+        # Slice the data frame to get all episodes in selected iterations
+        df_iter = df[df['iteration'].isin(iteration_ids)] if iteration_ids is not None else df
 
-            th = 0.8
-            for idx in range(len(action_names)):
-                ax = fig.add_subplot(len(action_names), 2, 2 * idx + 1)
-                PlottingUtils.print_border(
+        # Slice the data frame to get all episodes in list
+        df_iter = df[df['episode'].isin(episode_ids)] if episode_ids is not None else df
+
+        for idx in range(len(action_names)):
+            ax = fig.add_subplot(len(action_names), 2, 2 * idx + 1)
+            PlottingUtils.print_border(
+                ax,
+                track
+            )
+
+            df_slice = df_iter[df_iter['action'] == idx]
+            df_slice = df_slice[df_slice['reward'] >= min_reward]
+
+            ax.plot(df_slice['x'], df_slice['y'], 'b.')
+
+            if track_breakdown:
+                for idWp in track_breakdown.vert_lines:
+                    ax.text(wpts_array[idWp][0],
+                            wpts_array[idWp][1] + 0.2,
+                            str(idWp),
+                            bbox=dict(facecolor='red', alpha=0.5))
+
+            # ax.set_title(str(log_name_id) + '-' + str(iter_num) + ' w rew >= '+str(th))
+            ax.set_ylabel(action_names[idx])
+
+            # calculate action way point distribution
+            action_waypoint_distribution = list()
+            for idWp in range(len(wpts_array)):
+                action_waypoint_distribution.append(
+                    len(df_slice[df_slice['closest_waypoint'] == idWp]))
+
+            ax = fig.add_subplot(len(action_names), 2, 2 * idx + 2)
+
+            if track_breakdown:
+                # Call function to create error boxes
+                _ = ActionBreakdownUtils._make_error_boxes(
                     ax,
-                    track
+                    track_breakdown.segment_x,
+                    track_breakdown.segment_y,
+                    track_breakdown.segment_xerr,
+                    track_breakdown.segment_yerr
                 )
 
-                df_slice = df_iter[df_iter['reward'] >= th]
-                df_slice = df_slice[df_slice['action'] == idx]
+                for tt in range(len(track_breakdown.track_segments)):
+                    ax.text(track_breakdown.track_segments[tt][0],
+                            track_breakdown.track_segments[tt][1],
+                            track_breakdown.track_segments[tt][2])
 
-                ax.plot(df_slice['x'], df_slice['y'], 'b.')
-
-                if track_breakdown:
-                    for idWp in track_breakdown.vert_lines:
-                        ax.text(wpts_array[idWp][0],
-                                wpts_array[idWp][1] + 0.2,
-                                str(idWp),
-                                bbox=dict(facecolor='red', alpha=0.5))
-
-                # ax.set_title(str(log_name_id) + '-' + str(iter_num) + ' w rew >= '+str(th))
-                ax.set_ylabel(action_names[idx])
-
-                # calculate action way point distribution
-                action_waypoint_distribution = list()
-                for idWp in range(len(wpts_array)):
-                    action_waypoint_distribution.append(
-                        len(df_slice[df_slice['closest_waypoint'] == idWp]))
-
-                ax = fig.add_subplot(len(action_names), 2, 2 * idx + 2)
-
-                if track_breakdown:
-                    # Call function to create error boxes
-                    _ = ActionBreakdownUtils._make_error_boxes(
-                        ax,
-                        track_breakdown.segment_x,
-                        track_breakdown.segment_y,
-                        track_breakdown.segment_xerr,
-                        track_breakdown.segment_yerr
-                    )
-
-                    for tt in range(len(track_breakdown.track_segments)):
-                        ax.text(track_breakdown.track_segments[tt][0],
-                                track_breakdown.track_segments[tt][1],
-                                track_breakdown.track_segments[tt][2])
-
-                ax.bar(np.arange(len(wpts_array)), action_waypoint_distribution)
-                ax.set_xlabel('waypoint')
-                ax.set_ylabel('# of actions')
-                ax.legend([action_names[idx]])
-                ax.set_ylim((0, 150))
+            ax.bar(np.arange(len(wpts_array)), action_waypoint_distribution)
+            ax.set_xlabel('waypoint')
+            ax.set_ylabel('# of actions')
+            ax.legend([action_names[idx]])
+            ax.set_ylim((0, 150))
 
         plt.show()
         plt.clf()
