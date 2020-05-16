@@ -15,23 +15,15 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from datetime import datetime
-from decimal import Decimal
-
-import matplotlib.pyplot as plt
+from io import BytesIO
+import json
 import math
+
+import boto3
 import numpy as np
 import pandas as pd
-import json
-import boto3
-import itertools
-from io import BytesIO
 
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
-from shapely.geometry.polygon import LineString
-from os import listdir
-from os.path import isfile, join, basename
+import matplotlib.pyplot as plt
 
 
 class TrainingMetrics:
@@ -39,15 +31,15 @@ class TrainingMetrics:
     """
 
     def __init__(
-        self,
-        bucket,
-        model_name=None,
-        pattern="{}/metrics/TrainingMetrics.json",
-        s3_endpoint_url=None,
-        region=None,
-        training_round=1,
-        display_digits_iteration=3,
-        display_digits_episode=4,
+            self,
+            bucket,
+            model_name=None,
+            pattern="{}/metrics/TrainingMetrics.json",
+            s3_endpoint_url=None,
+            region=None,
+            training_round=1,
+            display_digits_iteration=3,
+            display_digits_episode=4,
     ):
         """Creates a TrainingMetrics object. Loads the first metrics file into a DataFrame if
             model name is provided.
@@ -132,14 +124,14 @@ class TrainingMetrics:
         df["time"] = df["elapsed_time_in_milliseconds"] / 1000
         print(
             ("Successfully loaded training round %i: Iterations: %i, " +
-                "Training episodes: %i, Evaluation episodes: %i")
+             "Training episodes: %i, Evaluation episodes: %i")
             % (
                 training_round,
                 max(df["iteration"]) + 1,
                 max(df["episode"]),
                 df[df["phase"] == "evaluation"].shape[0],
-               )
-              )
+            )
+        )
         return df[
             [
                 "r-i",
@@ -236,15 +228,15 @@ class TrainingMetrics:
         return pd.concat([training_agg, eval_agg], axis=1, sort=False)
 
     def plotProgress(
-        self,
-        method="mean",
-        rolling_average=5,
-        figsize=(12, 5),
-        rounds=None,
-        series=[
-            ("eval_completion", "Evaluation", "orange"),
-            ("train_completion", "Training", "blue"),
-        ],
+            self,
+            method="mean",
+            rolling_average=5,
+            figsize=(12, 5),
+            rounds=None,
+            series=[
+                ("eval_completion", "Evaluation", "orange"),
+                ("train_completion", "Training", "blue"),
+            ],
     ):
         """Plots training progress. Allows selection of multiple iterations.
 
@@ -268,7 +260,7 @@ class TrainingMetrics:
         else:
             plot_methods = method
 
-        f, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
+        _, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
 
         axarr = []
         if type(axarr_raw) is not np.ndarray:
