@@ -42,11 +42,12 @@ class TrainingMetrics:
         self,
         bucket,
         model_name=None,
-        pattern="{}/metrics/training_metrics.json",
+        pattern="{}/metrics/TrainingMetrics.json",
         s3_endpoint_url=None,
         region=None,
         training_round=1,
-        display_digits=1,
+        display_digits_iteration=3,
+        display_digits_episode=4,
     ):
         """Creates a TrainingMetrics object. Loads the first metrics file into a DataFrame if
             model name is provided.
@@ -58,8 +59,10 @@ class TrainingMetrics:
         pattern - (str) Filename pattern that will be formatted with the model name to create
             the key.
         training_round - (int) Integer value that will be used to distinguish data.
-        display_digits - (int) Number that will define the padding (e.g for round 1, iteration 25
-            the display_digits=3 would give unique index as 1-025)
+        display_digits_iteration - (int) Number that will define the padding (e.g for round 1,
+            iteration 25 the display_digits_iteration=3 would give unique index as 1-025)
+        display_digits_episode - (int) Number that will define the padding (e.g for round 1,
+            iteration 25 the display_digits_iteration=4 would give unique index as 1-1225)
         s3_endpoint_url - (str) URL for the S3 endpoint
         region - (str) AWS Region for S3
 
@@ -67,7 +70,8 @@ class TrainingMetrics:
         TrainingMetrics object.
         """
         self.s3 = boto3.resource("s3", endpoint_url=s3_endpoint_url, region_name=region)
-        self.max_iteration_strlen = display_digits
+        self.max_iteration_strlen = display_digits_iteration
+        self.max_episode_strlen = display_digits_episode
         self.metrics = None
         self.bucket = bucket
         self.pattern = pattern
@@ -112,6 +116,14 @@ class TrainingMetrics:
             .str.pad(width=self.max_iteration_strlen, side="left", fillchar="0")
         )
 
+        df["r-e"] = (
+            df["round"].astype(str)
+            + "-"
+            + df["episode"]
+            .astype(str)
+            .str.pad(width=self.max_episode_strlen, side="left", fillchar="0")
+        )
+
         df["reward"] = df["reward_score"]
         df["completion"] = df["completion_percentage"]
         df["complete"] = df["episode_status"].apply(
@@ -126,8 +138,8 @@ class TrainingMetrics:
                 max(df["iteration"]) + 1,
                 max(df["episode"]),
                 df[df["phase"] == "evaluation"].shape[0],
-            )
-        )
+               )
+              )
         return df[
             [
                 "r-i",
@@ -135,6 +147,7 @@ class TrainingMetrics:
                 "iteration",
                 "master_iteration",
                 "episode",
+                "r-e",
                 "trial",
                 "phase",
                 "reward",
@@ -176,23 +189,25 @@ class TrainingMetrics:
         """
         return self.metrics[self.metrics["phase"] == "training"]
 
-    def getSummary(self, method="mean", summary_index=["r-i", "iteration"]):
+    def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"]):
         """Provides summary per iteration. Data for evaluation and training is separated.
 
         Arguments:
-        method - (str) Statistical value to be calculated. Examples are 'mean',
-            'median', 'min' & 'max'. Default: 'mean'.
+        method - (str) Statistical value to be calculated. Examples are 'mean', 'median',
+            'min' & 'max'. Default: 'mean'.
         summary_index - (list) List of columns to be used as index of summary.
             Default ['r-i','iteration'].
 
         Returns:
         Pandas DataFrame containing the summary table.
         """
+        input_df = self.metrics
+        if rounds is not None:
+            input_df = input_df[input_df["round"].isin(rounds)]
+
         columns = summary_index + ["reward", "completion", "time", "complete"]
-        training_input = self.metrics[self.metrics["phase"] == "training"][
-            columns
-        ].copy()
-        eval_input = self.metrics[self.metrics["phase"] == "evaluation"][columns].copy()
+        training_input = input_df[input_df["phase"] == "training"][columns].copy()
+        eval_input = input_df[input_df["phase"] == "evaluation"][columns].copy()
 
         training_gb = training_input.groupby(summary_index)
         training_agg = getattr(training_gb, method)()
@@ -225,23 +240,23 @@ class TrainingMetrics:
         method="mean",
         rolling_average=5,
         figsize=(12, 5),
+        rounds=None,
         series=[
             ("eval_completion", "Evaluation", "orange"),
             ("train_completion", "Training", "blue"),
         ],
     ):
-        """Plots training progress. Allows selection of multiple
+        """Plots training progress. Allows selection of multiple iterations.
 
         Arguments:
-        method - (str / list) Statistical value to be calculated. Examples are 'mean',
-            'median', 'min' & 'max'. Default: 'mean'.
-        rolling_average - (int) Plotted line will be averaged with last number of x
-            iterations. Default: 5.
+        method - (str / list) Statistical value to be calculated. Examples are 'mean', 'median',
+            'min' & 'max'. Default: 'mean'.
+        rolling_average - (int) Plotted line will be averaged with last number of x iterations.
+            Default: 5.
         figsize - (tuple) Matplotlib figsize definition.
-        series - (list) List of series to plot, contains tuples containing column in
-            summary to plot, the legend title and color of plot.
-                Default: [('eval_completion','Evaluation','orange'),
-                    ('train_completion','Training','blue')]
+        series - (list) List of series to plot, contains tuples containing column in summary to
+            plot, the legend title and color of plot. Default:
+            [('eval_completion','Evaluation','orange'),('train_completion','Training','blue')]
 
         Returns:
         Pandas DataFrame containing the summary table.
@@ -253,7 +268,7 @@ class TrainingMetrics:
         else:
             plot_methods = method
 
-        _, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
+        f, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
 
         axarr = []
         if type(axarr_raw) is not np.ndarray:
@@ -262,7 +277,7 @@ class TrainingMetrics:
             axarr = axarr_raw
 
         for (m, ax) in zip(plot_methods, axarr):
-            summary = self.getSummary(method=m)
+            summary = self.getSummary(method=m, rounds=rounds)
             labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))), 1)
             x = []
             t = []
@@ -275,7 +290,7 @@ class TrainingMetrics:
                 ax.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
                 ax.plot(
                     x,
-                    summary[s[0]].rolling(rolling_average, min_periods=1, center=True).mean(),
+                    summary[s[0]].rolling(rolling_average, min_periods=1).mean(),
                     label=s[1],
                     color=s[2],
                 )
@@ -287,8 +302,13 @@ class TrainingMetrics:
             ax.legend(loc='upper left')
 
             self.metrics["iteration"].unique()
-            for r in self.metrics["round"].unique()[1:]:
-                line = "{}-{}".format(r, "0".zfill(self.max_iteration_strlen))
-                ax.axvline(x=line, dashes=[0.25, 0.75], linewidth=0.5, color="black")
+            if rounds is not None:
+                unique_rounds = rounds[1:]
+            else:
+                unique_rounds = self.metrics["round"].unique()[1:]
+
+            for r in unique_rounds:
+                label = "{}-{}".format(r, "0".zfill(self.max_iteration_strlen))
+                ax.axvline(x=label, dashes=[0.25, 0.75], linewidth=0.5, color="black")
 
         plt.show()
