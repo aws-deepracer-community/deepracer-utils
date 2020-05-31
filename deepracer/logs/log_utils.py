@@ -496,6 +496,8 @@ class PlottingUtils:
 
             ax = fig.add_subplot(n_laps, 1, i + 1)
 
+            ax.axis('equal')
+
             PlottingUtils.print_border(ax, track, color='cyan')
 
             data_to_plot.plot.scatter('x', 'y', ax=ax, s=10, c='blue')
