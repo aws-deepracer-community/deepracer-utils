@@ -34,12 +34,13 @@ class TrainingMetrics:
             self,
             bucket,
             model_name=None,
-            pattern="{}/metrics/TrainingMetrics.json",
+            pattern="{}/metrics/TrainingMetrics{}.json",
             s3_endpoint_url=None,
             region=None,
             training_round=1,
             display_digits_iteration=3,
             display_digits_episode=4,
+            display_digits_round=2
     ):
         """Creates a TrainingMetrics object. Loads the first metrics file into a DataFrame if
             model name is provided.
@@ -64,6 +65,7 @@ class TrainingMetrics:
         self.s3 = boto3.resource("s3", endpoint_url=s3_endpoint_url, region_name=region)
         self.max_iteration_strlen = display_digits_iteration
         self.max_episode_strlen = display_digits_episode
+        self.max_round_strlen = display_digits_round
         self.metrics = None
         self.bucket = bucket
         self.pattern = pattern
@@ -73,7 +75,7 @@ class TrainingMetrics:
             )
             self.metrics = df
 
-    def _loadRound(self, bucket, key, training_round, verbose=False):
+    def _loadRound(self, bucket, key, training_round, worker, verbose=False):
 
         if verbose:
             print("Downloading s3://%s/%s" % (bucket, key))
@@ -83,7 +85,8 @@ class TrainingMetrics:
         data = json.loads(bytes_io.getvalue())
 
         df = pd.read_json(json.dumps(data["metrics"]), orient="records")
-        self.episodes_per_iteration = max(df["trial"])
+        if worker == 0:
+            self.episodes_per_iteration = max(df["trial"])
 
         df["round"] = training_round
         df["iteration"] = (
@@ -92,16 +95,20 @@ class TrainingMetrics:
             .astype(int)
         )
         if self.metrics is not None:
-            df["master_iteration"] = (
-                max(self.metrics["master_iteration"]) + 1 + df["iteration"]
-            )
+            prev_metrics = self.metrics[self.metrics["round"]<training_round]
+            if prev_metrics.shape[0] > 0:
+                df["master_iteration"] = (
+                    max(prev_metrics["master_iteration"]) + 1 + df["iteration"]
+                )
+            else:
+                df["master_iteration"] = df["iteration"]
         else:
             df["master_iteration"] = df["iteration"]
         self.max_iteration_strlen = max(
             len(str(max(df["iteration"]))), self.max_iteration_strlen
         )
         df["r-i"] = (
-            df["round"].astype(str)
+            df["round"].astype(str).str.pad(width=self.max_round_strlen, side="left", fillchar="0")
             + "-"
             + df["iteration"]
             .astype(str)
@@ -115,7 +122,7 @@ class TrainingMetrics:
             .astype(str)
             .str.pad(width=self.max_episode_strlen, side="left", fillchar="0")
         )
-
+        df["worker"] = worker
         df["reward"] = df["reward_score"]
         df["completion"] = df["completion_percentage"]
         df["complete"] = df["episode_status"].apply(
@@ -123,10 +130,11 @@ class TrainingMetrics:
         )
         df["time"] = df["elapsed_time_in_milliseconds"] / 1000
         print(
-            ("Successfully loaded training round %i: Iterations: %i, " +
+            ("Successfully loaded training round %i for worker %i: Iterations: %i, " +
              "Training episodes: %i, Evaluation episodes: %i")
             % (
                 training_round,
+                worker,
                 max(df["iteration"]) + 1,
                 max(df["episode"]),
                 df[df["phase"] == "evaluation"].shape[0],
@@ -140,6 +148,7 @@ class TrainingMetrics:
                 "master_iteration",
                 "episode",
                 "r-e",
+                "worker",
                 "trial",
                 "phase",
                 "reward",
@@ -150,20 +159,29 @@ class TrainingMetrics:
             ]
         ]
 
-    def addRound(self, model_name, training_round=2):
+    def addRound(self, model_name, training_round=2, workers=1):
         """Adds a round of training metrics to the data set
 
         Arguments:
         model_name - (str) Name of the model that will be loaded.
         training_round - (int) Integer value that will be used to distinguish data.
+        workers - (int) Number of separate workers files to be loaded. (Default: 1)
         """
-        df = self._loadRound(
-            self.bucket, self.pattern.format(model_name), training_round
-        )
-        if self.metrics is not None:
-            self.metrics = self.metrics.append(df, ignore_index=True)
-        else:
-            self.metrics = df
+        
+        for w in range(0, workers):
+            if w > 0:
+                worker_suffix = "_{}".format(w)
+            else:
+                worker_suffix = ""
+                
+            df = self._loadRound(
+                self.bucket, self.pattern.format(model_name, worker_suffix), training_round, w
+            )
+            
+            if self.metrics is not None:
+                self.metrics = self.metrics.append(df, ignore_index=True)
+            else:
+                self.metrics = df
 
     def getEvaluation(self):
         """Get the Evaluation part of the data.
@@ -300,7 +318,7 @@ class TrainingMetrics:
                 unique_rounds = self.metrics["round"].unique()[1:]
 
             for r in unique_rounds:
-                label = "{}-{}".format(r, "0".zfill(self.max_iteration_strlen))
+                label = "{}-{}".format(str(r).zfill(self.max_round_strlen), "0".zfill(self.max_iteration_strlen))
                 ax.axvline(x=label, dashes=[0.25, 0.75], linewidth=0.5, color="black")
 
         plt.show()
