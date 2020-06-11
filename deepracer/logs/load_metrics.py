@@ -15,23 +15,15 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from datetime import datetime
-from decimal import Decimal
-
-import matplotlib.pyplot as plt
+from io import BytesIO
+import json
 import math
+
+import boto3
 import numpy as np
 import pandas as pd
-import json
-import boto3
-import itertools
-from io import BytesIO
 
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
-from shapely.geometry.polygon import LineString
-from os import listdir
-from os.path import isfile, join, basename
+import matplotlib.pyplot as plt
 
 
 class TrainingMetrics:
@@ -39,14 +31,16 @@ class TrainingMetrics:
     """
 
     def __init__(
-        self,
-        bucket,
-        model_name=None,
-        pattern="{}/metrics/training_metrics.json",
-        s3_endpoint_url=None,
-        region=None,
-        training_round=1,
-        display_digits=1,
+            self,
+            bucket,
+            model_name=None,
+            pattern="{}/metrics/TrainingMetrics{}.json",
+            s3_endpoint_url=None,
+            region=None,
+            training_round=1,
+            display_digits_iteration=3,
+            display_digits_episode=4,
+            display_digits_round=2
     ):
         """Creates a TrainingMetrics object. Loads the first metrics file into a DataFrame if
             model name is provided.
@@ -58,8 +52,10 @@ class TrainingMetrics:
         pattern - (str) Filename pattern that will be formatted with the model name to create
             the key.
         training_round - (int) Integer value that will be used to distinguish data.
-        display_digits - (int) Number that will define the padding (e.g for round 1, iteration 25
-            the display_digits=3 would give unique index as 1-025)
+        display_digits_iteration - (int) Number that will define the padding (e.g for round 1,
+            iteration 25 the display_digits_iteration=3 would give unique index as 1-025)
+        display_digits_episode - (int) Number that will define the padding (e.g for round 1,
+            iteration 25 the display_digits_iteration=4 would give unique index as 1-1225)
         s3_endpoint_url - (str) URL for the S3 endpoint
         region - (str) AWS Region for S3
 
@@ -67,7 +63,9 @@ class TrainingMetrics:
         TrainingMetrics object.
         """
         self.s3 = boto3.resource("s3", endpoint_url=s3_endpoint_url, region_name=region)
-        self.max_iteration_strlen = display_digits
+        self.max_iteration_strlen = display_digits_iteration
+        self.max_episode_strlen = display_digits_episode
+        self.max_round_strlen = display_digits_round
         self.metrics = None
         self.bucket = bucket
         self.pattern = pattern
@@ -77,7 +75,7 @@ class TrainingMetrics:
             )
             self.metrics = df
 
-    def _loadRound(self, bucket, key, training_round, verbose=False):
+    def _loadRound(self, bucket, key, training_round, worker, verbose=False):
 
         if verbose:
             print("Downloading s3://%s/%s" % (bucket, key))
@@ -87,7 +85,8 @@ class TrainingMetrics:
         data = json.loads(bytes_io.getvalue())
 
         df = pd.read_json(json.dumps(data["metrics"]), orient="records")
-        self.episodes_per_iteration = max(df["trial"])
+        if worker == 0:
+            self.episodes_per_iteration = max(df["trial"])
 
         df["round"] = training_round
         df["iteration"] = (
@@ -96,22 +95,34 @@ class TrainingMetrics:
             .astype(int)
         )
         if self.metrics is not None:
-            df["master_iteration"] = (
-                max(self.metrics["master_iteration"]) + 1 + df["iteration"]
-            )
+            prev_metrics = self.metrics[self.metrics["round"]<training_round]
+            if prev_metrics.shape[0] > 0:
+                df["master_iteration"] = (
+                    max(prev_metrics["master_iteration"]) + 1 + df["iteration"]
+                )
+            else:
+                df["master_iteration"] = df["iteration"]
         else:
             df["master_iteration"] = df["iteration"]
         self.max_iteration_strlen = max(
             len(str(max(df["iteration"]))), self.max_iteration_strlen
         )
         df["r-i"] = (
-            df["round"].astype(str)
+            df["round"].astype(str).str.pad(width=self.max_round_strlen, side="left", fillchar="0")
             + "-"
             + df["iteration"]
             .astype(str)
             .str.pad(width=self.max_iteration_strlen, side="left", fillchar="0")
         )
 
+        df["r-e"] = (
+            df["round"].astype(str)
+            + "-"
+            + df["episode"]
+            .astype(str)
+            .str.pad(width=self.max_episode_strlen, side="left", fillchar="0")
+        )
+        df["worker"] = worker
         df["reward"] = df["reward_score"]
         df["completion"] = df["completion_percentage"]
         df["complete"] = df["episode_status"].apply(
@@ -119,10 +130,11 @@ class TrainingMetrics:
         )
         df["time"] = df["elapsed_time_in_milliseconds"] / 1000
         print(
-            ("Successfully loaded training round %i: Iterations: %i, " +
-                "Training episodes: %i, Evaluation episodes: %i")
+            ("Successfully loaded training round %i for worker %i: Iterations: %i, " +
+             "Training episodes: %i, Evaluation episodes: %i")
             % (
                 training_round,
+                worker,
                 max(df["iteration"]) + 1,
                 max(df["episode"]),
                 df[df["phase"] == "evaluation"].shape[0],
@@ -135,6 +147,8 @@ class TrainingMetrics:
                 "iteration",
                 "master_iteration",
                 "episode",
+                "r-e",
+                "worker",
                 "trial",
                 "phase",
                 "reward",
@@ -145,20 +159,29 @@ class TrainingMetrics:
             ]
         ]
 
-    def addRound(self, model_name, training_round=2):
+    def addRound(self, model_name, training_round=2, workers=1):
         """Adds a round of training metrics to the data set
 
         Arguments:
         model_name - (str) Name of the model that will be loaded.
         training_round - (int) Integer value that will be used to distinguish data.
+        workers - (int) Number of separate workers files to be loaded. (Default: 1)
         """
-        df = self._loadRound(
-            self.bucket, self.pattern.format(model_name), training_round
-        )
-        if self.metrics is not None:
-            self.metrics = self.metrics.append(df, ignore_index=True)
-        else:
-            self.metrics = df
+        
+        for w in range(0, workers):
+            if w > 0:
+                worker_suffix = "_{}".format(w)
+            else:
+                worker_suffix = ""
+                
+            df = self._loadRound(
+                self.bucket, self.pattern.format(model_name, worker_suffix), training_round, w
+            )
+            
+            if self.metrics is not None:
+                self.metrics = self.metrics.append(df, ignore_index=True)
+            else:
+                self.metrics = df
 
     def getEvaluation(self):
         """Get the Evaluation part of the data.
@@ -176,23 +199,25 @@ class TrainingMetrics:
         """
         return self.metrics[self.metrics["phase"] == "training"]
 
-    def getSummary(self, method="mean", summary_index=["r-i", "iteration"]):
+    def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"]):
         """Provides summary per iteration. Data for evaluation and training is separated.
 
         Arguments:
-        method - (str) Statistical value to be calculated. Examples are 'mean',
-            'median', 'min' & 'max'. Default: 'mean'.
+        method - (str) Statistical value to be calculated. Examples are 'mean', 'median',
+            'min' & 'max'. Default: 'mean'.
         summary_index - (list) List of columns to be used as index of summary.
             Default ['r-i','iteration'].
 
         Returns:
         Pandas DataFrame containing the summary table.
         """
+        input_df = self.metrics
+        if rounds is not None:
+            input_df = input_df[input_df["round"].isin(rounds)]
+
         columns = summary_index + ["reward", "completion", "time", "complete"]
-        training_input = self.metrics[self.metrics["phase"] == "training"][
-            columns
-        ].copy()
-        eval_input = self.metrics[self.metrics["phase"] == "evaluation"][columns].copy()
+        training_input = input_df[input_df["phase"] == "training"][columns].copy()
+        eval_input = input_df[input_df["phase"] == "evaluation"][columns].copy()
 
         training_gb = training_input.groupby(summary_index)
         training_agg = getattr(training_gb, method)()
@@ -221,27 +246,27 @@ class TrainingMetrics:
         return pd.concat([training_agg, eval_agg], axis=1, sort=False)
 
     def plotProgress(
-        self,
-        method="mean",
-        rolling_average=5,
-        figsize=(12, 5),
-        series=[
-            ("eval_completion", "Evaluation", "orange"),
-            ("train_completion", "Training", "blue"),
-        ],
+            self,
+            method="mean",
+            rolling_average=5,
+            figsize=(12, 5),
+            rounds=None,
+            series=[
+                ("eval_completion", "Evaluation", "orange"),
+                ("train_completion", "Training", "blue"),
+            ],
     ):
-        """Plots training progress. Allows selection of multiple
+        """Plots training progress. Allows selection of multiple iterations.
 
         Arguments:
-        method - (str / list) Statistical value to be calculated. Examples are 'mean',
-            'median', 'min' & 'max'. Default: 'mean'.
-        rolling_average - (int) Plotted line will be averaged with last number of x
-            iterations. Default: 5.
+        method - (str / list) Statistical value to be calculated. Examples are 'mean', 'median',
+            'min' & 'max'. Default: 'mean'.
+        rolling_average - (int) Plotted line will be averaged with last number of x iterations.
+            Default: 5.
         figsize - (tuple) Matplotlib figsize definition.
-        series - (list) List of series to plot, contains tuples containing column in
-            summary to plot, the legend title and color of plot.
-                Default: [('eval_completion','Evaluation','orange'),
-                    ('train_completion','Training','blue')]
+        series - (list) List of series to plot, contains tuples containing column in summary to
+            plot, the legend title and color of plot. Default:
+            [('eval_completion','Evaluation','orange'),('train_completion','Training','blue')]
 
         Returns:
         Pandas DataFrame containing the summary table.
@@ -262,7 +287,7 @@ class TrainingMetrics:
             axarr = axarr_raw
 
         for (m, ax) in zip(plot_methods, axarr):
-            summary = self.getSummary(method=m)
+            summary = self.getSummary(method=m, rounds=rounds)
             labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))), 1)
             x = []
             t = []
@@ -275,7 +300,7 @@ class TrainingMetrics:
                 ax.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
                 ax.plot(
                     x,
-                    summary[s[0]].rolling(rolling_average, min_periods=1, center=True).mean(),
+                    summary[s[0]].rolling(rolling_average, min_periods=1).mean(),
                     label=s[1],
                     color=s[2],
                 )
@@ -287,8 +312,13 @@ class TrainingMetrics:
             ax.legend(loc='upper left')
 
             self.metrics["iteration"].unique()
-            for r in self.metrics["round"].unique()[1:]:
-                line = "{}-{}".format(r, "0".zfill(self.max_iteration_strlen))
-                ax.axvline(x=line, dashes=[0.25, 0.75], linewidth=0.5, color="black")
+            if rounds is not None:
+                unique_rounds = rounds[1:]
+            else:
+                unique_rounds = self.metrics["round"].unique()[1:]
+
+            for r in unique_rounds:
+                label = "{}-{}".format(str(r).zfill(self.max_round_strlen), "0".zfill(self.max_iteration_strlen))
+                ax.axvline(x=label, dashes=[0.25, 0.75], linewidth=0.5, color="black")
 
         plt.show()
