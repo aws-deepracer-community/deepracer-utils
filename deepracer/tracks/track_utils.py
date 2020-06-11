@@ -188,10 +188,18 @@ class Track:
             np.vstack((l_outer_border, np.flipud(l_inner_border))))
 
     def size(self):
+        """Track bounding box size tuple
+        """
         return (
             np.max(self.outer_border[:, 0]) - np.min(self.outer_border[:, 0]),
             np.max(self.outer_border[:, 1]) - np.min(self.outer_border[:, 1])
         )
+
+    def ratio(self):
+        """Track size ratio
+        """
+        s = self.size()
+        return s[1] / s[0]
 
 
 class GeometryUtils:

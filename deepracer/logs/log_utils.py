@@ -496,6 +496,8 @@ class PlottingUtils:
 
             ax = fig.add_subplot(n_laps, 1, i + 1)
 
+            ax.axis('equal')
+
             PlottingUtils.print_border(ax, track, color='cyan')
 
             data_to_plot.plot.scatter('x', 'y', ax=ax, s=10, c='blue')
@@ -598,7 +600,7 @@ class PlottingUtils:
                 plt.clf()
 
     @staticmethod
-    def plot_track(df, track: Track, value_field="reward", margin=1):
+    def plot_track(df, track: Track, value_field="reward", margin=1, cmap="hot"):
         """Plot track with dots presenting the rewards for steps
         """
         track_size = (np.asarray(track.size()) + 2*margin).astype(int) * 100
@@ -633,7 +635,7 @@ class PlottingUtils:
         PlottingUtils.print_border(ax, shifted_track)
 
         plt.title("Reward distribution for all actions ")
-        plt.imshow(track_img, cmap='hot', interpolation='bilinear', origin="lower")
+        plt.imshow(track_img, cmap=cmap, interpolation='bilinear', origin="lower")
 
         plt.show()
         plt.clf()
