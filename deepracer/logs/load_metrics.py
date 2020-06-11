@@ -95,7 +95,7 @@ class TrainingMetrics:
             .astype(int)
         )
         if self.metrics is not None:
-            prev_metrics = self.metrics[self.metrics["round"]<training_round]
+            prev_metrics = self.metrics[self.metrics["round"] < training_round]
             if prev_metrics.shape[0] > 0:
                 df["master_iteration"] = (
                     max(prev_metrics["master_iteration"]) + 1 + df["iteration"]
@@ -167,17 +167,17 @@ class TrainingMetrics:
         training_round - (int) Integer value that will be used to distinguish data.
         workers - (int) Number of separate workers files to be loaded. (Default: 1)
         """
-        
+
         for w in range(0, workers):
             if w > 0:
                 worker_suffix = "_{}".format(w)
             else:
                 worker_suffix = ""
-                
+
             df = self._loadRound(
                 self.bucket, self.pattern.format(model_name, worker_suffix), training_round, w
             )
-            
+
             if self.metrics is not None:
                 self.metrics = self.metrics.append(df, ignore_index=True)
             else:
@@ -318,7 +318,10 @@ class TrainingMetrics:
                 unique_rounds = self.metrics["round"].unique()[1:]
 
             for r in unique_rounds:
-                label = "{}-{}".format(str(r).zfill(self.max_round_strlen), "0".zfill(self.max_iteration_strlen))
+                label = "{}-{}".format(
+                    str(r).zfill(self.max_round_strlen),
+                    "0".zfill(self.max_iteration_strlen)
+                    )
                 ax.axvline(x=label, dashes=[0.25, 0.75], linewidth=0.5, color="black")
 
         plt.show()
