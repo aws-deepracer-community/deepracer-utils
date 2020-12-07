@@ -208,6 +208,13 @@ class SimulationLogsIO:
             df['reward'].values.reshape(df['reward'].values.shape[0], 1))
         df['reward'] = pd.DataFrame(scaled_vals.squeeze())
 
+class TrainingLogs:
+    def __init__(self):
+        self.iteration_csv_logs_list = None
+        self.robomaker_logs_list = None
+        self.sagemaker_logs = None
+
+    
 
 class AnalysisUtils:
     """Set of utilities to verify how the training is doing.
