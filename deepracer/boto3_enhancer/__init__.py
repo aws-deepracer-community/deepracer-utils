@@ -22,15 +22,6 @@ import boto3
 from .. import DEEPRACER_UTILS_ROOT
 
 
-def _provide_url_and_region(params, **kwargs):
-    if 'region_name' not in params:
-        params['region_name'] = 'us-east-1'
-
-    if 'endpoint_url' not in params:
-        params['endpoint_url'] = "https://deepracer-prod.{}.amazonaws.com".format(
-            params['region_name'])
-
-
 def add_deepracer(session=None, **kwargs):
     """
     Add deepracer service definition file to boto3 session.
@@ -50,17 +41,16 @@ def add_deepracer(session=None, **kwargs):
             boto3.setup_default_session(**kwargs)
         session = boto3.DEFAULT_SESSION
 
-    dr_path = os.path.join(DEEPRACER_UTILS_ROOT, 'boto3', 'models')
+    dr_path = os.path.join(DEEPRACER_UTILS_ROOT, 'boto3_enhancer', 'models')
 
     if dr_path not in session._loader.search_paths:
         session._loader.search_paths.append(dr_path)
 
-    session.unregister('provide-client-params.deepracer')
-    session.register('provide-client-params.deepracer', _provide_url_and_region)
-
 
 def deepracer_client(region_name='us-east-1'):
-    """ Return deepracer client for boto3 """
+    """
+    Return deepracer client for boto3 with default (and only working) parameters
+    """
     add_deepracer()
 
     return boto3.client(

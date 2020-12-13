@@ -1407,7 +1407,9 @@
       ],
       "members":{
         "Arn":{"shape":"Arn"},
-        "AssetType":{"shape":"AssetType"}
+        "AssetType":{"shape":"AssetType"},
+        "ModelArtifactsS3Bucket":{"shape":"S3Bucket"},
+        "ModelArtifactsS3Prefix":{"shape":"S3ObjectKey"}
       }
     },
     "GetAssetUrlResponse":{
