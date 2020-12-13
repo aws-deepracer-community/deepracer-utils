@@ -4,6 +4,7 @@ import pandas as pd
 import re
 from joblib import Parallel, delayed
 
+
 class DeepRacerLog:
     def __init__(self):
         # Column names we support in the CSV file.
@@ -26,20 +27,19 @@ class DeepRacerLog:
             "episode_status",
         ]
         self.hyperparam_keys = [
-            "batch_size", 
-            "beta_entropy", 
-            "e_greedy_value", 
-            "epsilon_steps", 
-            "exploration_type", 
-            "loss_type", 
-            "lr", 
-            "num_episodes_between_training", 
-            "num_epochs", 
-            "stack_size", 
-            "term_cond_avg_score", 
+            "batch_size",
+            "beta_entropy",
+            "e_greedy_value",
+            "epsilon_steps",
+            "exploration_type",
+            "loss_type",
+            "lr",
+            "num_episodes_between_training",
+            "num_epochs",
+            "stack_size",
+            "term_cond_avg_score",
             "term_cond_max_episodes"
         ]
-
 
     def load(self):
         """Method that loads a DeepRacer log into a dataframe.
@@ -62,14 +62,15 @@ class DeepRacerLog:
 
         Raises:
             NotImplementedError: This class should not be used.
-        """  
+        """
+
 
 class DeepRacerConsoleLog(DeepRacerLog):
     def __init__(self, model_folder):
         super().__init__()
 
         self.model_folder = model_folder
-        
+
         self.iter_count = {}
 
         self.df = None
@@ -87,11 +88,12 @@ class DeepRacerConsoleLog(DeepRacerLog):
 
         return df
 
-
     def load(self):
         # Load all available iteration files.
-        model_iterations = glob.glob(os.path.join(self.model_folder, "**", "**", "training-simtrace", "*-iteration.csv"))
+        model_iterations = glob.glob(os.path.join(
+            self.model_folder, "**", "**", "training-simtrace", "*-iteration.csv"))
         print(self.model_folder)
+
         def read_csv(path, iteration):
             df = pd.read_csv(path, names=self.col_names, header=0)
 
@@ -105,12 +107,12 @@ class DeepRacerConsoleLog(DeepRacerLog):
 
         if len(dfs) == 0:
             return
-        
+
         # Merge into single large DataFrame
         df = pd.concat(dfs, ignore_index=True)
 
         self.df = df
-  
+
     def dataframe(self):
         if self.df is None:
             raise Exception("Model not loaded, call load() before requesting a dataframe.")
@@ -120,16 +122,17 @@ class DeepRacerConsoleLog(DeepRacerLog):
     def hyperparameters(self):
         try:
             missing = set(self.hyperparam_keys)
-            robomaker_log = glob.glob(os.path.join(self.model_folder, "**", "training", "*-robomaker.log"))[0]
+            robomaker_log = glob.glob(os.path.join(
+                self.model_folder, "**", "training", "*-robomaker.log"))[0]
             hyperparameters = {}
         except:
             raise Exception("Could not find robomaker log!")
-            
+
         with open(robomaker_log, 'r') as f:
             for line in f.read().splitlines():
                 for key in missing:
                     # TODO: Fig regex
-#                     match = re.search(r'"{}": (.*)'.format(key), line)
+                    #                     match = re.search(r'"{}": (.*)'.format(key), line)
 
                     if match:
                         value = match.group(1).replace(",", "")
@@ -145,5 +148,3 @@ class DeepRacerConsoleLog(DeepRacerLog):
                     break
 
             return hyperparameters
-
-
