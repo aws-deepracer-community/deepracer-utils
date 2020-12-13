@@ -41,7 +41,8 @@ setup(
         'shapely>=1.7.0',
         'matplotlib>=3.1.0',
         'pandas>=1.0.0',
-        'scikit-learn>=0.22.0'
+        'scikit-learn>=0.22.0',
+        'joblib>=0.17.0'
     ],
     extras_require={
         'dev': ['check-manifest'],
