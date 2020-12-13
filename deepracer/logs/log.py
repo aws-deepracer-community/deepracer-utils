@@ -1,4 +1,5 @@
 import glob
+import json
 import os
 import pandas as pd
 import re
@@ -75,19 +76,6 @@ class DeepRacerConsoleLog(DeepRacerLog):
 
         self.df = None
 
-    def load_model_iteration(self, model_iteration):
-        dfs = []
-
-        dfs = [self.load_worker(model_iteration, worker_id) for worker_id in worker_ids]
-        if len(dfs) == 0:
-
-            return None
-
-        df = pd.concat(dfs, ignore_index=True)
-        df["model_iteration"] = "rl-deepracer-{}".format(model_iteration)
-
-        return df
-
     def load(self):
         # Load all available iteration files.
         model_iterations = glob.glob(os.path.join(
@@ -121,30 +109,53 @@ class DeepRacerConsoleLog(DeepRacerLog):
 
     def hyperparameters(self):
         try:
-            missing = set(self.hyperparam_keys)
             robomaker_log = glob.glob(os.path.join(
                 self.model_folder, "**", "training", "*-robomaker.log"))[0]
-            hyperparameters = {}
-        except:
-            raise Exception("Could not find robomaker log!")
+        except Exception as e:
+            raise Exception("Could not find robomaker log!") from e
 
+        outside_hyperparams = True
+        hyperparameters_string = ""
         with open(robomaker_log, 'r') as f:
-            for line in f.read().splitlines():
-                for key in missing:
-                    # TODO: Fig regex
-                    #                     match = re.search(r'"{}": (.*)'.format(key), line)
-
-                    if match:
-                        value = match.group(1).replace(",", "")
-
-                        if value.isnumeric():
-                            value = float(value)
-
-                        hyperparameters[key] = value
-                        missing.remove(key)
+            for line in f:
+                if outside_hyperparams:
+                    if "Using the following hyper-parameters" in line:
+                        outside_hyperparams = False
+                else:
+                    hyperparameters_string += line
+                    if "}" in line:
                         break
 
-                if len(missing) == 0:
-                    break
+        return json.loads(hyperparameters_string)
 
-            return hyperparameters
+    def action_space(self):
+        try:
+            robomaker_log = glob.glob(os.path.join(
+                self.model_folder, "**", "training", "*-robomaker.log"))[0]
+        except Exception as e:
+            raise Exception("Could not find robomaker log!") from e
+
+        with open(robomaker_log, 'r') as f:
+            for line in f:
+                if "Action space from file: " in line:
+                    return json.loads(line[24:].replace("'", '"'))
+
+    def agent_and_network(self):
+        try:
+            robomaker_log = glob.glob(os.path.join(
+                self.model_folder, "**", "training", "*-robomaker.log"))[0]
+        except Exception as e:
+            raise Exception("Could not find robomaker log!") from e
+
+        with open(robomaker_log, 'r') as f:
+            result = {}
+            for line in f:
+                if " * /WORLD_NAME: " in line:
+                    result["world"] = line[:-1].split(" ")[-1]
+                elif "Sensor list ['" in line:
+                    data = line[:-1].split(", ")
+                    result["sensor_list"] = json.loads(data[0].split(" ")[-1].replace("'", '"'))
+                    for info in data[1:]:
+                        data_bits = info.split(" ")
+                        result[data_bits[0]] = data_bits[1]
+                    return result
