@@ -155,6 +155,39 @@ london_loop = TrackBreakdown(
 track_breakdown = {'reinvent2018': reinvent2018, 'london_loop': london_loop}
 
 
+track_meta = {}
+track_meta['Austin'] = 'American Hills Speedway'
+track_meta['Singapore'] = 'Asia Pacific Bay Loop'
+track_meta['Monaco'] = 'European Seaside Circuit'
+track_meta['Aragon'] = 'Stratus Loop'
+track_meta['Belille'] = 'Cumulo Turnpike'
+track_meta['Albert'] = 'Yun Speedway'
+track_meta['July_2020'] = 'Roger Raceway'
+track_meta['FS_June2020'] = 'Fumiaki Loop'
+track_meta['Spain_track'] = 'Circuit de Barcelona-Catalunya'
+track_meta['reInvent2019_track'] = 'The 2019 DeepRacer Championship Cup'
+track_meta['reinvent_base'] = 're:Invent 2018'
+track_meta['AmericasGeneratedInclStart'] = 'Badaal Track'
+track_meta['LGSWide'] = 'SOLA Speedway'
+track_meta['Vegas_track'] = 'AWS Summit Raceway'
+track_meta['Canada_Training'] = 'Toronto Turnpike Training'
+track_meta['Canada_Eval'] = 'Toronto Turnpike Eval'
+track_meta['Mexico_track'] = 'Cumulo Carrera Training'
+track_meta['Mexico_track_eval'] = 'Cumulo Carrera Eval'
+track_meta['China_track'] = 'Shanghai Sudu Training'
+track_meta['China_eval_track'] = 'Shanghai Sudu Eval'
+track_meta['New_York_Track'] = 'Empire City Training'
+track_meta['New_York_Eval_Track'] = 'Empire City Eval'
+track_meta['Tokyo_Training_track'] = 'Kumo Torakku Training'
+track_meta['Virtual_May19_Train_track'] = 'London Loop Training'
+track_meta['Bowtie_track'] = 'Bowtie Track'
+track_meta['Oval_track'] = 'Oval Track'
+track_meta['reInvent2019_wide'] = 're:Invent 2018 Wide'
+track_meta['reInvent2019_wide_mirrored'] = 're:Invent 2018 Wide Mirrored'
+track_meta['H_track'] = 'H track'
+track_meta['Straight_track'] = 'Straight track'
+
+
 class Track:
     """Track object represents a track.
 
