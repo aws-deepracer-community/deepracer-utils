@@ -22,6 +22,10 @@ import numpy as np
 from shapely.geometry import Polygon
 from shapely.geometry.polygon import LineString
 
+# os tools to list things
+from os import listdir
+from os.path import isfile, join
+
 
 class TrackIO:
     """Utility to help load npy files containing the track waypoints.
@@ -43,6 +47,13 @@ class TrackIO:
                     default value: "./tracks"
         """
         self.base_path = base_path
+
+    def get_tracks(self):
+        """Yields tracks in the base_path
+        """
+        for f in sorted(listdir(self.base_path)):
+            if isfile(join(self.base_path, f)) and f.endswith('.npy'):
+                yield f
 
     def get_track_waypoints(self, track_name):
         """Load track waypoints as an array of coordinates
@@ -177,10 +188,18 @@ class Track:
             np.vstack((l_outer_border, np.flipud(l_inner_border))))
 
     def size(self):
+        """Track bounding box size tuple
+        """
         return (
             np.max(self.outer_border[:, 0]) - np.min(self.outer_border[:, 0]),
             np.max(self.outer_border[:, 1]) - np.min(self.outer_border[:, 1])
         )
+
+    def ratio(self):
+        """Track size ratio
+        """
+        s = self.size()
+        return s[1] / s[0]
 
 
 class GeometryUtils:
