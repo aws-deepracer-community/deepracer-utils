@@ -214,24 +214,25 @@ class SimulationLogsIO:
 class SimulationLogsTraceDir:
 
     @staticmethod
-    def load_to_pandas(dname, workers=1):
+    def load_to_pandas(dirname, tracefolder='training-simtrace', workers=1):
         """Load all log files in one directory for a given simulation.
            Directly converts into a Panda DataFrame.
 
         Arguments:
-        dname - path to the files
+        dirname - root-path to the files
+        tracefolder - sub-folder for trace-files
         workers - number of workers per iteration
 
         Returns:
         Data as DataFrame
         """
 
-        data_lines = SimulationLogsTraceDir.load_data(dname, workers)
+        data_lines = SimulationLogsTraceDir.load_data(dirname, tracefolder, workers)
         df = SimulationLogsTraceDir.convert_to_pandas(data_lines)
         return df
 
     @staticmethod
-    def load_data(dname, workers=1):
+    def load_data(dirname, tracefolder='training-simtrace', workers=1):
         """Load all log files in one directory for a given simulation.
 
         Arguments:
@@ -245,15 +246,17 @@ class SimulationLogsTraceDir:
 
         for w in range(0, workers):
             if workers == 1:
-                files = [join(dname, f) for f in listdir(dname) if isfile(join(dname, f))]
+                files = [join(dirname, tracefolder, f) for f in listdir(join(dirname, tracefolder))
+                         if isfile(join(dirname, tracefolder, f))]
             else:
-                files = [join(dname, str(w), f) for f in listdir(join(dname, str(w)))
-                         if isfile(join(dname, str(w), f))]
+                files = [join(dirname, str(w), tracefolder, f) for f in
+                         listdir(join(dirname, str(w), tracefolder))
+                         if isfile(join(dirname, str(w), tracefolder, f))]
             for fname in files:
                 with open(fname, 'r') as f:
                     iter = basename(fname).rstrip().split("-")[0]
                     for line in f.readlines():
-                        if not line.startswith('episode'):                       
+                        if not line.startswith('episode'):
                             data.append("%s,%s,%s" % (iter, w, line))
 
         print("Loaded %s log files" % len(files))
@@ -322,8 +325,8 @@ class SimulationLogsTraceDir:
                   'closest_waypoint', 'track_len', 'timestamp']
 
         df = pd.DataFrame(df_list, columns=header)
-        df = df.sort_values('timestamp', ignore_index=True)
-
+        df = df.sort_values(['iteration', 'worker', 'episode', 'steps', 'timestamp'],
+                            ignore_index=True)
         return df
 
 
