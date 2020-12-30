@@ -26,7 +26,7 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from shapely.geometry.polygon import LineString
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, basename
 
 from .cw_utils import CloudWatchLogs as cw
 from ..tracks.track_utils import Track
@@ -210,27 +210,28 @@ class SimulationLogsIO:
             df['reward'].values.reshape(df['reward'].values.shape[0], 1))
         df['reward'] = pd.DataFrame(scaled_vals.squeeze())
 
-class SimulationLogsV2:
+
+class SimulationLogsTraceDir:
 
     @staticmethod
-    def load_to_pandas(dname, episodes_per_iteration=20):
+    def load_to_pandas(dname, workers=1):
         """Load all log files in one directory for a given simulation.
            Directly converts into a Panda DataFrame.
 
         Arguments:
         dname - path to the files
-        episodes_per_iteration - number of episodes per iteration
+        workers - number of workers per iteration
 
         Returns:
         Data as DataFrame
         """
 
-        data_lines = SimulationLogsV2.load_data(dname)
-        df = SimulationLogsV2.convert_to_pandas(data_lines, episodes_per_iteration=episodes_per_iteration)
+        data_lines = SimulationLogsTraceDir.load_data(dname, workers)
+        df = SimulationLogsTraceDir.convert_to_pandas(data_lines)
         return df
 
     @staticmethod
-    def load_data(dname):
+    def load_data(dname, workers=1):
         """Load all log files in one directory for a given simulation.
 
         Arguments:
@@ -242,20 +243,25 @@ class SimulationLogsV2:
         from os.path import isfile
         data = []
 
-        files = [join(dname, f) for f in listdir(dname) if isfile(join(dname, f))]
-
-        for fname in files:
-            with open(fname, 'r') as f:
-                for line in f.readlines():
-                    if not line.startswith('episode'):
-                        data.append(line)
+        for w in range(0, workers):
+            if workers == 1:
+                files = [join(dname, f) for f in listdir(dname) if isfile(join(dname, f))]
+            else:
+                files = [join(dname, str(w), f) for f in listdir(join(dname, str(w)))
+                         if isfile(join(dname, str(w), f))]
+            for fname in files:
+                with open(fname, 'r') as f:
+                    iter = basename(fname).rstrip().split("-")[0]
+                    for line in f.readlines():
+                        if not line.startswith('episode'):                       
+                            data.append("%s,%s,%s" % (iter, w, line))
 
         print("Loaded %s log files" % len(files))
-        print("Found %s files" % len(data))
+        print("Found %s steps" % len(data))
         return data
 
     @staticmethod
-    def convert_to_pandas(data, episodes_per_iteration=20):
+    def convert_to_pandas(data, worker=0):
         """Load the log data to pandas dataframe
 
         Reads the loaded log files and parses them according to this format of print:
@@ -289,35 +295,37 @@ class SimulationLogsV2:
         # ignore the first two dummy values that coach throws at the start.
         for d in data:
             parts = d.rstrip().split(",")
-            episode = int(parts[0])
-            steps = int(float(parts[1]))
-            x = float(parts[2])
-            y = float(parts[3])
-            yaw = float(parts[4])
-            steer = float(parts[5])
-            throttle = float(parts[6])
-            action = float(parts[7])
-            reward = float(parts[8])
-            done = 0 if 'False' in parts[9] else 1
-            all_wheels_on_track = parts[10]
-            progress = float(parts[11])
-            closest_waypoint = int(parts[12])
-            track_len = float(parts[13])
-            tstamp = Decimal(parts[14])
+            iteration = int(parts[0])
+            worker = int(parts[1])
+            episode = int(parts[2])
+            steps = int(float(parts[3]))
+            x = float(parts[4])
+            y = float(parts[5])
+            yaw = float(parts[6])
+            steer = float(parts[7])
+            throttle = float(parts[8])
+            action = float(parts[9])
+            reward = float(parts[10])
+            done = 0 if 'False' in parts[11] else 1
+            all_wheels_on_track = parts[12]
+            progress = float(parts[13])
+            closest_waypoint = int(parts[14])
+            track_len = float(parts[15])
+            tstamp = Decimal(parts[16])
 
-            iteration = int(episode / episodes_per_iteration) + 1
-            df_list.append((iteration, episode, steps, x, y, yaw, steer, throttle,
+            df_list.append((iteration, worker, episode, steps, x, y, yaw, steer, throttle,
                             action, reward, done, all_wheels_on_track, progress,
                             closest_waypoint, track_len, tstamp))
 
-        header = ['iteration', 'episode', 'steps', 'x', 'y', 'yaw', 'steer',
+        header = ['iteration', 'worker', 'episode', 'steps', 'x', 'y', 'yaw', 'steer',
                   'throttle', 'action', 'reward', 'done', 'on_track', 'progress',
                   'closest_waypoint', 'track_len', 'timestamp']
 
         df = pd.DataFrame(df_list, columns=header)
-        df = df.sort_values('timestamp',ignore_index=True)
-        
+        df = df.sort_values('timestamp', ignore_index=True)
+
         return df
+
 
 class AnalysisUtils:
     """Set of utilities to verify how the training is doing.
