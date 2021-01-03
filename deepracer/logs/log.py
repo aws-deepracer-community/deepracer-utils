@@ -64,6 +64,25 @@ class DeepRacerLog:
         Raises:
             NotImplementedError: This class should not be used.
         """
+        raise NotImplementedError("Implement this in a subclass!")
+
+    def action_space(self):
+        """Method that provides the action space for this log.
+
+        Raises:
+            NotImplementedError: This class should not be used.
+        """
+        raise NotImplementedError("Implement this in a subclass!")
+
+    def agent_and_network(self):
+        """Method that provides the agent and network information for this log.
+        Resulting dictionary includes the name of environment used,
+        list of sensors and type of network.
+
+        Raises:
+            NotImplementedError: This class should not be used.
+        """
+        raise NotImplementedError("Implement this in a subclass!")
 
 
 class DeepRacerConsoleLog(DeepRacerLog):
