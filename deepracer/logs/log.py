@@ -6,8 +6,14 @@ import re
 from joblib import Parallel, delayed
 
 
+CONSOLE_MODEL_WITH_LOGS = 0
+DRFC_MODEL_SINGLE_WORKERS = 1
+DRFC_MODEL_MULTIPLE_WORKERS = 2
+UNKNOWN_FOLDER = 3
+
+
 class DeepRacerLog:
-    def __init__(self):
+    def __init__(self, model_folder, simtrace_path=None, robomaker_log_path=None):
         # Column names we support in the CSV file.
         self.col_names = [
             "episode",
@@ -42,74 +48,35 @@ class DeepRacerLog:
             "term_cond_max_episodes"
         ]
 
-    def load(self):
-        """Method that loads a DeepRacer log into a dataframe.
-
-        Raises:
-            NotImplementedError This class should not be used.
-        """
-        raise NotImplementedError("Implement this in a subclass!")
-
-    def dataframe(self):
-        """Method that provides the dataframe for analysis of this log.
-
-        Raises:
-            NotImplementedError: This class should not be used.
-        """
-        raise NotImplementedError("Implement this in a subclass!")
-
-    def hyperparameters(self):
-        """Method that provides the hyperparameters for this log.
-
-        Raises:
-            NotImplementedError: This class should not be used.
-        """
-        raise NotImplementedError("Implement this in a subclass!")
-
-    def action_space(self):
-        """Method that provides the action space for this log.
-
-        Raises:
-            NotImplementedError: This class should not be used.
-        """
-        raise NotImplementedError("Implement this in a subclass!")
-
-    def agent_and_network(self):
-        """Method that provides the agent and network information for this log.
-        Resulting dictionary includes the name of environment used,
-        list of sensors and type of network.
-
-        Raises:
-            NotImplementedError: This class should not be used.
-        """
-        raise NotImplementedError("Implement this in a subclass!")
-
-
-class DeepRacerConsoleLog(DeepRacerLog):
-    def __init__(self, model_folder):
-        super().__init__()
-
         self.model_folder = model_folder
 
-        self.iter_count = {}
+        self.simtrace_path = simtrace_path
+        self.robomaker_log_path = robomaker_log_path
+
+        self._determine_root_folder_type()
 
         self.df = None
 
     def load(self):
-        # Load all available iteration files.
-        model_iterations = glob.glob(os.path.join(
-            self.model_folder, "**", "**", "training-simtrace", "*-iteration.csv"))
-        print(self.model_folder)
+        """Method that loads a DeepRacer log into a dataframe.
+        """
+        if self.simtrace_path is None:
+            raise Exception(
+                "Cannot detect training-simtrace, is model_folder pointing at your model folder?")
 
-        def read_csv(path, iteration):
+        model_iterations = glob.glob(self.simtrace_path)
+
+        def read_csv(path):
             df = pd.read_csv(path, names=self.col_names, header=0)
 
-            df["iteration"] = iteration
+            df["iteration"] = int(path.split(os.path.sep)[-1].split("-")[0])
+            df["worker"] = int(path.split(os.path.sep)[-3] if self.type ==
+                               DRFC_MODEL_MULTIPLE_WORKERS else 0)
 
             return df
 
         dfs = Parallel(n_jobs=-1, prefer="threads")(
-            delayed(read_csv)(path, i) for i, path in enumerate(model_iterations)
+            delayed(read_csv)(path) for _, path in enumerate(model_iterations)
         )
 
         if len(dfs) == 0:
@@ -118,24 +85,31 @@ class DeepRacerConsoleLog(DeepRacerLog):
         # Merge into single large DataFrame
         df = pd.concat(dfs, ignore_index=True)
 
-        self.df = df
+        episodes_per_worker_per_iteration = df[(
+            df["iteration"] == 0) & (df["worker"] == 0)]["episode"].max()
+        workers_count = df["worker"].max() + 1
+
+        df["unique_episode"] = df["episode"] + df["worker"] * episodes_per_worker_per_iteration + \
+            df["iteration"] * episodes_per_worker_per_iteration * workers_count
+
+        self.df = df.sort_values(['unique_episode', 'steps']).reset_index(drop=True)
 
     def dataframe(self):
+        """Method that provides the dataframe for analysis of this log.
+        """
         if self.df is None:
             raise Exception("Model not loaded, call load() before requesting a dataframe.")
 
         return self.df
 
     def hyperparameters(self):
-        try:
-            robomaker_log = glob.glob(os.path.join(
-                self.model_folder, "**", "training", "*-robomaker.log"))[0]
-        except Exception as e:
-            raise Exception("Could not find robomaker log!") from e
+        """Method that provides the hyperparameters for this log.
+        """
+        self._ensure_robomaker_log_exists()
 
         outside_hyperparams = True
         hyperparameters_string = ""
-        with open(robomaker_log, 'r') as f:
+        with open(self.robomaker_log_path, 'r') as f:
             for line in f:
                 if outside_hyperparams:
                     if "Using the following hyper-parameters" in line:
@@ -148,33 +122,65 @@ class DeepRacerConsoleLog(DeepRacerLog):
         return json.loads(hyperparameters_string)
 
     def action_space(self):
-        try:
-            robomaker_log = glob.glob(os.path.join(
-                self.model_folder, "**", "training", "*-robomaker.log"))[0]
-        except Exception as e:
-            raise Exception("Could not find robomaker log!") from e
+        """Method that provides the action space for this log.
+        """
+        self._ensure_robomaker_log_exists()
 
-        with open(robomaker_log, 'r') as f:
+        with open(self.robomaker_log_path, 'r') as f:
             for line in f:
-                if "Action space from file: " in line:
-                    return json.loads(line[24:].replace("'", '"'))
+                if "ction space from file: " in line:
+                    return json.loads(line.split("file: ")[1].replace("'", '"'))
 
     def agent_and_network(self):
-        try:
-            robomaker_log = glob.glob(os.path.join(
-                self.model_folder, "**", "training", "*-robomaker.log"))[0]
-        except Exception as e:
-            raise Exception("Could not find robomaker log!") from e
+        """Method that provides the agent and network information for this log.
+        Resulting dictionary includes the name of environment used,
+        list of sensors and type of network.
+        """
+        self._ensure_robomaker_log_exists()
 
-        with open(robomaker_log, 'r') as f:
+        regex = r'Sensor list (\[[\'a-zA-Z, _-]+\]), network ([a-zA-Z_]+), simapp_version ([\d.]+)'
+
+        with open(self.robomaker_log_path, 'r') as f:
             result = {}
             for line in f:
                 if " * /WORLD_NAME: " in line:
                     result["world"] = line[:-1].split(" ")[-1]
                 elif "Sensor list ['" in line:
-                    data = line[:-1].split(", ")
-                    result["sensor_list"] = json.loads(data[0].split(" ")[-1].replace("'", '"'))
-                    for info in data[1:]:
-                        data_bits = info.split(" ")
-                        result[data_bits[0]] = data_bits[1]
+                    m = re.search(regex, line)
+
+                    result["sensor_list"] = json.loads(m.group(1).replace("'", '"'))
+                    result["network"] = m.group(2)
+                    result["simapp_version"] = m.group(3)
+
                     return result
+
+    def _determine_root_folder_type(self):
+        if os.path.isdir(os.path.join(self.model_folder, "sim-trace")):
+            self.type = CONSOLE_MODEL_WITH_LOGS
+            if self.simtrace_path is None:
+                self.simtrace_path = os.path.join(
+                    self.model_folder,
+                    "sim-trace",
+                    "training",
+                    "training-simtrace",
+                    "*-iteration.csv")
+            if self.robomaker_log_path is None:
+                self.robomaker_log_path = glob.glob(os.path.join(
+                    self.model_folder, "**", "training", "*-robomaker.log"))[0]
+        elif os.path.isdir(os.path.join(self.model_folder, "training-simtrace")):
+            self.type = DRFC_MODEL_SINGLE_WORKERS
+            if self.simtrace_path is None:
+                self.simtrace_path = os.path.join(
+                    self.model_folder, "training-simtrace", "*-iteration.csv")
+        elif os.path.isdir(os.path.join(self.model_folder, "0")):
+            self.type = DRFC_MODEL_MULTIPLE_WORKERS
+            if self.simtrace_path is None:
+                self.simtrace_path = os.path.join(
+                    self.model_folder, "**", "training-simtrace", "*-iteration.csv")
+        else:
+            self.type = UNKNOWN_FOLDER
+
+    def _ensure_robomaker_log_exists(self):
+        if self.robomaker_log_path is None or not os.path.isfile(self.robomaker_log_path):
+            raise Exception(
+                "Cannot detect robomaker log file, is model_folder pointing at your model folder?")
