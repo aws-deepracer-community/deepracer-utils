@@ -2,7 +2,8 @@
   "version":"2.0",
   "metadata":{
     "apiVersion":"2019-04-01",
-    "endpointPrefix":"deepracer",
+    "signingName":"deepracer",
+    "endpointPrefix":"deepracer-prod",
     "jsonVersion":"1.1",
     "protocol":"json",
     "serviceFullName":"AWS DeepRacer",
