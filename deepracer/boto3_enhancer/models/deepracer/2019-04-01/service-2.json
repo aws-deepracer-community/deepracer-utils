@@ -44,7 +44,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Join a community race.</p><p>Using this method you can join the race without having to open the AWS DeepRacer Console.</p><p>When successful, the leaderboard for a given race will be available to you in the leaderboards list</p>"
     },
     "CloneReinforcementLearningModel": {
       "name": "CloneReinforcementLearningModel",
@@ -80,7 +81,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Clones an existing model and continues training with new instructions</p>"
     },
     "CreateAccountResources": {
       "name": "CreateAccountResources",
@@ -110,7 +112,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>This method is no longer supported and should not be used.</p>"
     },
     "CreateCar": {
       "name": "CreateCar",
@@ -140,7 +143,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Create a new car to train your model with.</p><p>You can choose various settings for your car including the action space, name or look.</p><p>There is a limit of 20 cars that you can create. If you reach this limit, update an existing car instead using update-car</p>"
     },
     "CreateLeaderboardAccessToken": {
       "name": "CreateLeaderboardAccessToken",
@@ -173,7 +177,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Create a new invitation token for the community race. It is useful if your existing invitation link has been shared outside of your desired users.</p><p>To use the new token simply put it in place of [token] in url https://console.aws.amazon.com/deepracer/home#raceToken/[token]</p><p>Creation of a new access token makes the old token invalid.</p>"
     },
     "CreateLeaderboardSubmission": {
       "name": "CreateLeaderboardSubmission",
@@ -206,7 +211,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Submit a model to a race.</p><p>Simply choose the model and a race and your submission will be created</p><p>When creating your first submission you need to confirm that you accept the terms and conditions of it. If you don't, you will not be allowed to submit your entry.</p>"
     },
     "CreatePrivateLeaderboard": {
       "name": "CreatePrivateLeaderboard",
@@ -242,7 +248,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Creates a community race</p>"
     },
     "CreateReinforcementLearningModel": {
       "name": "CreateReinforcementLearningModel",
@@ -278,7 +285,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Starts a new training with instructions provided.</p><p>A new model is created and used in the training session to gather experiences, then it is updated in the learning session based on the reward gathered.</p><p>While you can start training through the cli/boto3, it is recommended that you use the Deepracer Console instead for a richer experience.</p>"
     },
     "DeleteAccountResources": {
       "name": "DeleteAccountResources",
@@ -308,7 +316,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>This method is no longer supported and should not be used.</p>"
     },
     "DeleteCar": {
       "name": "DeleteCar",
@@ -336,7 +345,8 @@
           "shape": "InvalidRequestException"
         }
       ],
-      "internalonly": true
+      "internalonly": true,
+      "documentation": "<p>This method is for internal use only and should not be used.</p>"
     },
     "DeleteCars": {
       "name": "DeleteCars",
@@ -364,7 +374,8 @@
           "shape": "InvalidRequestException"
         }
       ],
-      "internalonly": true
+      "internalonly": true,
+      "documentation": "<p>This method is for internal use only and should not be used.</p>"
     },
     "DeleteModel": {
       "name": "DeleteModel",
@@ -394,7 +405,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>Delete existing model.</p><p>This method lets you limit your AWS DeepRacer model storage costs "
     },
     "DeletePrivateLeaderboard": {
       "name": "DeletePrivateLeaderboard",
@@ -427,7 +439,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Deletes a community race</p>"
     },
     "EditPrivateLeaderboard": {
       "name": "EditPrivateLeaderboard",
@@ -460,7 +473,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Updates a community race</p>"
     },
     "GetAccountResources": {
       "name": "GetAccountResources",
@@ -487,7 +501,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>This method is no longer supported and should not be used.</p>"
     },
     "GetAlias": {
       "name": "GetAlias",
@@ -505,7 +520,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Displays the racer alias assigned to given account</p>"
     },
     "GetAssetUrl": {
       "name": "GetAssetUrl",
@@ -532,7 +548,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>Used to fetch various assets related to a model, training or race submission</p><p>Returns a Url that you can use to fetch things like logs, models etc.</p><p>Asset types prefixed with \"S3_\" are for copying assets to S3 (operations available in a model view under Actions->Copy to S3)."
     },
     "GetCar": {
       "name": "GetCar",
@@ -559,7 +576,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>Returns current car settings.</p>"
     },
     "GetCars": {
       "name": "GetCars",
@@ -580,7 +598,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Returns a list of configured cars</p>"
     },
     "GetEvaluation": {
       "name": "GetEvaluation",
@@ -607,7 +626,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Get evaluation details.</p><p>Returns information about a given evaluation</p>"
     },
     "GetLatestUserSubmission": {
       "name": "GetLatestUserSubmission",
@@ -634,7 +654,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Returns information about the most recent model submission status</p><p>This is the information that you will see next to your name on the race page.</p>"
     },
     "GetLeaderboard": {
       "name": "GetLeaderboard",
@@ -661,7 +682,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Returns a details for a race</p><p>Does not return the entrants ranking - that is available through ListLeaderboardSubmissions (list-leaderboard-submissions for AWS CLI).</p>"
     },
     "GetModel": {
       "name": "GetModel",
@@ -688,7 +710,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>Fetch information about the model</p>"
     },
     "GetPrivateLeaderboard": {
       "name": "GetPrivateLeaderboard",
@@ -715,7 +738,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Returns a details for a race</p><p>Don't quote me on that but it does look like an aliast for GetLeaderboard (get-leaderboard) which returns both community and public leaderboards</p><p>Does not return the entrants ranking - that is available through ListLeaderboardSubmissions (list-leaderboard-submissions for AWS CLI).</p>"
     },
     "GetRankedUserSubmission": {
       "name": "GetRankedUserSubmission",
@@ -742,7 +766,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Returns current user's best submission for a given race.</p>"
     },
     "GetTournament": {
       "name": "GetTournament",
@@ -769,7 +794,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>TODO</p>"
     },
     "GetTrack": {
       "name": "GetTrack",
@@ -796,7 +822,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>Provides information about a given track.</p>"
     },
     "GetTrainingJob": {
       "name": "GetTrainingJob",
@@ -823,7 +850,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>Get information about how a model is being trained</p>"
     },
     "ImportModel": {
       "name": "ImportModel",
@@ -850,7 +878,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Import a model from S3 into console</p><p>Allows to import a model from backup or alternative training solution and clone for more training or submit to a race.</p>"
     },
     "ListEvaluations": {
       "name": "ListEvaluations",
@@ -874,7 +903,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Returns a list of evaluations performed on a given model.</p>"
     },
     "ListLeaderboardSubmissions": {
       "name": "ListLeaderboardSubmissions",
@@ -901,7 +931,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Returns an ordered list of a given race entries.</p>"
     },
     "ListLeaderboardWinners": {
       "name": "ListLeaderboardWinners",
@@ -928,7 +959,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>TODO</p>"
     },
     "ListLeaderboards": {
       "name": "ListLeaderboards",
@@ -955,7 +987,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>List races that current user has access to</p>"
     },
     "ListModels": {
       "name": "ListModels",
@@ -979,7 +1012,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>List current user's models</p>"
     },
     "ListPrivateLeaderboardParticipants": {
       "name": "ListPrivateLeaderboardParticipants",
@@ -1006,7 +1040,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Lists users which have joined a private race.</p><p>For public race Arn an empty list is returned</p>"
     },
     "ListPrivateLeaderboards": {
       "name": "ListPrivateLeaderboards",
@@ -1033,7 +1068,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Lists community races that current user has created.</p>"
     },
     "ListSubscribedPrivateLeaderboards": {
       "name": "ListSubscribedPrivateLeaderboards",
@@ -1060,7 +1096,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Lists community races that current user has joined.</p>"
     },
     "ListTracks": {
       "name": "ListTracks",
@@ -1084,7 +1121,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>List available tracks</p>"
     },
     "ListTrainingJobs": {
       "name": "ListTrainingJobs",
@@ -1108,7 +1146,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>List current user's training jobs</p><p>Training jobs are associated with models that user has.</p>"
     },
     "MigrateModels": {
       "name": "MigrateModels",
@@ -1132,7 +1171,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>This method is no longer be relevant and you should not use it</p>"
     },
     "RemoveLeaderboardAccessPermission": {
       "name": "RemoveLeaderboardAccessPermission",
@@ -1165,7 +1205,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Removes a racer from a community race administrated by the current user.</p>"
     },
     "RunTournament": {
       "name": "RunTournament",
@@ -1192,7 +1233,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>TODO</p>"
     },
     "SetAlias": {
       "name": "SetAlias",
@@ -1213,7 +1255,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Set your racer name. You can only set your racer name once so choose wisely!</p>\n<p>The names are checked in terms approprietness. You may have your name rejected if a disallowed word is a substring of it.</p>"
     },
     "StartEvaluation": {
       "name": "StartEvaluation",
@@ -1246,7 +1289,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Evaluate your model in conditions of your choice.</p><p>This is a great opportunity to check how your model is doing without the entropy altering it actions which happens during the training. But there's more: you can try a different track, different racing format or even race your model against a car with another model that you have trained.</p>"
     },
     "StopEvaluation": {
       "name": "StopEvaluation",
@@ -1279,7 +1323,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Stop performing evaluation</p><p>The system will still take some time to shut everything down, but the evaluation will have been stopped at the time of request</p>"
     },
     "StopTrainingReinforcementLearningModel": {
       "name": "StopTrainingReinforcementLearningModel",
@@ -1309,7 +1354,8 @@
         {
           "shape": "InvalidRequestException"
         }
-      ]
+      ],
+      "documentation": "<p>Stop the training job.</p><p>The training will be immediately interrupted and will perform a shutdown of the environment which can take a few minutes. Once done, you will be able to evaluate, clone or submit your model to a race. The interrupted iteration is discarded and only the last and the best complete iterations are being stored.</p>"
     },
     "TestRewardFunction": {
       "name": "TestRewardFunction",
@@ -1342,7 +1388,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Test reward function. Submit your function to perform a number of tests against it.</p><p>Not all problems are clearly communicated even if caught, for instance whitespace issues. If you don't get the details that could help you, do revert to a code editor of your choice.</p>"
     },
     "UpdateCar": {
       "name": "UpdateCar",
@@ -1372,7 +1419,8 @@
         {
           "shape": "ServiceException"
         }
-      ]
+      ],
+      "documentation": "<p>Change settings of your car</p><p>You can choose various settings for your car including the action space, name or look.</p><p>Changing the settings for a car only affects new models being created from scratch. Old models and their clones will continue to use the old settings which are stored with the model at the start of a new training and then passed on during cloning.</p>"
     }
   },
   "shapes": {
@@ -1627,13 +1675,20 @@
     "AssetType": {
       "type": "string",
       "enum": [
-        "MODEL_ARTIFACT",
-        "COMPLETE_MODEL_ARTIFACT",
-        "SAGEMAKER_CLOUDWATCH_LOG",
+        "S3_PKG_MODEL_VIDEOS",
+        "S3_PKG_MODEL_LOGS_VIDEOS",
+        "S3_PKG_LOGS",
         "ROBOMAKER_CLOUDWATCH_LOG",
-        "ROBOMAKER_METRICS",
-        "SIMTRACE_LOG",
-        "MP4"
+        "SAGEMAKER_CLOUDWATCH_LOG",
+        "MODEL_ARTIFACT",
+        "S3_PKG_VIDEOS",
+        "COMPLETE_MODEL_ARTIFACT",
+        "LOGS",
+        "S3_PKG_LOGS_VIDEOS",
+        "S3_PKG_MODEL_LOGS",
+        "S3_PKG_MODEL",
+        "VIDEOS",
+        "ROBOMAKER_METRICS"
       ]
     },
     "AutoSubmission": {
@@ -1777,22 +1832,28 @@
       ],
       "members": {
         "ModelArnToClone": {
-          "shape": "ModelArn"
+          "shape": "ModelArn",
+          "documentation": "<p>Identifies the base model that you wish to clone</p>"
         },
         "ModelName": {
-          "shape": "ModelName"
+          "shape": "ModelName",
+          "documentation": "<p>The name that you want to give to your new model</p>"
         },
         "ModelDescription": {
-          "shape": "Description"
+          "shape": "Description",
+          "documentation": "<p>Descirption that you want to give to your new model</p>"
         },
         "TrainingConfig": {
-          "shape": "TrainingConfig"
+          "shape": "TrainingConfig",
+          "documentation": "<p>Configuration of the training to be started after cloning</p>"
         },
         "RoleArn": {
-          "shape": "RoleArn"
+          "shape": "RoleArn",
+          "documentation": "<p>Arn Role of the user that allows to perform this operation</p>"
         },
         "AutoSubmission": {
-          "shape": "AutoSubmission"
+          "shape": "AutoSubmission",
+          "documentation": "<p>Decide whether after training completion you wish to submit the model to a race</p>"
         }
       }
     },
@@ -1805,7 +1866,8 @@
         "ModelArn": {
           "shape": "ModelArn"
         }
-      }
+      },
+      "documentation": "<p>Identifies the model that has been created</p>"
     },
     "CodeBlock": {
       "type": "string",
@@ -2596,29 +2658,36 @@
         "Name",
         "ModelArtifactsS3Bucket",
         "ModelArtifactsS3Prefix",
-        "RoleArn"
+        "RoleArn",
+        "Type"
       ],
       "members": {
         "ModelArn": {
           "shape": "ModelArn"
         },
         "Type": {
-          "shape": "ModelType"
+          "shape": "ModelType",
+          "documentation": "<p>Type of model to import</p>"
         },
         "Name": {
-          "shape": "ModelName"
+          "shape": "ModelName",
+          "documentation": "<p>A name to be given to imported model</p>"
         },
         "Description": {
-          "shape": "Description"
+          "shape": "Description",
+          "documentation": "<p>A description of the imported model</p>"
         },
         "ModelArtifactsS3Bucket": {
-          "shape": "S3Bucket"
+          "shape": "S3Bucket",
+          "documentation": "<p>The S3 bucket to import from</p>"
         },
         "ModelArtifactsS3Prefix": {
-          "shape": "S3ObjectKey"
+          "shape": "S3ObjectKey",
+          "documentation": "<p>Path to model in that bucket</p>"
         },
         "RoleArn": {
-          "shape": "RoleArn"
+          "shape": "RoleArn",
+          "documentation": "<p>An Arn of a role that current user has assigned, which allows to fetch files from that bucket</p>"
         }
       }
     },
@@ -4159,5 +4228,6 @@
         "shape": "StandardLengthString"
       }
     }
-  }
+  },
+  "documentation": "<p>AWS DeepRacer is the easiest way to get started with learning reinforcement learning. Visit <a href=\"https://aws.amazon.com/deepracer/\">https://aws.amazon.com/deepracer/</a> to learn more.</p>\n<p>While it is strongly recommended that you start interacting with DeepRacer through the AWS Console, all operations available on the website are also available programatically and through aws cli.</p>"
 }
