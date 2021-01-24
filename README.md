@@ -1,6 +1,23 @@
 # deepracer-utils
 A set of utilities to take your DeepRacer experience to the next level.
 
+# Add deepracer to AWS CLI and boto3
+Make sure you have deepracer-utils >= 0.9 installed.
+
+Then run this to install:
+```
+python -m deepracer install-cli
+```
+
+If you want to ensure you have the latest deepracer service definition, you can run:
+```
+python -m deepracer install-cli --force
+```
+
+To remove deepracer support from aws-cli and boto3, run:
+```
+python -m deepracer remove-cli
+```
 
 ## Development
 
