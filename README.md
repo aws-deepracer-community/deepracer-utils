@@ -48,6 +48,11 @@ pycodestyle
 
 ### Releasing, Packaging, distribution
 
+Checking the current version:
+```
+python setup.py version
+```
+
 Marking new release:
 ```
 git tag deepracer-utils-version
