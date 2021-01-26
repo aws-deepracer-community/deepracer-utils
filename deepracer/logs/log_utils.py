@@ -26,7 +26,6 @@ from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from shapely.geometry.polygon import LineString
 
-from .cw_utils import CloudWatchLogs as cw
 from ..tracks.track_utils import Track
 
 
@@ -690,39 +689,6 @@ class EvaluationUtils:
         for log in logs:
             EvaluationUtils.analyse_single_evaluation(
                 SimulationLogsIO.load_pandas(log[0]), track, min_progress=min_progress)
-
-    @staticmethod
-    def download_and_analyse_multiple_race_evaluations(
-        log_folder,
-        track: Track,
-        not_older_than=None,
-        older_than=None,
-        log_group='/aws/deepracer/leaderboard/SimulationJobs',
-        min_progress=None
-    ):
-        """Download and analyse multiple race evaluations
-
-        Arguments:
-        log_folder - where should the logs be stored
-        track - track to plot
-        not_older_than - the oldest date at which a stream has to have
-            at least one message to be downloaded; unlimited if not
-            provided; ISO-8601 compliant date string. Example:
-            "2020-02-20 02:02 UTC"
-        older_than - the most recent date at which a stream has to have
-            at least one message to be downloaded; unlimited if not
-            provided; ISO-8601 compliant date string. Example:
-            "2020-02-20 02:02 UTC"
-        log_group - which group to look in for the streams; default:
-            '/aws/deepracer/leaderboard/SimulationJobs'
-        min_progress - minimum progres for an episode to be plotted, default: None
-
-        """
-        logs = cw.download_all_logs("%s/deepracer-eval-" % log_folder,
-                                    log_group, not_older_than, older_than)
-
-        EvaluationUtils.analyse_multiple_race_evaluations(
-            logs, track, min_progress=min_progress)
 
 
 class NewRewardUtils:
