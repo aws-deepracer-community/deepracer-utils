@@ -127,8 +127,8 @@ class SimulationLogsIO:
             x = float(parts[2])
             y = float(parts[3])
             yaw = float(parts[4])
-            steer = float(parts[5])
-            throttle = float(parts[6])
+            steering_angle = float(parts[5])
+            speed = float(parts[6])
             action = float(parts[7])
             reward = float(parts[8])
             done = 0 if 'False' in parts[9] else 1
@@ -139,13 +139,13 @@ class SimulationLogsIO:
             tstamp = Decimal(parts[14])
 
             iteration = int(episode / episodes_per_iteration) + 1
-            df_list.append((iteration, episode, steps, x, y, yaw, steer, throttle,
+            df_list.append((iteration, episode, steps, x, y, yaw, steering_angle, speed,
                             action, reward, done, all_wheels_on_track, progress,
                             closest_waypoint, track_len, tstamp))
 
-        header = ['iteration', 'episode', 'steps', 'x', 'y', 'yaw', 'steer',
-                  'throttle', 'action', 'reward', 'done', 'on_track', 'progress',
-                  'closest_waypoint', 'track_len', 'timestamp']
+        header = ['iteration', 'episode', 'steps', 'x', 'y', 'yaw', 'steering_angle',
+                  'speed', 'action', 'reward', 'done', 'on_track', 'progress',
+                  'closest_waypoint', 'track_len', 'tstamp']
 
         df = pd.DataFrame(df_list, columns=header)
         return df
@@ -216,7 +216,7 @@ class AnalysisUtils:
     in form which allows drawing conclusions from them
     """
     @staticmethod
-    def simulation_agg(panda, firstgroup='iteration', add_timestamp=False, is_eval=False):
+    def simulation_agg(panda, firstgroup='iteration', add_tstamp=False, is_eval=False):
         """Groups all log data by episodes and other information and returns
         a pandas dataframe with aggregated information
 
@@ -224,7 +224,7 @@ class AnalysisUtils:
         * steps - amount of steps per episode,
         * start_at - starting waypoint
         * progress - how much of the track has been covered
-        * throttle - average throttle decision
+        * speed - average speed decision
         * time - how much time elapsed from first to last step
         * reward - how much reward has been aggregated in the iteration
         * time_if_complete - scales time from given progress value to 100% to give
@@ -237,13 +237,13 @@ class AnalysisUtils:
         * quintile - which training quintile the episode happened in
             (first 20% of episodes are in 1st, second 20% in 2nd etc.)
         Also if timestamp is requested:
-        * timestamp - when given episode ended
+        * tstamp - when given episode ended
 
         Arguments:
         panda - panda dataframe with simulation data
         firstgroup - first group to group by, by default iteration,
         for multiple log files loaded stream would be preferred
-        add_timestamp - whether to add a timestamp, by default False
+        add_tstamp - whether to add a timestamp, by default False
         is_eval - is data for evaluation (training if False), default: False
 
         Returns:
@@ -255,9 +255,9 @@ class AnalysisUtils:
         by_start = grouped.first()['closest_waypoint'].reset_index() \
             .rename(index=str, columns={"closest_waypoint": "start_at"})
         by_progress = grouped['progress'].agg(np.max).reset_index()
-        by_throttle = grouped['throttle'].agg(np.mean).reset_index()
-        by_time = grouped['timestamp'].agg(np.ptp).reset_index() \
-            .rename(index=str, columns={"timestamp": "time"})
+        by_speed = grouped['speed'].agg(np.mean).reset_index()
+        by_time = grouped['tstamp'].agg(np.ptp).reset_index() \
+            .rename(index=str, columns={"tstamp": "time"})
         by_time['time'] = by_time['time'].astype(float)
 
         result = by_steps \
@@ -272,7 +272,7 @@ class AnalysisUtils:
             by_new_reward = grouped['new_reward'].agg(np.sum).reset_index()
             result = result.merge(by_new_reward, on=[firstgroup, 'episode'])
 
-        result = result.merge(by_throttle, on=[firstgroup, 'episode'])
+        result = result.merge(by_speed, on=[firstgroup, 'episode'])
 
         if not is_eval:
             by_reward = grouped['reward'].agg(np.sum).reset_index()
@@ -285,10 +285,10 @@ class AnalysisUtils:
             result['quintile'] = pd.cut(result['episode'], 5, labels=[
                                         '1st', '2nd', '3rd', '4th', '5th'])
 
-        if add_timestamp:
-            by_timestamp = grouped['timestamp'].agg(np.max).astype(float).reset_index()
-            by_timestamp['timestamp'] = pd.to_datetime(by_timestamp['timestamp'], unit='s')
-            result = result.merge(by_timestamp, on=[firstgroup, 'episode'])
+        if add_tstamp:
+            by_tstamp = grouped['tstamp'].agg(np.max).astype(float).reset_index()
+            by_tstamp['tstamp'] = pd.to_datetime(by_tstamp['tstamp'], unit='s')
+            result = result.merge(by_tstamp, on=[firstgroup, 'episode'])
 
         return result
 
@@ -508,13 +508,13 @@ class PlottingUtils:
         # return fig
 
     @staticmethod
-    def plot_evaluations(evaluations, track: Track, graphed_value='throttle'):
+    def plot_evaluations(evaluations, track: Track, graphed_value='speed'):
         """Plot graphs for evaluations
         """
         from math import ceil
 
         streams = evaluations.sort_values(
-            'timestamp', ascending=False).groupby('stream', sort=False)
+            'tstamp', ascending=False).groupby('stream', sort=False)
 
         for _, stream in streams:
             episodes = stream.groupby('episode')
@@ -544,20 +544,20 @@ class PlottingUtils:
     def plot_grid_world(
         episode_df,
         track: Track,
-        graphed_value='throttle',
+        graphed_value='speed',
         min_progress=None,
         ax=None
     ):
-        """Plot a scaled version of lap, along with throttle taken a each position
+        """Plot a scaled version of lap, along with speed taken a each position
         """
 
         episode_df.loc[:, 'distance_diff'] = ((episode_df['x'].shift(1) - episode_df['x']) ** 2 + (
             episode_df['y'].shift(1) - episode_df['y']) ** 2) ** 0.5
 
         distance = np.nansum(episode_df['distance_diff'])
-        lap_time = np.ptp(episode_df['timestamp'].astype(float))
+        lap_time = np.ptp(episode_df['tstamp'].astype(float))
         velocity = distance / lap_time
-        average_throttle = np.nanmean(episode_df['throttle'])
+        average_speed = np.nanmean(episode_df['speed'])
         progress = np.nanmax(episode_df['progress'])
 
         if not min_progress or progress > min_progress:
@@ -565,8 +565,8 @@ class PlottingUtils:
             distance_lap_time = 'Distance, progress, lap time = %.2f m, %.2f %%, %.2f s' % (
                 distance, progress, lap_time
             )
-            throttle_velocity = 'Average throttle, velocity = %.2f (Gazebo), %.2f m/s' % (
-                average_throttle, velocity
+            speed_velocity = 'Average speed, velocity = %.2f (Gazebo), %.2f m/s' % (
+                average_speed, velocity
             )
 
             fig = None
@@ -590,9 +590,9 @@ class PlottingUtils:
             subtitle = '%s%s\n%s\n%s' % (
                 ('Stream: %s, ' % episode_df['stream'].iloc[0]
                  ) if 'stream' in episode_df.columns else '',
-                datetime.fromtimestamp(episode_df['timestamp'].iloc[0]),
+                datetime.fromtimestamp(episode_df['tstamp'].iloc[0]),
                 distance_lap_time,
-                throttle_velocity)
+                speed_velocity)
             ax.set_title(subtitle)
 
             if fig:
@@ -754,7 +754,7 @@ class NewRewardUtils:
     """
     @staticmethod
     def df_to_params(df_row, waypoints):
-        """Convert log data to parameters to be passed to be passed to the reward function
+        """Convert log data to parameters to be passed to the reward function
 
         Arguments:
         df_row - single row to be converted to parameters
@@ -799,12 +799,12 @@ class NewRewardUtils:
         params = {
             'x': df_row['x'],
             'y': df_row['y'],
-            'speed': df_row['throttle'],
+            'speed': df_row['speed'],
             'steps': df_row['steps'],
             'progress': df_row['progress'],
             'heading': df_row['yaw'] * 180 / 3.14,
             'closest_waypoints': closest_waypoints,
-            'steering_angle': df_row['steer'] * 180 / 3.14,
+            'steering_angle': df_row['steering_angle'] * 180 / 3.14,
             'waypoints': waypoints,
             'distance_from_center':
                 gu.get_vector_length(
@@ -812,7 +812,7 @@ class NewRewardUtils:
                         closest_point -
                         current_location
                     )),
-            'timestamp': df_row['timestamp'],
+            'timestamp': df_row['tstamp'],
             # TODO I didn't need them yet. DOIT
             'track_width': 0.60,
             'is_left_of_center': None,
@@ -852,7 +852,10 @@ class ActionBreakdownUtils:
     """
     @staticmethod
     def determine_action_names(df):
-        keys = sorted(df.groupby(["action", "steer", "throttle"]).groups.keys(), key=lambda x: x[0])
+        keys = sorted(
+            df.groupby(["action", "steering_angle", "speed"]).groups.keys(),
+            key=lambda x: x[0]
+        )
 
         return ["A:%d S:%s, T:%s%s" % (
             key[0],
