@@ -34,6 +34,7 @@ class DeepRacerLog:
             "track_len",
             "tstamp",
             "episode_status",
+            "pause_duration"
         ]
         self.hyperparam_keys = [
             "batch_size",
@@ -71,7 +72,11 @@ class DeepRacerLog:
         model_iterations = glob.glob(self.simtrace_path)
 
         def read_csv(path):
-            df = pd.read_csv(path, names=self.col_names, header=0)
+            try:
+                df = pd.read_csv(path, names=self.col_names, header=0)
+            except pd.errors.ParserError as e:
+                # Older logs don't have pause_duration, so we're handling this
+                df = pd.read_csv(path, names=self.col_names[:-1], header=0)
 
             df["iteration"] = int(path.split(os.path.sep)[-1].split("-")[0])
             df["worker"] = int(path.split(os.path.sep)[-3] if self.type ==

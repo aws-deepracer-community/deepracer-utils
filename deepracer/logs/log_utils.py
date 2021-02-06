@@ -139,15 +139,20 @@ class SimulationLogsIO:
             closest_waypoint = int(parts[12])
             track_len = float(parts[13])
             tstamp = Decimal(parts[14])
+            episode_status = parts[15]
+            if len(parts) > 16:
+                pause_duration = float(parts[16])
+            else:
+                pause_duration = 0.0
 
             iteration = int(episode / episodes_per_iteration) + 1
             df_list.append((iteration, episode, steps, x, y, yaw, steering_angle, speed,
                             action, reward, done, all_wheels_on_track, progress,
-                            closest_waypoint, track_len, tstamp))
+                            closest_waypoint, track_len, tstamp, episode_status, pause_duration))
 
         header = ['iteration', 'episode', 'steps', 'x', 'y', 'yaw', 'steering_angle',
                   'speed', 'action', 'reward', 'done', 'on_track', 'progress',
-                  'closest_waypoint', 'track_len', 'tstamp']
+                  'closest_waypoint', 'track_len', 'tstamp', 'episode_status', 'pause_duration']
 
         df = pd.DataFrame(df_list, columns=header)
         return df
