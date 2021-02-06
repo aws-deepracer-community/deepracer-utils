@@ -5,6 +5,8 @@ import pandas as pd
 import re
 from joblib import Parallel, delayed
 
+from . import SimulationLogsIO
+
 
 CONSOLE_MODEL_WITH_LOGS = 0
 DRFC_MODEL_SINGLE_WORKERS = 1
@@ -57,9 +59,11 @@ class DeepRacerLog:
 
         self.df = None
 
-    def load(self):
-        """Method that loads a DeepRacer log into a dataframe.
+    def load(self, force=False):
+        """Method that loads DeepRacer trace logs into a dataframe.
         """
+        self._block_duplicate_load(force)
+
         if self.simtrace_path is None:
             raise Exception(
                 "Cannot detect training-simtrace, is model_folder pointing at your model folder?")
@@ -72,6 +76,9 @@ class DeepRacerLog:
             df["iteration"] = int(path.split(os.path.sep)[-1].split("-")[0])
             df["worker"] = int(path.split(os.path.sep)[-3] if self.type ==
                                DRFC_MODEL_MULTIPLE_WORKERS else 0)
+
+            if df.dtypes["action"].name == "object":
+                df["action"] = -1
 
             return df
 
@@ -93,6 +100,17 @@ class DeepRacerLog:
             df["iteration"] * episodes_per_worker_per_iteration * workers_count
 
         self.df = df.sort_values(['unique_episode', 'steps']).reset_index(drop=True)
+
+    def load_robomaker_logs(self, force=False):
+        """Method that loads a DeepRacer RoboMaker log into a dataframe.
+        """
+        self._block_duplicate_load(force)
+
+        self._ensure_robomaker_log_exists()
+
+        episodes_per_iteration = self.hyperparameters()["num_episodes_between_training"]
+
+        self.df = SimulationLogsIO.load_pandas(self.robomaker_log_path, episodes_per_iteration)
 
     def dataframe(self):
         """Method that provides the dataframe for analysis of this log.
@@ -184,3 +202,9 @@ class DeepRacerLog:
         if self.robomaker_log_path is None or not os.path.isfile(self.robomaker_log_path):
             raise Exception(
                 "Cannot detect robomaker log file, is model_folder pointing at your model folder?")
+
+    def _block_duplicate_load(self, force=False):
+        if self.df is not None and not force:
+            raise Exception(
+                "The dataframe has already been loaded, add force=True"
+                  + " to your load method to load again")
