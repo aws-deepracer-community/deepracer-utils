@@ -128,7 +128,10 @@ class SimulationLogsIO:
             yaw = float(parts[4])
             steering_angle = float(parts[5])
             speed = float(parts[6])
-            action = float(parts[7])
+            try:
+                action = int(parts[7])
+            except ValueError as e:
+                action = -1
             reward = float(parts[8])
             done = 0 if 'False' in parts[9] else 1
             all_wheels_on_track = parts[10]
@@ -602,6 +605,10 @@ class PlottingUtils:
     def plot_track(df, track: Track, value_field="reward", margin=1, cmap="hot"):
         """Plot track with dots presenting the rewards for steps
         """
+        if df.empty:
+            print("The dataframe is empty, check if you have selected an existing subset")
+            return
+
         track_size = (np.asarray(track.size()) + 2*margin).astype(int) * 100
         track_img = np.zeros(track_size).transpose()
 
@@ -609,8 +616,8 @@ class PlottingUtils:
         y_coord = 1
 
         # compensation moves car's coordinates in logs to start at 0 in each dimention
-        x_compensation = df['x'].min()
-        y_compensation = df['y'].min()
+        x_compensation = track.outer_border[:, 0].min()
+        y_compensation = track.outer_border[:, 1].min()
 
         for _, row in df.iterrows():
             x = int((row["x"] - x_compensation + margin) * 100)
