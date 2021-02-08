@@ -121,6 +121,10 @@ class SimulationLogsIO:
         # ignore the first two dummy values that coach throws at the start.
         for d in data[2:]:
             parts = d.rstrip().split(",")
+            # TODO: this is a workaround and should be removed when logs are fixed
+            parts_workaround = 0
+            if len(parts) > 17:
+                parts_workaround = 1
             episode = int(parts[0])
             steps = int(parts[1])
             x = float(parts[2])
@@ -132,16 +136,16 @@ class SimulationLogsIO:
                 action = int(parts[7])
             except ValueError as e:
                 action = -1
-            reward = float(parts[8])
-            done = 0 if 'False' in parts[9] else 1
-            all_wheels_on_track = parts[10]
-            progress = float(parts[11])
-            closest_waypoint = int(parts[12])
-            track_len = float(parts[13])
-            tstamp = Decimal(parts[14])
-            episode_status = parts[15]
-            if len(parts) > 16:
-                pause_duration = float(parts[16])
+            reward = float(parts[8+parts_workaround])
+            done = 0 if 'False' in parts[9+parts_workaround] else 1
+            all_wheels_on_track = parts[10+parts_workaround]
+            progress = float(parts[11+parts_workaround])
+            closest_waypoint = int(parts[12+parts_workaround])
+            track_len = float(parts[13+parts_workaround])
+            tstamp = Decimal(parts[14+parts_workaround])
+            episode_status = parts[15+parts_workaround]
+            if len(parts) > 16+parts_workaround:
+                pause_duration = float(parts[16+parts_workaround])
             else:
                 pause_duration = 0.0
 
