@@ -36,6 +36,27 @@ class DeepRacerLog:
             "episode_status",
             "pause_duration"
         ]
+        # TODO Column names as a workaround for an excess comma in the CSV file
+        self.col_names_workaround = [
+            "episode",
+            "steps",
+            "x",
+            "y",
+            "heading",
+            "steering_angle",
+            "speed",
+            "action",
+            "action_b",
+            "reward",
+            "done",
+            "all_wheels_on_track",
+            "progress",
+            "closest_waypoint",
+            "track_len",
+            "tstamp",
+            "episode_status",
+            "pause_duration"
+        ]
         self.hyperparam_keys = [
             "batch_size",
             "beta_entropy",
@@ -73,10 +94,15 @@ class DeepRacerLog:
 
         def read_csv(path):
             try:
-                df = pd.read_csv(path, names=self.col_names, header=0)
-            except pd.errors.ParserError as e:
-                # Older logs don't have pause_duration, so we're handling this
-                df = pd.read_csv(path, names=self.col_names[:-1], header=0)
+                # TODO: this is a workaround and should be removed when logs are fixed
+                df = pd.read_csv(path, names=self.col_names_workaround, header=0)
+                df.drop("action_b")
+            except pd.errors.ParserError:
+                try:
+                    df = pd.read_csv(path, names=self.col_names, header=0)
+                except pd.errors.ParserError:
+                    # Older logs don't have pause_duration, so we're handling this
+                    df = pd.read_csv(path, names=self.col_names[:-1], header=0)
 
             df["iteration"] = int(path.split(os.path.sep)[-1].split("-")[0])
             df["worker"] = int(path.split(os.path.sep)[-3] if self.type ==
