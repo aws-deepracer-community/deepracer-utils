@@ -96,7 +96,7 @@ class DeepRacerLog:
             try:
                 # TODO: this is a workaround and should be removed when logs are fixed
                 df = pd.read_csv(path, names=self.col_names_workaround, header=0)
-                df.drop("action_b")
+                df = df.drop("action_b", axis=1)
             except pd.errors.ParserError:
                 try:
                     df = pd.read_csv(path, names=self.col_names, header=0)
