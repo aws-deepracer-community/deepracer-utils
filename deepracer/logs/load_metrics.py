@@ -37,6 +37,7 @@ class TrainingMetrics:
             pattern="{}/metrics/TrainingMetrics{}.json",
             s3_endpoint_url=None,
             region=None,
+            profile=None,
             training_round=1,
             display_digits_iteration=3,
             display_digits_episode=4,
@@ -58,11 +59,16 @@ class TrainingMetrics:
             iteration 25 the display_digits_iteration=4 would give unique index as 1-1225)
         s3_endpoint_url - (str) URL for the S3 endpoint
         region - (str) AWS Region for S3
-
+        profile - (str) Local awscli profile to use when connecting
+        
         Returns:
         TrainingMetrics object.
         """
-        self.s3 = boto3.resource("s3", endpoint_url=s3_endpoint_url, region_name=region)
+        if profile is not None:
+            session = boto3.session.Session(profile_name=profile)
+            self.s3 = session.resource("s3", endpoint_url=s3_endpoint_url, region_name=region)
+        else:
+            self.s3 = boto3.resource("s3", endpoint_url=s3_endpoint_url, region_name=region)
         self.max_iteration_strlen = display_digits_iteration
         self.max_episode_strlen = display_digits_episode
         self.max_round_strlen = display_digits_round
