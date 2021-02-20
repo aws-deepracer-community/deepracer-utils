@@ -1,9 +1,27 @@
+"""
+Copyright 2018-2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+Copyright 2020-2021 AWS DeepRacer Community. All Rights Reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
 import cv2
 import tensorflow as tf
 import numpy as np
 from tensorflow.gfile import GFile
 
-def load_session(pb_path, sensor):
+def load_session(pb_path, sensor='FRONT_FACING_CAMERA'):
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, 
                                     log_device_placement=True))
     print("load graph:", pb_path)
@@ -26,7 +44,7 @@ def load_session(pb_path, sensor):
 def rgb2gray(rgb):
     return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
 
-def visualize_gradcam_discrete_ppo(sess, rgb_img, sensor, category_index=0, num_of_actions=5):
+def visualize_gradcam_discrete_ppo(sess, rgb_img, sensor='FRONT_FACING_CAMERA', category_index=0, num_of_actions=5):
     '''
     @inp: model session, RGB Image - np array, action_index, total number of actions 
     @return: overlayed heatmap
