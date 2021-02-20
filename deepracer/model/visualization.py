@@ -1,13 +1,13 @@
 import cv2
 import tensorflow as tf
 import numpy as np
-from tensorflow.python.platform import gfile
+from tensorflow.gfile import GFile
 
 def load_session(pb_path, sensor):
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True, 
                                     log_device_placement=True))
     print("load graph:", pb_path)
-    with gfile.FastGFile(pb_path,'rb') as f:
+    with GFile(pb_path,'rb') as f:
         graph_def = tf.GraphDef()
     graph_def.ParseFromString(f.read())
     sess.graph.as_default()
