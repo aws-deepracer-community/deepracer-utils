@@ -45,6 +45,7 @@ setup(
         'joblib>=0.17.0'
     ],
     extras_require={
+        'visualization': ['tensorflow==1.15.4', 'opencv-python', 'python-resize-image'],
         'dev': ['check-manifest'],
         'test': ['coverage'],
     },
