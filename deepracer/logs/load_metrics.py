@@ -77,11 +77,11 @@ class TrainingMetrics:
         self.pattern = pattern
         if model_name is not None:
             df = self._loadRound(
-                bucket, self.pattern.format(model_name), training_round
+                bucket, self.pattern.format(model_name, ''), training_round
             )
             self.metrics = df
 
-    def _loadRound(self, bucket, key, training_round, worker, verbose=False):
+    def _loadRound(self, bucket, key, training_round=1, worker=0, verbose=False):
 
         if verbose:
             print("Downloading s3://%s/%s" % (bucket, key))
