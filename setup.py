@@ -55,4 +55,5 @@ setup(
         'Source':
         'https://github.com/aws-deepracer-community/deepracer-utils/',
     },
+    include_package_data=True,
 )
