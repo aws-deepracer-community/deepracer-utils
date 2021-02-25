@@ -2382,6 +2382,10 @@
         },
         "ModelArtifactsS3Prefix": {
           "shape": "S3ObjectKey"
+        },
+        "RoleArn": {
+          "shape": "RoleArn",
+          "documentation": "<p>An Arn of a role that current user has assigned, which write files to that bucket</p>"
         }
       }
     },
