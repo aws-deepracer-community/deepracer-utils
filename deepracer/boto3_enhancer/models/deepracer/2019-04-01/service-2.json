@@ -2660,8 +2660,7 @@
       "type": "structure",
       "required": [
         "Name",
-        "ModelArtifactsS3Bucket",
-        "ModelArtifactsS3Prefix",
+        "ModelArtifactsS3Path",
         "RoleArn",
         "Type"
       ],
@@ -2681,14 +2680,10 @@
           "shape": "Description",
           "documentation": "<p>A description of the imported model</p>"
         },
-        "ModelArtifactsS3Bucket": {
-          "shape": "S3Bucket",
-          "documentation": "<p>The S3 bucket to import from</p>"
-        },
-        "ModelArtifactsS3Prefix": {
+        "ModelArtifactsS3Path": {
           "shape": "S3ObjectKey",
           "documentation": "<p>Path to model in that bucket</p>"
-        },
+        },        
         "RoleArn": {
           "shape": "RoleArn",
           "documentation": "<p>An Arn of a role that current user has assigned, which allows to fetch files from that bucket</p>"
