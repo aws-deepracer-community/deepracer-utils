@@ -39,7 +39,7 @@ def deepracer_client(region_name='us-east-1', session=None):
     if not session:
         session = boto3.Session()
 
-    session._loader.search_paths.append(DR_MODEL_ROOT)
+    session._loader.search_paths.append(UTILS_MODELS_ROOT)
 
     return session.client(
         "deepracer",
