@@ -29,36 +29,20 @@ DR_MODELS_ROOT = os.path.join(DEEPRACER_UTILS_ROOT, 'boto3_enhancer', 'models', 
 AWS_CLI_MODELS_DR_ROOT = os.path.join(os.path.expanduser("~"), ".aws", "models", "deepracer")
 
 
-def add_deepracer(session=None, **kwargs):
-    """
-    Add deepracer service definition file to boto3 session.
-
-    If session not provided, boto3.DEFAULT_SESSION is used.
-
-    If boto3.DEFAULT_SESSION is not present, it is set up. kwargs are used then.
-
-    We could have used AWS_DATA_PATH environment variable but I wanted to leave
-    it untouched. Instead this is adding directly into the loader in session.
-
-    This code has been written thanks to guidance of Don Barber of AWS. The model
-    file for deepracer is his doing and has been introduced in
-    """
-    if not session:
-        if not boto3.DEFAULT_SESSION:
-            boto3.setup_default_session(**kwargs)
-        session = boto3.DEFAULT_SESSION
-
-    if DR_MODELS_ROOT not in session._loader.search_paths:
-        session._loader.search_paths.append(DR_MODELS_ROOT)
-
-
-def deepracer_client(region_name='us-east-1'):
+def deepracer_client(region_name='us-east-1', session=None):
     """
     Return deepracer client for boto3 with default (and only working) parameters
     """
-    add_deepracer()
+    if not session:
+        session = boto3.Session()
 
-    return boto3.client('deepracer', region_name=region_name)
+    session._loader.search_paths.append(DR_MODELS_ROOT)
+
+    return session.client(
+        "deepracer",
+        region_name=region_name,
+        endpoint_url="https://deepracer-prod.{}.amazonaws.com".format(region_name),
+    )
 
 
 def install_deepracer_cli(force=False):
