@@ -23,7 +23,10 @@ import shutil
 from deepracer.utils import DEEPRACER_UTILS_ROOT
 
 
-DR_MODELS_ROOT = os.path.join(DEEPRACER_UTILS_ROOT, 'boto3_enhancer', 'models', "deepracer")
+UTILS_MODELS_ROOT = os.path.join(DEEPRACER_UTILS_ROOT, 'boto3_enhancer', 'models')
+
+
+DR_MODEL_ROOT = os.path.join(UTILS_MODELS_ROOT, "deepracer")
 
 
 AWS_CLI_MODELS_DR_ROOT = os.path.join(os.path.expanduser("~"), ".aws", "models", "deepracer")
@@ -36,7 +39,7 @@ def deepracer_client(region_name='us-east-1', session=None):
     if not session:
         session = boto3.Session()
 
-    session._loader.search_paths.append(DR_MODELS_ROOT)
+    session._loader.search_paths.append(UTILS_MODELS_ROOT)
 
     return session.client(
         "deepracer",
@@ -53,7 +56,7 @@ def install_deepracer_cli(force=False):
         print("Configuration already found, not installing. Use --force to overwrite")
         return
 
-    shutil.copytree(DR_MODELS_ROOT, AWS_CLI_MODELS_DR_ROOT)
+    shutil.copytree(DR_MODEL_ROOT, AWS_CLI_MODELS_DR_ROOT)
 
 
 def remove_deepracer_cli():
