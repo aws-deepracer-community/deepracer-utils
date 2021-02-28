@@ -60,7 +60,7 @@ class TrainingMetrics:
         s3_endpoint_url - (str) URL for the S3 endpoint
         region - (str) AWS Region for S3
         profile - (str) Local awscli profile to use when connecting
-        
+
         Returns:
         TrainingMetrics object.
         """
