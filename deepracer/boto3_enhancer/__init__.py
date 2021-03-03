@@ -32,14 +32,14 @@ DR_MODEL_ROOT = os.path.join(UTILS_MODELS_ROOT, "deepracer")
 AWS_CLI_MODELS_DR_ROOT = os.path.join(os.path.expanduser("~"), ".aws", "models", "deepracer")
 
 
-def deepracer_client(region_name='us-east-1', session=None):
+def deepracer_client(region_name='us-east-1', session=None, search_path=UTILS_MODELS_ROOT):
     """
     Return deepracer client for boto3 with default (and only working) parameters
     """
     if not session:
         session = boto3.Session()
 
-    session._loader.search_paths.append(UTILS_MODELS_ROOT)
+    session._loader.search_paths.append(search_path)
 
     return session.client(
         "deepracer",
