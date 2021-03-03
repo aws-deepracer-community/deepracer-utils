@@ -1772,6 +1772,17 @@
         }
       }
     },
+    "CarControlConfig": {
+      "type": "structure",
+      "required": [
+        "CarSpeedControl"
+      ],
+      "members": {
+        "CarSpeedControl": {
+          "shape": "boolean"
+        }
+      }
+    },
     "CarCustomization": {
       "type": "structure",
       "required": [
@@ -2202,6 +2213,20 @@
     "EditPrivateLeaderboardResponse": {
       "type": "structure",
       "members": {}
+    },
+    "EntryTypeConfig": {
+      "type": "structure",
+      "required": [
+        "InvitationEntryType"
+      ],
+      "members": {
+        "InvitationEntryType": {
+          "shape": "StandardLengthString"
+        },
+        "RacingDivisionEntryType": {
+          "shape": "StandardLengthString"
+        }
+      }
     },
     "EpisodeStatus": {
       "type": "string",
@@ -2683,7 +2708,7 @@
         "ModelArtifactsS3Path": {
           "shape": "S3ObjectKey",
           "documentation": "<p>Path to model in that bucket</p>"
-        },        
+        },
         "RoleArn": {
           "shape": "RoleArn",
           "documentation": "<p>An Arn of a role that current user has assigned, which allows to fetch files from that bucket</p>"
@@ -2746,6 +2771,12 @@
         "CloseTime": {
           "shape": "epochTimeMillis"
         },
+        "StartTime": {
+          "shape": "epochTimeMillis"
+        },
+        "EndTime": {
+          "shape": "epochTimeMillis"
+        },
         "TrackArn": {
           "shape": "TrackArn"
         },
@@ -2755,6 +2786,9 @@
         "MinimumLaps": {
           "shape": "PositiveInteger"
         },
+        "TotalLaps": {
+          "shape": "PositiveInteger"
+        },
         "ParticipantCount": {
           "shape": "NonNegativeInteger"
         },
@@ -2762,6 +2796,9 @@
           "shape": "StandardLengthString"
         },
         "TrackImageUrl": {
+          "shape": "StandardLengthString"
+        },
+        "LeaderboardImage": {
           "shape": "StandardLengthString"
         },
         "HeadToHeadConfig": {
@@ -2776,6 +2813,15 @@
         "RaceType": {
           "shape": "RaceType"
         },
+        "Visibility": {
+          "shape": "StandardLengthString"
+        },
+        "Tournament": {
+          "shape": "Tournament"
+        },
+        "TerminationConditions": {
+          "shape": "TerminationConditions"
+        },
         "TimingMethod": {
           "shape": "TimingMethod"
         },
@@ -2788,14 +2834,38 @@
         "WinnerAlias": {
           "shape": "Alias"
         },
-        "Division": {
-          "shape": "Division"
+        "LeagueType": {
+          "shape": "StandardLengthString"
         },
         "PlayoffRaceTypeConfig": {
           "shape": "PlayoffRaceTypeConfig"
         },
         "ThemeConfig": {
           "shape": "ThemeConfig"
+        },
+        "NumOfTeamSubmissionsRequired": {
+          "shape": "PositiveInteger"
+        },
+        "WinningTeamName": {
+          "shape": "StandardLengthString"
+        },
+        "RacingDivisionEnabled": {
+          "shape": "boolean"
+        },
+        "RacingDivision": {
+          "shape": "Division"
+        },
+        "ParticipationConfig": {
+          "shape": "ParticipationConfig"
+        },
+        "CarControlConfig": {
+          "shape": "CarControlConfig"
+        },
+        "Tags": {
+          "shape": "StandardLengthString"
+        },
+        "Moderated": {
+          "shape": "boolean"
         }
       }
     },
@@ -2905,6 +2975,15 @@
         },
         "LogDownloadComplete": {
           "shape": "Boolean"
+        },
+        "TeamName": {
+          "shape": "StandardLengthString"
+        },
+        "RacingDivision": {
+          "shape": "StandardLengthString"
+        },
+        "UserId": {
+          "shape": "StandardLengthString"
         }
       }
     },
@@ -3435,6 +3514,9 @@
         "RandomizeLocation": {
           "shape": "boolean"
         },
+        "ObstaclePositions": {
+          "shape": "ObstablePositionList"
+        },
         "NumObstacles": {
           "shape": "NumObstacles"
         },
@@ -3443,11 +3525,47 @@
         }
       }
     },
+    "ObstablePositionList": {
+      "type": "list",
+      "member": {
+        "shape": "ObstaclePosition"
+      }
+    },
+    "ObstaclePosition": {
+      "type": "structure",
+      "required": [
+        "LaneNumber",
+        "TrackPercentage"
+      ],
+      "members": {
+        "LaneNumber": {
+          "shape": "NonNegativeInteger"
+        },
+        "TrackPercentage": {
+          "shape": "NonNegativeDouble"
+        }
+      }
+    },
     "ObstacleType": {
       "type": "string",
       "enum": [
         "BOX"
       ]
+    },
+    "ParticipationConfig": {
+      "type": "structure",
+      "required": [
+        "EntryTypeConfig",
+        "ViewType"
+      ],
+      "members": {
+        "EntryTypeConfig": {
+          "shape": "EntryTypeConfig"
+        },
+        "ViewType": {
+          "shape": "StandardLengthString"
+        }
+      }
     },
     "PerspectiveCustomization": {
       "type": "structure",
@@ -3720,6 +3838,12 @@
       "members": {},
       "exception": true
     },
+    "ResultsReleaseTimes": {
+      "type": "list",
+      "member": {
+        "shape": "epochTimeMillis"
+      }
+    },
     "RewardFunctionCode": {
       "type": "string",
       "max": 140000,
@@ -3891,6 +4015,23 @@
       "type": "structure",
       "members": {}
     },
+    "TerminationConditions": {
+      "type": "structure",
+      "required": [
+        "MaxTimeInMinutes"
+      ],
+      "members": {
+        "RewardScore": {
+          "shape": "double"
+        },
+        "MaxTimeInMinutes": {
+          "shape": "NonNegativeInteger"
+        },
+        "MaxEpisodes": {
+          "shape": "NonNegativeInteger"
+        }
+      }
+    },
     "TermsConditionId": {
       "type": "string",
       "max": 255,
@@ -3950,6 +4091,21 @@
       "members": {},
       "exception": true
     },
+    "Tournament": {
+      "type": "structure",
+      "required": [
+        "Size",
+        "ResultsReleaseTimes"
+      ],
+      "members": {
+        "Size": {
+          "shape": "NonNegativeInteger"
+        },
+        "ResultsReleaseTimes": {
+          "shape": "ResultsReleaseTimes"
+        }
+      }
+    },
     "TournamentResults": {
       "type": "structure",
       "members": {
@@ -3970,8 +4126,26 @@
         "TrackDescription": {
           "shape": "Description"
         },
+        "TrackReleaseTime": {
+          "shape": "epochTimeMillis"
+        },
+        "TrackDifficulty": {
+          "shape": "PositiveInteger"
+        },
+        "TrackLength": {
+          "shape": "double"
+        },
+        "TrackWidth": {
+          "shape": "double"
+        },
         "TrackPicture": {
           "shape": "StandardLengthString"
+        },
+        "TrackRaceTypePictureMap": {
+          "shape": "TrackRaceTypePictureMap"
+        },
+        "TrackUsageCount": {
+          "shape": "PositiveInteger"
         }
       }
     },
@@ -3996,6 +4170,29 @@
       "type": "list",
       "member": {
         "shape": "Track"
+      }
+    },
+    "TrackRaceTypePictureMap": {
+      "type": "structure",
+      "members": {
+        "HeadToHeadRacing": {
+          "shape": "StandardLengthString"
+        },
+        "HeadToHeadRacingGray": {
+          "shape": "StandardLengthString"
+        },
+        "ObjectAvoidance": {
+          "shape": "StandardLengthString"
+        },
+        "ObjectAvoidanceGray": {
+          "shape": "StandardLengthString"
+        },
+        "TimeTrial": {
+          "shape": "StandardLengthString"
+        },
+        "TimeTrialGray": {
+          "shape": "StandardLengthString"
+        }
       }
     },
     "TrainingConfig": {
