@@ -8,7 +8,7 @@ import uuid
 # Run this script with desired parameters on the last line"
 
 
-def edit_action_speeds(filename, edit_value, change_left_steering, change_straight, change_right_steering, add_indexer):
+def edit_action_speeds(filename, edit_value, change_left_steering, change_right_steering, add_indexer):
     with open(filename) as action_space_file:
         action_space_data = json.load(action_space_file)
         index_counter = 0
@@ -19,13 +19,14 @@ def edit_action_speeds(filename, edit_value, change_left_steering, change_straig
             if change_left_steering:
                 if action['steering_angle'] < 0:
                     action_update(action, edit_value)
-            if change_straight:
-                if action['steering_angle'] == 0:
-                    action_update(action, edit_value)
             if change_right_steering:
                 if action['steering_angle'] > 0:
                     action_update(action, edit_value)
 
+    create_temp_file(action_space_data, filename)
+
+
+def create_temp_file(action_space_data, filename):
     # Create randomly named temporary file to avoid interference with other thread/asynchronous request
     tmpfile = os.path.join(os.path.dirname(filename), str(uuid.uuid4()))
 
@@ -50,12 +51,12 @@ def action_update(action, edit_value):
 
 # 1st is filename of action space (metadata.json)
 # 2nd Parameter either a positive or negative value for editing all speeds the same value
-# 3rd/4th/5th Parameter boolean for changing left(positive), straight or right steering angles
-# 6th Parameter is for adding index values
+# 3rd/4th Parameter boolean for changing left(positive) or right steering angles
+# 5th Parameter is for adding index values
 
 
 # EXAMPLE 1 - Add Speed of 0.5 to all actions, with updating index values
-edit_action_speeds('action_space.json', 0.5, True, True, True, True)
+edit_action_speeds('action_space.json', 0.5, True, True, True)
 
 # EXAMPLE 2 - Minus Speed of 0.1 to all actions, with no change to index values
 # edit_action_speeds('action_space.json', -0.1, True, True, True, False)
