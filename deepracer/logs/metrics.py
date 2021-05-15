@@ -205,7 +205,7 @@ class TrainingMetrics:
         """
         return self.metrics[self.metrics["phase"] == "training"]
 
-    def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"]):
+    def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"], workers=None):
         """Provides summary per iteration. Data for evaluation and training is separated.
 
         Arguments:
@@ -213,11 +213,17 @@ class TrainingMetrics:
             'min' & 'max'. Default: 'mean'.
         summary_index - (list) List of columns to be used as index of summary.
             Default ['r-i','iteration'].
+        rounds - (list) List of rounds to include in the summary. Defaults to all rounds.
+        workers - (list) List of workers to include in the summary. Defaults to all workers.
 
         Returns:
         Pandas DataFrame containing the summary table.
         """
         input_df = self.metrics
+
+        if workers is not None:
+            input_df = input_df[input_df["worker"].isin(workers)]
+
         if rounds is not None:
             input_df = input_df[input_df["round"].isin(rounds)]
 
@@ -257,6 +263,7 @@ class TrainingMetrics:
             rolling_average=5,
             figsize=(12, 5),
             rounds=None,
+            workers=None,
             series=[
                 ("eval_completion", "Evaluation", "orange"),
                 ("train_completion", "Training", "blue"),
@@ -273,6 +280,8 @@ class TrainingMetrics:
         series - (list) List of series to plot, contains tuples containing column in summary to
             plot, the legend title and color of plot. Default:
             [('eval_completion','Evaluation','orange'),('train_completion','Training','blue')]
+        rounds - (list) List of rounds to include in the summary. Defaults to all rounds.
+        workers - (list) List of workers to include in the summary. Defaults to all workers.
 
         Returns:
         Pandas DataFrame containing the summary table.
@@ -293,7 +302,7 @@ class TrainingMetrics:
             axarr = axarr_raw
 
         for (m, ax) in zip(plot_methods, axarr):
-            summary = self.getSummary(method=m, rounds=rounds)
+            summary = self.getSummary(method=m, rounds=rounds, workers=workers)
             labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))), 1)
             x = []
             t = []
