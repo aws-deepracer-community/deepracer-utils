@@ -2,6 +2,7 @@ import glob
 import json
 import os
 import pandas as pd
+import numpy as np
 import re
 from joblib import Parallel, delayed
 
@@ -123,12 +124,22 @@ class DeepRacerLog:
         # Merge into single large DataFrame
         df = pd.concat(dfs, ignore_index=True)
 
-        episodes_per_worker_per_iteration = df[(
-            df["iteration"] == 0) & (df["worker"] == 0)]["episode"].max()
         workers_count = df["worker"].max() + 1
+        episodes_per_worker = {}
+        episodes_until_worker = {0: 0}
+        episodes_per_iteration = 0
+        for worker in range(workers_count):
+            episodes_per_worker[worker] = df[(df["iteration"] == 0) & (df["worker"] == worker)]["episode"].max() + 1
+            episodes_until_worker[worker + 1] = episodes_per_worker[worker] + episodes_until_worker[worker]
+            episodes_per_iteration += episodes_per_worker[worker]
+        print("workers_count: {}".format(workers_count))
+        print("episodes_per_worker: {}".format(episodes_per_worker))
+#        print("episodes_until_worker: {}".format(episodes_until_worker))
+        print("episodes_per_iteration: {}".format(episodes_per_iteration))
 
-        df["unique_episode"] = df["episode"] + df["worker"] * episodes_per_worker_per_iteration + \
-            df["iteration"] * episodes_per_worker_per_iteration * workers_count
+        df["unique_episode"] = df["episode"] % np.array([episodes_per_worker[worker] for worker in df["worker"]]) + \
+                               np.array([episodes_until_worker[worker] for worker in df["worker"]]) + \
+                               df["iteration"] * episodes_per_iteration
 
         self.df = df.sort_values(['unique_episode', 'steps']).reset_index(drop=True)
 
