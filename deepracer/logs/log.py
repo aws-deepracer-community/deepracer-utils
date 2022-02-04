@@ -3,6 +3,7 @@ import json
 import os
 import pandas as pd
 import numpy as np
+import logging
 import re
 from joblib import Parallel, delayed
 
@@ -132,10 +133,10 @@ class DeepRacerLog:
             episodes_per_worker[worker] = df[(df["iteration"] == 0) & (df["worker"] == worker)]["episode"].max() + 1
             episodes_until_worker[worker + 1] = episodes_per_worker[worker] + episodes_until_worker[worker]
             episodes_per_iteration += episodes_per_worker[worker]
-        print("workers_count: {}".format(workers_count))
-        print("episodes_per_worker: {}".format(episodes_per_worker))
-#        print("episodes_until_worker: {}".format(episodes_until_worker))
-        print("episodes_per_iteration: {}".format(episodes_per_iteration))
+        logging.debug("workers_count: {}".format(workers_count))
+        logging.debug("episodes_per_worker: {}".format(episodes_per_worker))
+#        logging.debug("episodes_until_worker: {}".format(episodes_until_worker))
+        logging.debug("episodes_per_iteration: {}".format(episodes_per_iteration))
 
         df["unique_episode"] = df["episode"] % np.array([episodes_per_worker[worker] for worker in df["worker"]]) + \
                                np.array([episodes_until_worker[worker] for worker in df["worker"]]) + \
