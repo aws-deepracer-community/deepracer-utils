@@ -198,7 +198,7 @@ class TrainingMetrics:
         workers - (int) Number of separate workers files to be loaded. (Default: 1)
         """
 
-        print ("Reloading round {}".format(training_round))
+        print("Reloading round {}".format(training_round))
         self.metrics = self.metrics[self.metrics['round'] != training_round]
 
         for w in range(0, workers):
@@ -215,7 +215,6 @@ class TrainingMetrics:
                 self.metrics = self.metrics.append(df, ignore_index=True)
             else:
                 self.metrics = df
-
 
     def getEvaluation(self):
         """Get the Evaluation part of the data.
@@ -234,11 +233,11 @@ class TrainingMetrics:
         return self.metrics[self.metrics["phase"] == "training"]
 
     def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"],
-                    workers=None, completedLapsOnly=False):
+                   workers=None, completedLapsOnly=False):
         """Provides summary per iteration. Data for evaluation and training is separated.
 
         Arguments:
-        rounds - (array) Array of round numbers to be plotted.       
+        rounds - (array) Array of round numbers to be plotted.
         method - (str) Statistical value to be calculated. Examples are 'mean', 'median',
             'min' & 'max'. Default: 'mean'.
         summary_index - (list) List of columns to be used as index of summary.
@@ -259,7 +258,7 @@ class TrainingMetrics:
             input_df = input_df[input_df["round"].isin(rounds)]
 
         if completedLapsOnly:
-            input_df = input_df[input_df["complete"]==1]
+            input_df = input_df[input_df["complete"] == 1]
 
         columns = summary_index + ["reward", "completion", "time", "complete"]
         training_input = input_df[input_df["phase"] == "training"][columns].copy()
@@ -348,7 +347,8 @@ class TrainingMetrics:
             axarr = axarr_raw
 
         for (m, ax) in zip(plot_methods, axarr):
-            summary = self.getSummary(method=m, rounds=rounds, workers=workers, completedLapsOnly=completedLapsOnly)
+            summary = self.getSummary(method=m, rounds=rounds, workers=workers,
+                                      completedLapsOnly=completedLapsOnly)
             labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))), 1)
             x = []
             t = []
