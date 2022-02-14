@@ -234,7 +234,7 @@ class TrainingMetrics:
         return self.metrics[self.metrics["phase"] == "training"]
 
     def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"],
-                    completedLapsOnly=False):
+                    workers=None, completedLapsOnly=False):
         """Provides summary per iteration. Data for evaluation and training is separated.
 
         Arguments:
@@ -244,11 +244,17 @@ class TrainingMetrics:
         summary_index - (list) List of columns to be used as index of summary.
             Default ['r-i','iteration'].
         completedLapsOnly - (boolean) True will include only completed laps in summary.
+        rounds - (list) List of rounds to include in the summary. Defaults to all rounds.
+        workers - (list) List of workers to include in the summary. Defaults to all workers.
 
         Returns:
         Pandas DataFrame containing the summary table.
         """
         input_df = self.metrics
+
+        if workers is not None:
+            input_df = input_df[input_df["worker"].isin(workers)]
+
         if rounds is not None:
             input_df = input_df[input_df["round"].isin(rounds)]
 
@@ -291,6 +297,7 @@ class TrainingMetrics:
             rolling_average=5,
             figsize=(12, 5),
             rounds=None,
+            workers=None,
             series=[
                 ("eval_completion", "Evaluation", "orange"),
                 ("train_completion", "Training", "blue"),
@@ -319,6 +326,8 @@ class TrainingMetrics:
             for the method.
         completedLapsOnly - (boolean) Include only completed laps in the statistics.
         grid - (boolean) Adds a grid to the plot.
+        rounds - (list) List of rounds to include in the summary. Defaults to all rounds.
+        workers - (list) List of workers to include in the summary. Defaults to all workers.
 
         Returns:
         Pandas DataFrame containing the summary table.
@@ -339,7 +348,7 @@ class TrainingMetrics:
             axarr = axarr_raw
 
         for (m, ax) in zip(plot_methods, axarr):
-            summary = self.getSummary(method=m, rounds=rounds, completedLapsOnly=completedLapsOnly)
+            summary = self.getSummary(method=m, rounds=rounds, workers=workers, completedLapsOnly=completedLapsOnly)
             labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))), 1)
             x = []
             t = []
