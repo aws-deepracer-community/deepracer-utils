@@ -189,6 +189,33 @@ class TrainingMetrics:
             else:
                 self.metrics = df
 
+    def reloadRound(self, model_name, training_round=2, workers=1):
+        """Adds a round of training metrics to the data set
+
+        Arguments:
+        model_name - (str) Name of the model that will be loaded.
+        training_round - (int) Integer value that will be used to distinguish data.
+        workers - (int) Number of separate workers files to be loaded. (Default: 1)
+        """
+
+        print("Reloading round {}".format(training_round))
+        self.metrics = self.metrics[self.metrics['round'] != training_round]
+
+        for w in range(0, workers):
+            if w > 0:
+                worker_suffix = "_{}".format(w)
+            else:
+                worker_suffix = ""
+
+            df = self._loadRound(
+                self.bucket, self.pattern.format(model_name, worker_suffix), training_round, w
+            )
+
+            if self.metrics is not None:
+                self.metrics = self.metrics.append(df, ignore_index=True)
+            else:
+                self.metrics = df
+
     def getEvaluation(self):
         """Get the Evaluation part of the data.
 
@@ -205,21 +232,33 @@ class TrainingMetrics:
         """
         return self.metrics[self.metrics["phase"] == "training"]
 
-    def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"]):
+    def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"],
+                   workers=None, completedLapsOnly=False):
         """Provides summary per iteration. Data for evaluation and training is separated.
 
         Arguments:
+        rounds - (array) Array of round numbers to be plotted.
         method - (str) Statistical value to be calculated. Examples are 'mean', 'median',
             'min' & 'max'. Default: 'mean'.
         summary_index - (list) List of columns to be used as index of summary.
             Default ['r-i','iteration'].
+        completedLapsOnly - (boolean) True will include only completed laps in summary.
+        rounds - (list) List of rounds to include in the summary. Defaults to all rounds.
+        workers - (list) List of workers to include in the summary. Defaults to all workers.
 
         Returns:
         Pandas DataFrame containing the summary table.
         """
         input_df = self.metrics
+
+        if workers is not None:
+            input_df = input_df[input_df["worker"].isin(workers)]
+
         if rounds is not None:
             input_df = input_df[input_df["round"].isin(rounds)]
+
+        if completedLapsOnly:
+            input_df = input_df[input_df["complete"] == 1]
 
         columns = summary_index + ["reward", "completion", "time", "complete"]
         training_input = input_df[input_df["phase"] == "training"][columns].copy()
@@ -257,10 +296,16 @@ class TrainingMetrics:
             rolling_average=5,
             figsize=(12, 5),
             rounds=None,
+            workers=None,
             series=[
                 ("eval_completion", "Evaluation", "orange"),
                 ("train_completion", "Training", "blue"),
             ],
+            title="Completion per Iteration ({})",
+            xlabel="Iteration",
+            ylabel="Percent complete ({})",
+            completedLapsOnly=False,
+            grid=False,
     ):
         """Plots training progress. Allows selection of multiple iterations.
 
@@ -273,6 +318,15 @@ class TrainingMetrics:
         series - (list) List of series to plot, contains tuples containing column in summary to
             plot, the legend title and color of plot. Default:
             [('eval_completion','Evaluation','orange'),('train_completion','Training','blue')]
+        title - (string) The title of the diagram. Optional formatting placeholder '{}' for
+            the method.
+        xlabel - (string) The x label of the diagram.
+        ylabel - (string) The y label of the diagram. Optional formatting placeholder '{}'
+            for the method.
+        completedLapsOnly - (boolean) Include only completed laps in the statistics.
+        grid - (boolean) Adds a grid to the plot.
+        rounds - (list) List of rounds to include in the summary. Defaults to all rounds.
+        workers - (list) List of workers to include in the summary. Defaults to all workers.
 
         Returns:
         Pandas DataFrame containing the summary table.
@@ -293,7 +347,8 @@ class TrainingMetrics:
             axarr = axarr_raw
 
         for (m, ax) in zip(plot_methods, axarr):
-            summary = self.getSummary(method=m, rounds=rounds)
+            summary = self.getSummary(method=m, rounds=rounds, workers=workers,
+                                      completedLapsOnly=completedLapsOnly)
             labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))), 1)
             x = []
             t = []
@@ -310,9 +365,9 @@ class TrainingMetrics:
                     label=s[1],
                     color=s[2],
                 )
-            ax.set_title("Completion per Iteration ({})".format(m))
-            ax.set_xlabel("Iteration")
-            ax.set_ylabel("Percent complete ({})".format(m))
+            ax.set_title(title.format(m))
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel.format(m))
             ax.set_xticks(t)
 
             ax.legend(loc='upper left')
@@ -329,5 +384,8 @@ class TrainingMetrics:
                     "0".zfill(self.max_iteration_strlen)
                     )
                 ax.axvline(x=label, dashes=[0.25, 0.75], linewidth=0.5, color="black")
+
+            if grid:
+                ax.grid()
 
         plt.show()
