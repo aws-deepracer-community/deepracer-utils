@@ -260,7 +260,7 @@ class AnalysisUtils:
         Returns:
         Aggregated dataframe
         """
-        grouped = panda.groupby([firstgroup, 'episode'])
+        grouped = panda.groupby([firstgroup, 'unique_episode'])
 
         by_steps = grouped['steps'].agg(np.max).reset_index()
         by_start = grouped.first()['closest_waypoint'].reset_index() \
@@ -273,33 +273,33 @@ class AnalysisUtils:
 
         result = by_steps \
             .merge(by_start) \
-            .merge(by_progress, on=[firstgroup, 'episode']) \
-            .merge(by_time, on=[firstgroup, 'episode'])
+            .merge(by_progress, on=[firstgroup, 'unique_episode']) \
+            .merge(by_time, on=[firstgroup, 'unique_episode'])
 
         if not is_eval:
             if 'new_reward' not in panda.columns:
                 print('new reward not found, using reward as its values')
                 panda['new_reward'] = panda['reward']
             by_new_reward = grouped['new_reward'].agg(np.sum).reset_index()
-            result = result.merge(by_new_reward, on=[firstgroup, 'episode'])
+            result = result.merge(by_new_reward, on=[firstgroup, 'unique_episode'])
 
-        result = result.merge(by_speed, on=[firstgroup, 'episode'])
+        result = result.merge(by_speed, on=[firstgroup, 'unique_episode'])
 
         if not is_eval:
             by_reward = grouped['reward'].agg(np.sum).reset_index()
-            result = result.merge(by_reward, on=[firstgroup, 'episode'])
+            result = result.merge(by_reward, on=[firstgroup, 'unique_episode'])
 
         result['time_if_complete'] = result['time'] * 100 / result['progress']
 
         if not is_eval:
             result['reward_if_complete'] = result['reward'] * 100 / result['progress']
-            result['quintile'] = pd.cut(result['episode'], 5, labels=[
+            result['quintile'] = pd.cut(result['unique_episode'], 5, labels=[
                                         '1st', '2nd', '3rd', '4th', '5th'])
 
         if add_tstamp:
             by_tstamp = grouped['tstamp'].agg(np.max).astype(float).reset_index()
             by_tstamp['tstamp'] = pd.to_datetime(by_tstamp['tstamp'], unit='s')
-            result = result.merge(by_tstamp, on=[firstgroup, 'episode'])
+            result = result.merge(by_tstamp, on=[firstgroup, 'unique_episode'])
 
         return result
 
@@ -403,7 +403,7 @@ class AnalysisUtils:
 
         complete_per_iteration = grouped['complete'].agg([np.mean]).reset_index()
 
-        print('Number of episodes = ', np.max(aggregates['episode']))
+        print('Number of episodes = ', np.max(aggregates['unique_episode']))
         print('Number of iterations = ', np.max(aggregates['iteration']))
 
         fig, axes = plt.subplots(nrows=3, ncols=3, figsize=[15, 15])
@@ -415,7 +415,7 @@ class AnalysisUtils:
                            'mean', 'Mean reward', 'Rewards per Iteration')
         AnalysisUtils.plot(axes[1, 0], reward_per_iteration, 'iteration',
                            'Iteration', 'std', 'Std dev of reward', 'Dev of reward')
-        AnalysisUtils.plot(axes[2, 0], aggregates, 'episode', 'Episode', 'reward', 'Total reward')
+        AnalysisUtils.plot(axes[2, 0], aggregates, 'unique_episode', 'Episode', 'reward', 'Total reward')
 
         AnalysisUtils.plot(axes[0, 1], time_per_iteration, 'iteration',
                            'Iteration', 'mean', 'Mean time', 'Times per Iteration')
@@ -482,7 +482,7 @@ class PlottingUtils:
         PlottingUtils._plot_line(ax, line, color)
 
     @staticmethod
-    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="episode"):
+    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="unique_episode"):
         """Plot n laps in the training, referenced by episode ids
 
         Arguments:
@@ -528,7 +528,7 @@ class PlottingUtils:
             'tstamp', ascending=False).groupby('stream', sort=False)
 
         for _, stream in streams:
-            episodes = stream.groupby('episode')
+            episodes = stream.groupby('unique_episode')
             ep_count = len(episodes)
 
             rows = ceil(ep_count / 3)
@@ -695,10 +695,10 @@ class EvaluationUtils:
                                   min_progress=None):
         """Plot all episodes of a single evaluation
         """
-        episodes = eval_df.groupby('episode').groups
+        episodes = eval_df.groupby('unique_episode').groups
         for e in episodes:
             PlottingUtils.plot_grid_world(
-                eval_df[eval_df['episode'] == e], track, min_progress=min_progress)
+                eval_df[eval_df['unique_episode'] == e], track, min_progress=min_progress)
 
     @staticmethod
     def analyse_multiple_race_evaluations(logs, track: Track, min_progress=None):
@@ -903,7 +903,7 @@ class ActionBreakdownUtils:
         df_iter = df[df['iteration'].isin(iteration_ids)] if iteration_ids is not None else df
 
         # Slice the data frame to get all episodes in list
-        df_iter = df[df['episode'].isin(episode_ids)] if episode_ids is not None else df
+        df_iter = df[df['unique_episode'].isin(episode_ids)] if episode_ids is not None else df
 
         for idx in range(len(action_names)):
             ax = fig.add_subplot(len(action_names), 2, 2 * idx + 1)
