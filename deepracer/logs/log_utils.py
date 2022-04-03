@@ -454,6 +454,14 @@ class AnalysisUtils:
         ax.set_ylabel(ylabel)
         ax.set_xlabel(xlabel)
 
+        # Draw the running average
+        if (len(df) > 5):
+            ys = uniform_filter1d(df[yval], size=int(len(df)/5.0))
+            xys = [o for o in zip(df[xval], ys)]
+            xyarr = np.array(xys)
+            xyarr_t = xyarr.T
+            ax.plot(*xyarr_t, color="purple")
+        
         plt.grid(True)
 
 
