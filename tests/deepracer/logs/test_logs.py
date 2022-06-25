@@ -63,8 +63,10 @@ class TestDeepRacerLog:
 
 class TestEvaluationLogs:
     def test_load_evaluation_logs(self):
-        logs = [['deepracer/logs/sample-console-logs/logs/evaluation/evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log', 'log-1'],
-                ['deepracer/logs/sample-console-logs/logs/evaluation/evaluation-20220612083839-PMfF__s5QJSQT_-E0rEYwg-robomaker.log', 'log-2']]
+        logs = [['deepracer/logs/sample-console-logs/logs/evaluation/'
+                 'evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log', 'log-1'],
+                ['deepracer/logs/sample-console-logs/logs/evaluation/'
+                 'evaluation-20220612083839-PMfF__s5QJSQT_-E0rEYwg-robomaker.log', 'log-2']]
 
         bulk = SimulationLogsIO.load_a_list_of_logs(logs)
 
@@ -75,8 +77,10 @@ class TestEvaluationLogs:
                        'pause_duration', 'stream'] == bulk.columns)
 
     def test_summarize_evaluation_logs(self):
-        logs = [['deepracer/logs/sample-console-logs/logs/evaluation/evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log', 'log-1'],
-                ['deepracer/logs/sample-console-logs/logs/evaluation/evaluation-20220612083839-PMfF__s5QJSQT_-E0rEYwg-robomaker.log', 'log-2']]
+        logs = [['deepracer/logs/sample-console-logs/logs/evaluation/'
+                 'evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log', 'log-1'],
+                ['deepracer/logs/sample-console-logs/logs/evaluation/'
+                 'evaluation-20220612083839-PMfF__s5QJSQT_-E0rEYwg-robomaker.log', 'log-2']]
 
         bulk = SimulationLogsIO.load_a_list_of_logs(logs)
 

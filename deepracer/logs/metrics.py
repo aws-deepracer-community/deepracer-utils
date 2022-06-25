@@ -38,6 +38,7 @@ class TrainingMetrics:
             s3_endpoint_url=None,
             region=None,
             profile=None,
+            fname=None,
             training_round=1,
             display_digits_iteration=3,
             display_digits_episode=4,
@@ -60,6 +61,7 @@ class TrainingMetrics:
         s3_endpoint_url - (str) URL for the S3 endpoint
         region - (str) AWS Region for S3
         profile - (str) Local awscli profile to use when connecting
+        fname - (str) Read in a file, rather than from S3
 
         Returns:
         TrainingMetrics object.
@@ -76,12 +78,30 @@ class TrainingMetrics:
         self.bucket = bucket
         self.pattern = pattern
         if model_name is not None:
+            data = self._getS3File(bucket, self.pattern.format(model_name, ''), False)
             df = self._loadRound(
-                bucket, self.pattern.format(model_name, ''), training_round
+                data, training_round
             )
             self.metrics = df
 
-    def _loadRound(self, bucket, key, training_round=1, worker=0, verbose=False):
+        if fname is not None:
+            data = self._getFile(fname, False)
+            df = self._loadRound(
+                data, training_round
+            )
+            self.metrics = df
+
+    def _getFile(self, fname, verbose=False):
+        if verbose:
+            print("Reading in file://%s" % (fname))
+
+        f = open(fname)
+        data = json.load(f)
+        f.close()
+
+        return data
+
+    def _getS3File(self, bucket, key, verbose=False):
 
         if verbose:
             print("Downloading s3://%s/%s" % (bucket, key))
@@ -89,6 +109,10 @@ class TrainingMetrics:
         bytes_io = BytesIO()
         self.s3.Object(bucket, key).download_fileobj(bytes_io)
         data = json.loads(bytes_io.getvalue())
+
+        return data
+
+    def _loadRound(self, data, training_round=1, worker=0, verbose=False):
 
         df = pd.read_json(json.dumps(data["metrics"]), orient="records")
         if worker == 0:
@@ -165,29 +189,43 @@ class TrainingMetrics:
             ]
         ]
 
-    def addRound(self, model_name, training_round=2, workers=1):
+    def addRound(self, model_name, fname=None, training_round=2, workers=1):
         """Adds a round of training metrics to the data set
 
         Arguments:
         model_name - (str) Name of the model that will be loaded.
+        fname - (str) Read from file not from S3
         training_round - (int) Integer value that will be used to distinguish data.
         workers - (int) Number of separate workers files to be loaded. (Default: 1)
         """
 
-        for w in range(0, workers):
-            if w > 0:
-                worker_suffix = "_{}".format(w)
-            else:
-                worker_suffix = ""
-
+        if fname is not None:
+            data = self._getFile(fname, False)
             df = self._loadRound(
-                self.bucket, self.pattern.format(model_name, worker_suffix), training_round, w
+                data, training_round
             )
 
             if self.metrics is not None:
                 self.metrics = self.metrics.append(df, ignore_index=True)
             else:
                 self.metrics = df
+
+        else:
+            for w in range(0, workers):
+                if w > 0:
+                    worker_suffix = "_{}".format(w)
+                else:
+                    worker_suffix = ""
+
+                data = self._getS3File(self.bucket, self.pattern.format(model_name, worker_suffix))
+                df = self._loadRound(
+                    data, training_round, w
+                )
+
+                if self.metrics is not None:
+                    self.metrics = self.metrics.append(df, ignore_index=True)
+                else:
+                    self.metrics = df
 
     def reloadRound(self, model_name, training_round=2, workers=1):
         """Adds a round of training metrics to the data set
@@ -389,3 +427,4 @@ class TrainingMetrics:
                 ax.grid()
 
         plt.show()
+        return ax
