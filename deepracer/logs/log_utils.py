@@ -57,6 +57,28 @@ class SimulationLogsIO:
         return data
 
     @staticmethod
+    def load_buffer(buffer, data=None):
+        """Loads a buffered reader and remembers only the SIM_TRACE_LOG lines
+
+        Arguments:
+        buffer - buffered reader
+        data - list to populate with SIM_TRACE_LOG lines. Default: None
+
+        Returns:
+        List of loaded log lines. If data is not None, it is the reference returned
+        and the list referenced has new log lines appended
+        """
+        if data is None:
+            data = []
+
+        for line in buffer.readlines():
+            if "SIM_TRACE_LOG" in line:
+                parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split(",")
+                data.append(",".join(parts))
+
+        return data
+
+    @staticmethod
     def load_data(fname):
         """Load all log files for a given simulation
 
@@ -482,7 +504,8 @@ class PlottingUtils:
         PlottingUtils._plot_line(ax, line, color)
 
     @staticmethod
-    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="episode", single_plot=False):
+    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="episode",
+                           single_plot=False):
         """Plot n laps in the training, referenced by episode ids
 
         Arguments:
@@ -599,7 +622,7 @@ class PlottingUtils:
             PlottingUtils._plot_line(ax, line)
 
             if cmap is None:
-                cmap=plt.get_cmap('plasma')
+                cmap = plt.get_cmap('plasma')
 
             episode_df.plot.scatter('x', 'y', ax=ax, s=3, c=graphed_value,
                                     cmap=cmap)
