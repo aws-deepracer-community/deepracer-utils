@@ -482,7 +482,7 @@ class PlottingUtils:
         PlottingUtils._plot_line(ax, line, color)
 
     @staticmethod
-    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="episode"):
+    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="episode", single_plot=False):
         """Plot n laps in the training, referenced by episode ids
 
         Arguments:
@@ -497,21 +497,25 @@ class PlottingUtils:
         if type(sorted_idx) is not list:
             ids = sorted_idx[section_to_plot].unique().tolist()
 
-        n_laps = len(ids)
+        if single_plot:
+            grid = [ids]
+        else:
+            grid = ids
 
-        fig = plt.figure(n_laps, figsize=(12, n_laps * 10))
-        for i in range(n_laps):
-            idx = ids[i]
+        n_plots = len(grid)
 
-            data_to_plot = df[df[section_to_plot] == idx]
-
-            ax = fig.add_subplot(n_laps, 1, i + 1)
-
+        fig = plt.figure(n_plots, figsize=(16, n_plots * 10))
+        for j, indexes in enumerate(grid):
+            ax = fig.add_subplot(n_plots, 1, j + 1)
             ax.axis('equal')
-
             PlottingUtils.print_border(ax, track, color='cyan')
 
-            data_to_plot.plot.scatter('x', 'y', ax=ax, s=10, c='blue')
+            if type(indexes) is int:
+                indexes = [indexes]
+
+            for idx in indexes:
+                data_to_plot = df[df[section_to_plot] == idx]
+                data_to_plot.plot.scatter('x', 'y', ax=ax, s=5, c='blue')
 
         plt.show()
         plt.clf()
@@ -557,7 +561,8 @@ class PlottingUtils:
         track: Track,
         graphed_value='speed',
         min_progress=None,
-        ax=None
+        ax=None,
+        cmap=None
     ):
         """Plot a scaled version of lap, along with speed taken a each position
         """
@@ -585,8 +590,6 @@ class PlottingUtils:
                 fig = plt.figure(figsize=(16, 10))
                 ax = fig.add_subplot(1, 1, 1)
 
-            ax.set_facecolor('midnightblue')
-
             line = LineString(track.inner_border)
             PlottingUtils._plot_coords(ax, line)
             PlottingUtils._plot_line(ax, line)
@@ -595,8 +598,11 @@ class PlottingUtils:
             PlottingUtils._plot_coords(ax, line)
             PlottingUtils._plot_line(ax, line)
 
+            if cmap is None:
+                cmap=plt.get_cmap('plasma')
+
             episode_df.plot.scatter('x', 'y', ax=ax, s=3, c=graphed_value,
-                                    cmap=plt.get_cmap('plasma'))
+                                    cmap=cmap)
 
             subtitle = '%s%s\n%s\n%s' % (
                 ('Stream: %s, ' % episode_df['stream'].iloc[0]
