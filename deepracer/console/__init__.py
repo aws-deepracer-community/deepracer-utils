@@ -1,1 +1,1 @@
-from .helper import ConsoleHelper
+from .helper import ConsoleHelper, LeaderboardSubmissionType

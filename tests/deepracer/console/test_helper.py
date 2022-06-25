@@ -1,4 +1,4 @@
-from deepracer.console import ConsoleHelper
+from deepracer.console import ConsoleHelper, LeaderboardSubmissionType
 from deepracer.logs import AnalysisUtils
 from deepracer.logs.metrics import TrainingMetrics
 import numpy as np
@@ -7,6 +7,7 @@ import pytest
 from boto3.exceptions import PythonDeprecationWarning
 
 
+@pytest.mark.skip(reason="Requires AWS access")
 class TestConsoleHelper:
 
     @pytest.fixture(autouse=True)
@@ -14,7 +15,6 @@ class TestConsoleHelper:
         warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
         yield
 
-    @pytest.mark.skip(reason="Requires AWS access")
     def test_find_model(self):
 
         ch = ConsoleHelper()
@@ -26,7 +26,6 @@ class TestConsoleHelper:
         assert "COMPLETED" == training_job['ActivityJob']['Status']['JobStatus']
         assert model_arn == training_job['ActivityJob']['ModelArn']
 
-    @pytest.mark.skip(reason="Requires AWS access")
     def test_get_metrics(self):
 
         ch = ConsoleHelper()
@@ -38,7 +37,6 @@ class TestConsoleHelper:
         summary = tm.getSummary()
         assert (29, 10) == summary.shape
 
-    @pytest.mark.skip(reason="Requires AWS access")
     def test_get_training_logs(self):
 
         ch = ConsoleHelper()
@@ -56,3 +54,29 @@ class TestConsoleHelper:
         assert 432 == fastest.iloc[0, 1]
         assert 213.0 == fastest.iloc[0, 2]
         assert 14.128 == pytest.approx(fastest.iloc[0, 5])
+
+    def test_get_leaderboard_logs_ranked(self):
+
+        ch = ConsoleHelper()
+        df = ch.get_leaderboard_log_robomaker("7bbc2d59-af3c-4e06-ac51-e2c76d9f5734",
+                                              select=LeaderboardSubmissionType.RANKED)
+
+        simulation_agg = AnalysisUtils.simulation_agg(df)
+
+        assert (3, 12) == simulation_agg.shape  # four more episodes in the log
+        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
+                       'new_reward', 'speed', 'reward', 'time_if_complete',
+                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
+
+    def test_get_leaderboard_logs_latest(self):
+
+        ch = ConsoleHelper()
+        df = ch.get_leaderboard_log_robomaker("7bbc2d59-af3c-4e06-ac51-e2c76d9f5734",
+                                              select=LeaderboardSubmissionType.LATEST)
+
+        simulation_agg = AnalysisUtils.simulation_agg(df)
+
+        assert (3, 12) == simulation_agg.shape  # four more episodes in the log
+        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
+                       'new_reward', 'speed', 'reward', 'time_if_complete',
+                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
