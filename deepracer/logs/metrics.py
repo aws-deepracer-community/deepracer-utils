@@ -16,6 +16,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 from io import BytesIO
+from urllib.request import urlopen
 import json
 import math
 
@@ -39,6 +40,7 @@ class TrainingMetrics:
             region=None,
             profile=None,
             fname=None,
+            url=None,
             training_round=1,
             display_digits_iteration=3,
             display_digits_episode=4,
@@ -91,6 +93,13 @@ class TrainingMetrics:
             )
             self.metrics = df
 
+        if url is not None:
+            data = self._getUrlFile(url, False)
+            df = self._loadRound(
+                data, training_round
+            )
+            self.metrics = df
+
     def _getFile(self, fname, verbose=False):
         if verbose:
             print("Reading in file://%s" % (fname))
@@ -108,6 +117,15 @@ class TrainingMetrics:
 
         bytes_io = BytesIO()
         self.s3.Object(bucket, key).download_fileobj(bytes_io)
+        data = json.loads(bytes_io.getvalue())
+
+        return data
+
+    def _getUrlFile(self, url, verbose=False):
+        if verbose:
+            print("Downloading %s" % (url))
+
+        bytes_io = BytesIO(urlopen(url).read())
         data = json.loads(bytes_io.getvalue())
 
         return data
