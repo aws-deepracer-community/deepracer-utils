@@ -376,7 +376,7 @@ class TrainingMetrics:
         else:
             plot_methods = method
 
-        _, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
+        fig, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
 
         axarr = []
         if type(axarr_raw) is not np.ndarray:
@@ -427,4 +427,4 @@ class TrainingMetrics:
                 ax.grid()
 
         plt.show()
-        return ax
+        return fig

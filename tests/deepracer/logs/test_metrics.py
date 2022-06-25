@@ -2,6 +2,7 @@ from deepracer.logs.metrics import TrainingMetrics
 import numpy as np
 import warnings
 import pytest
+import matplotlib as plt
 from boto3.exceptions import PythonDeprecationWarning
 
 
@@ -26,12 +27,17 @@ class TestMetrics:
         assert 28 == max(training['master_iteration'])
         assert 568 == len(training)
         assert np.all([
-            "r-i", "round", "iteration", "master_iteration", "episode", "r-e", "worker", "trial", "phase", "reward", "completion", "time", "complete", "start_time",
+            "r-i", "round", "iteration", "master_iteration", "episode", "r-e", "worker", "trial", 
+            "phase", "reward", "completion", "time", "complete", "start_time",
         ] == training.columns)
 
     def test_plot(self):
         tm = TrainingMetrics(None, fname='./deepracer/logs/sample-console-logs/metrics/training/'
                                          'training-20220611205309-EHNgTNY2T9-77qXhqjBi6A.json')
-        ax = tm.plotProgress()
+        figure = tm.plotProgress(method=["mean", "max"])
+        size = figure.get_size_inches()*figure.dpi
+        axes = figure.get_axes()
 
-        assert ax is not None
+        assert 1200 == size[0]
+        assert 500 == size[1]
+        assert 2 == len(axes)
