@@ -24,7 +24,6 @@ import tarfile
 import pandas as pd
 
 import boto3
-from botocore.exceptions import ClientError
 from deepracer import boto3_enhancer
 from deepracer.logs import SimulationLogsIO
 
@@ -35,7 +34,9 @@ class LeaderboardSubmissionType(Enum):
 
 
 class ConsoleHelper:
-    def __init__(self, profile=None, region='us-east-1'):
+    """ Class used to retrieve information from AWS DeepRacer Console.
+    """
+    def __init__(self, profile: str = None, region: str = 'us-east-1'):
 
         if profile is not None:
             session = boto3.session.Session(profile_name=profile)
@@ -43,7 +44,15 @@ class ConsoleHelper:
             session = boto3.session.Session()
         self.dr = boto3_enhancer.deepracer_client(session=session, region_name=region)
 
-    def find_model(self, model_name):
+    def find_model(self, model_name: str) -> str:
+        """Finds the Model ARN based on a model display name
+
+        Arguments:
+        model_name - (str) String with the model name
+
+        Returns:
+        String with the model ARN. None if not found.
+        """
 
         m_response = self.dr.list_models(ModelType="REINFORCEMENT_LEARNING", MaxResults=25)
         model_dict = m_response["Models"]
@@ -68,7 +77,17 @@ class ConsoleHelper:
 
         return None
 
-    def find_leaderboard(self, leaderboard_guid):
+    def find_leaderboard(self, leaderboard_guid: str) -> str:
+        """Finds the Leaderboard ARN based on a short GUID
+
+        Arguments:
+        leaderboard_guid - (str) String with the leaderboard GUID
+                Example: 8fab8c08-66cd-4170-a0b0-ab2b464e42d9
+
+        Returns:
+        String with the model ARN. None if not found.
+        """
+
         leaderboard_arn = "arn:aws:deepracer:::leaderboard/{}".format(leaderboard_guid)
 
         l_response = self.dr.list_leaderboards(MaxResults=25)
@@ -89,7 +108,16 @@ class ConsoleHelper:
 
         return None
 
-    def get_training_job(self, model_arn):
+    def get_training_job(self, model_arn: str) -> dict:
+        """Retrieves Training Job information for a Model
+
+        Arguments:
+        model_arn - (str) String with the Model ARN
+
+        Returns:
+        Dict with the Training Job information.
+        """
+
         m_response = self.dr.list_training_jobs(ModelArn=model_arn)
         m_jobs = m_response["TrainingJobs"]
         training_job_arn = m_jobs[0]['JobArn']
@@ -97,8 +125,16 @@ class ConsoleHelper:
         m_job = m_response['TrainingJob']
         return m_job
 
-    def get_training_log_robomaker(self, model_arn, data=None):
+    def get_training_log_robomaker(self, model_arn: str, data: list = None) -> pd.DataFrame:
+        """Retrieves the Robomaker training log for a completed training
 
+        Arguments:
+        model_arn - (str) String with the Model ARN
+        data - (list) Optional pass in a pre-filled data object
+
+        Returns:
+        Pandas DataFrame with the parsed log.
+        """
         if data is None:
             data = []
 
@@ -115,9 +151,21 @@ class ConsoleHelper:
                     df = SimulationLogsIO.convert_to_pandas(data)
                     return df
 
-    def get_leaderboard_log_robomaker(self, leaderboard_guid,
-                                      select=LeaderboardSubmissionType.RANKED, data=None):
+        return None
 
+    def get_leaderboard_log_robomaker(self, leaderboard_guid: str,
+                                      select=LeaderboardSubmissionType.RANKED,
+                                      data: list = None) -> pd.DataFrame:
+        """Retrieves the Robomaker log for leaderboard submission
+
+        Arguments:
+        leaderboard_guid - (str) String with the Leaderboard GUID
+        select - (LeaderboardSubmissionType) Get ranked or latest submission
+        data - (list) Optional pass in a pre-filled data object
+
+        Returns:
+        Pandas DataFrame with the parsed log.
+        """
         if data is None:
             data = []
 
