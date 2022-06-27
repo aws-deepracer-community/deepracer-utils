@@ -63,7 +63,7 @@ class TestConsoleHelper:
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
 
-        assert (3, 12) == simulation_agg.shape  # four more episodes in the log
+        assert (3, 12) == simulation_agg.shape
         assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
                        'new_reward', 'speed', 'reward', 'time_if_complete',
                        'reward_if_complete', 'quintile'] == simulation_agg.columns)
@@ -76,7 +76,7 @@ class TestConsoleHelper:
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
 
-        assert (3, 12) == simulation_agg.shape  # four more episodes in the log
+        assert (3, 12) == simulation_agg.shape
         assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
                        'new_reward', 'speed', 'reward', 'time_if_complete',
                        'reward_if_complete', 'quintile'] == simulation_agg.columns)
