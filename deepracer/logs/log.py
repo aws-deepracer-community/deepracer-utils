@@ -34,11 +34,7 @@ class FileHandler(ABC):
         pass
 
     @abstractmethod
-    def get_file(self, key: str) -> BytesIO:
-        pass
-
-    @abstractmethod
-    def get_files(self, keys: list) -> list:
+    def get_file(self, key: str) -> bytes:
         pass
 
     @abstractmethod
@@ -54,10 +50,16 @@ class FSFileHandler(FileHandler):
         self.robomaker_log_path = robomaker_log_path
 
     def list_files(self, filterexp: str = None) -> list:
-        return []
+        if filterexp is None:
+            return glob.glob(self.model_folder)
+        else:
+            return glob.glob(filterexp)
 
-    def get_file(self, key: str) -> BytesIO:
-        return None
+    def get_file(self, key: str) -> bytes:
+        bytes_io: BytesIO = None
+        with open(key, 'rb') as fh:
+            bytes_io = BytesIO(fh.read())
+        return bytes_io.getvalue()
 
     def determine_root_folder_type(self) -> LogType:
 
@@ -122,9 +124,6 @@ class S3FileHandler(FileHandler):
         bytes_io = BytesIO()
         self.s3.Object(self.bucket, key).download_fileobj(bytes_io)
         return bytes_io.getvalue()
-
-    def get_files(self):
-        return
 
     def determine_root_folder_type(self) -> LogType:
 
