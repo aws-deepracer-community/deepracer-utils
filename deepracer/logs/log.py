@@ -5,19 +5,153 @@ import pandas as pd
 import numpy as np
 import logging
 import re
+from io import BytesIO, StringIO
+from enum import Enum
 from joblib import Parallel, delayed
 
+import boto3
 from . import SimulationLogsIO
 
+from abc import ABC, abstractmethod
+from typing import Tuple
 
-CONSOLE_MODEL_WITH_LOGS = 0
-DRFC_MODEL_SINGLE_WORKERS = 1
-DRFC_MODEL_MULTIPLE_WORKERS = 2
-UNKNOWN_FOLDER = 3
+
+class LogType(Enum):
+    CONSOLE_MODEL_WITH_LOGS = 0
+    DRFC_MODEL_SINGLE_WORKERS = 1
+    DRFC_MODEL_MULTIPLE_WORKERS = 2
+    UNKNOWN_FOLDER = 3
+
+
+class FileHandler(ABC):
+
+    type: LogType = LogType.UNKNOWN_FOLDER
+    simtrace_path: str = None
+    robomaker_log_path: str = None
+
+    @abstractmethod
+    def list_files(self, filterexp: str = None) -> list:
+        pass
+
+    @abstractmethod
+    def get_file(self, key: str) -> BytesIO:
+        pass
+
+    @abstractmethod
+    def get_files(self, keys: list) -> list:
+        pass
+
+    @abstractmethod
+    def determine_root_folder_type(self) -> LogType:
+        pass
+
+
+class FSFileHandler(FileHandler):
+
+    def __init__(self, model_folder: str, simtrace_path=None, robomaker_log_path=None):
+        self.model_folder = model_folder
+        self.simtrace_path = simtrace_path
+        self.robomaker_log_path = robomaker_log_path
+
+    def list_files(self, filterexp: str = None) -> list:
+        return []
+
+    def get_file(self, key: str) -> BytesIO:
+        return None
+
+    def determine_root_folder_type(self) -> LogType:
+
+        if os.path.isdir(os.path.join(self.model_folder, "sim-trace")):
+            self.type = LogType.CONSOLE_MODEL_WITH_LOGS
+            if self.simtrace_path is None:
+                self.simtrace_path = os.path.join(
+                    self.model_folder,
+                    "sim-trace",
+                    "training",
+                    "training-simtrace",
+                    "*-iteration.csv")
+            if self.robomaker_log_path is None:
+                self.robomaker_log_path = glob.glob(os.path.join(
+                    self.model_folder, "**", "training", "*-robomaker.log"))[0]
+        elif os.path.isdir(os.path.join(self.model_folder, "training-simtrace")):
+            self.type = LogType.DRFC_MODEL_SINGLE_WORKERS
+            if self.simtrace_path is None:
+                self.simtrace_path = os.path.join(
+                    self.model_folder, "training-simtrace", "*-iteration.csv")
+        elif os.path.isdir(os.path.join(self.model_folder, "0")):
+            self.type = LogType.DRFC_MODEL_MULTIPLE_WORKERS
+            if self.simtrace_path is None:
+                self.simtrace_path = os.path.join(
+                    self.model_folder, "**", "training-simtrace", "*-iteration.csv")
+
+        return self.type
+
+
+class S3FileHandler(FileHandler):
+
+    def __init__(self, bucket: str, prefix: str = None,
+                 s3_endpoint_url: str = None, region: str = None, profile: str = None,
+                 ):
+        if profile is not None:
+            session = boto3.session.Session(profile_name=profile)
+            self.s3 = session.resource("s3", endpoint_url=s3_endpoint_url, region_name=region)
+        else:
+            self.s3 = boto3.resource("s3", endpoint_url=s3_endpoint_url, region_name=region)
+
+        self.bucket = bucket
+
+        if (prefix[-1:] == "/"):
+            self.prefix = prefix
+        else:
+            self.prefix = "{}/".format(prefix)
+
+    def list_files(self, filterexp: str = None) -> list:
+        files = []
+
+        bucket_obj = self.s3.Bucket(self.bucket)
+        for objects in bucket_obj.objects.filter(Prefix=self.prefix):
+            files.append(objects.key)
+
+        if filterexp is not None:
+            return [x for x in files if re.match(filterexp, x)]
+        else:
+            return files
+
+    def get_file(self, key: str) -> bytes:
+
+        bytes_io = BytesIO()
+        self.s3.Object(self.bucket, key).download_fileobj(bytes_io)
+        return bytes_io.getvalue()
+
+    def get_files(self):
+        return
+
+    def determine_root_folder_type(self) -> LogType:
+
+        if len(self.list_files(filterexp=(self.prefix + r'sim-trace/(.*)'))) > 0:
+            self.type = LogType.CONSOLE_MODEL_WITH_LOGS
+            if self.simtrace_path is None:
+                self.simtrace_path = self.prefix + r'sim-trace/training/training-simtrace/(.*)-iteration\.csv'
+            if self.robomaker_log_path is None:
+                self.robomaker_log_path = self.prefix + r'logs/training/(.*)-robomaker\.log'
+        elif len(self.list_files(filterexp=(self.prefix + r'training-simtrace/(.*)'))) > 0:
+            self.type = LogType.DRFC_MODEL_SINGLE_WORKERS
+            if self.simtrace_path is None:
+                self.simtrace_path = self.prefix + r'training-simtrace/(.*)-iteration\.csv'
+        elif len(self.list_files(filterexp=(self.prefix + r'./training-simtrace/(.*)'))) > 0:
+            self.type = LogType.DRFC_MODEL_MULTIPLE_WORKERS
+            if self.simtrace_path is None:
+                self.simtrace_path = self.prefix + r'./training-simtrace/(.*)-iteration\.csv'
+
+        return self.type
 
 
 class DeepRacerLog:
-    def __init__(self, model_folder, simtrace_path=None, robomaker_log_path=None):
+
+    fh: FileHandler = None
+
+    def __init__(self, model_folder=None, simtrace_path=None, robomaker_log_path=None,
+                 filehandler: FileHandler = None):
         # Column names we support in the CSV file.
         self.col_names = [
             "episode",
@@ -75,11 +209,15 @@ class DeepRacerLog:
         ]
 
         self.model_folder = model_folder
-
         self.simtrace_path = simtrace_path
         self.robomaker_log_path = robomaker_log_path
 
-        self._determine_root_folder_type()
+        if filehandler is not None:
+            self.fh = filehandler
+        else:
+            self.fh = FSFileHandler(model_folder)
+
+        self.fh.determine_root_folder_type()
 
         self.df = None
 
@@ -88,35 +226,34 @@ class DeepRacerLog:
         """
         self._block_duplicate_load(force)
 
-        if self.simtrace_path is None:
+        if self.fh.simtrace_path is None:
             raise Exception(
                 "Cannot detect training-simtrace, is model_folder pointing at your model folder?")
 
-        model_iterations = glob.glob(self.simtrace_path)
+        model_iterations = self.fh.list_files(filterexp=self.fh.simtrace_path)
 
-        def read_csv(path):
+        def read_csv(path: str):
             try:
-                # TODO: this is a workaround and should be removed when logs are fixed
-                df = pd.read_csv(path, names=self.col_names_workaround, header=0)
+                csv_bytes = self.fh.get_file(path)
+                # TODO: this is a workaround and should be removed when logs are fixed              
+                df = pd.read_csv(BytesIO(csv_bytes), encoding='utf8', names=self.col_names_workaround, header=0)
                 df = df.drop("action_b", axis=1)
             except pd.errors.ParserError:
                 try:
-                    df = pd.read_csv(path, names=self.col_names, header=0)
+                    df = pd.read_csv(BytesIO(csv_bytes), names=self.col_names, header=0)
                 except pd.errors.ParserError:
                     # Older logs don't have pause_duration, so we're handling this
-                    df = pd.read_csv(path, names=self.col_names[:-1], header=0)
-
+                    df = pd.read_csv(BytesIO(csv_bytes), names=self.col_names[:-1], header=0)
             df["iteration"] = int(path.split(os.path.sep)[-1].split("-")[0])
-            df["worker"] = int(path.split(os.path.sep)[-3] if self.type ==
-                               DRFC_MODEL_MULTIPLE_WORKERS else 0)
-
+            df["worker"] = int(path.split(os.path.sep)[-3] if self.fh.type ==
+                               LogType.DRFC_MODEL_MULTIPLE_WORKERS else 0)
             if df.dtypes["action"].name == "object":
                 df["action"] = -1
 
             return df
 
         dfs = Parallel(n_jobs=-1, prefer="threads")(
-            delayed(read_csv)(path) for _, path in enumerate(model_iterations)
+            delayed(read_csv)(path) for path in model_iterations
         )
 
         if len(dfs) == 0:
@@ -125,13 +262,15 @@ class DeepRacerLog:
         # Merge into single large DataFrame
         df = pd.concat(dfs, ignore_index=True)
 
-        workers_count = df["worker"].max() + 1
+        workers_count = df["worker"].astype('int32').max() + 1
         episodes_per_worker = {}
         episodes_until_worker = {0: 0}
         episodes_per_iteration = 0
         for worker in range(workers_count):
-            episodes_per_worker[worker] = df[(df["iteration"] == 0) & (df["worker"] == worker)]["episode"].max() + 1
-            episodes_until_worker[worker + 1] = episodes_per_worker[worker] + episodes_until_worker[worker]
+            episodes_per_worker[worker] = df[(df["iteration"] == 0) & (
+                df["worker"] == worker)]["episode"].max() + 1
+            episodes_until_worker[worker + 1] = episodes_per_worker[worker] + \
+                episodes_until_worker[worker]
             episodes_per_iteration += episodes_per_worker[worker]
         logging.debug("workers_count: {}".format(workers_count))
         logging.debug("episodes_per_worker: {}".format(episodes_per_worker))
@@ -139,8 +278,8 @@ class DeepRacerLog:
         logging.debug("episodes_per_iteration: {}".format(episodes_per_iteration))
 
         df["unique_episode"] = df["episode"] % np.array([episodes_per_worker[worker] for worker in df["worker"]]) + \
-                               np.array([episodes_until_worker[worker] for worker in df["worker"]]) + \
-                               df["iteration"] * episodes_per_iteration
+            np.array([episodes_until_worker[worker] for worker in df["worker"]]) + \
+            df["iteration"] * episodes_per_iteration
 
         self.df = df.sort_values(['unique_episode', 'steps']).reset_index(drop=True)
 
@@ -214,32 +353,6 @@ class DeepRacerLog:
                     result["simapp_version"] = m.group(3)
 
                     return result
-
-    def _determine_root_folder_type(self):
-        if os.path.isdir(os.path.join(self.model_folder, "sim-trace")):
-            self.type = CONSOLE_MODEL_WITH_LOGS
-            if self.simtrace_path is None:
-                self.simtrace_path = os.path.join(
-                    self.model_folder,
-                    "sim-trace",
-                    "training",
-                    "training-simtrace",
-                    "*-iteration.csv")
-            if self.robomaker_log_path is None:
-                self.robomaker_log_path = glob.glob(os.path.join(
-                    self.model_folder, "**", "training", "*-robomaker.log"))[0]
-        elif os.path.isdir(os.path.join(self.model_folder, "training-simtrace")):
-            self.type = DRFC_MODEL_SINGLE_WORKERS
-            if self.simtrace_path is None:
-                self.simtrace_path = os.path.join(
-                    self.model_folder, "training-simtrace", "*-iteration.csv")
-        elif os.path.isdir(os.path.join(self.model_folder, "0")):
-            self.type = DRFC_MODEL_MULTIPLE_WORKERS
-            if self.simtrace_path is None:
-                self.simtrace_path = os.path.join(
-                    self.model_folder, "**", "training-simtrace", "*-iteration.csv")
-        else:
-            self.type = UNKNOWN_FOLDER
 
     def _ensure_robomaker_log_exists(self):
         if self.robomaker_log_path is None or not os.path.isfile(self.robomaker_log_path):
