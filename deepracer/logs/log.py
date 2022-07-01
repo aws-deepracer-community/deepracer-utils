@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import logging
 import re
-from io import BytesIO, StringIO
+from io import BytesIO, StringIO, TextIOWrapper
 from enum import Enum
 from joblib import Parallel, delayed
 
@@ -130,7 +130,8 @@ class S3FileHandler(FileHandler):
         if len(self.list_files(filterexp=(self.prefix + r'sim-trace/(.*)'))) > 0:
             self.type = LogType.CONSOLE_MODEL_WITH_LOGS
             if self.simtrace_path is None:
-                self.simtrace_path = self.prefix + r'sim-trace/training/training-simtrace/(.*)-iteration\.csv'
+                self.simtrace_path = self.prefix + \
+                    r'sim-trace/training/training-simtrace/(.*)-iteration\.csv'
             if self.robomaker_log_path is None:
                 self.robomaker_log_path = self.prefix + r'logs/training/(.*)-robomaker\.log'
         elif len(self.list_files(filterexp=(self.prefix + r'training-simtrace/(.*)'))) > 0:
@@ -234,8 +235,9 @@ class DeepRacerLog:
         def read_csv(path: str):
             try:
                 csv_bytes = self.fh.get_file(path)
-                # TODO: this is a workaround and should be removed when logs are fixed              
-                df = pd.read_csv(BytesIO(csv_bytes), encoding='utf8', names=self.col_names_workaround, header=0)
+                # TODO: this is a workaround and should be removed when logs are fixed
+                df = pd.read_csv(BytesIO(csv_bytes), encoding='utf8',
+                                 names=self.col_names_workaround, header=0)
                 df = df.drop("action_b", axis=1)
             except pd.errors.ParserError:
                 try:
@@ -276,7 +278,8 @@ class DeepRacerLog:
 #        logging.debug("episodes_until_worker: {}".format(episodes_until_worker))
         logging.debug("episodes_per_iteration: {}".format(episodes_per_iteration))
 
-        df["unique_episode"] = df["episode"] % np.array([episodes_per_worker[worker] for worker in df["worker"]]) + \
+        df["unique_episode"] = df["episode"] % np.array([episodes_per_worker[worker]
+                                                         for worker in df["worker"]]) + \
             np.array([episodes_until_worker[worker] for worker in df["worker"]]) + \
             df["iteration"] * episodes_per_iteration
 
@@ -291,7 +294,9 @@ class DeepRacerLog:
 
         episodes_per_iteration = self.hyperparameters()["num_episodes_between_training"]
 
-        self.df = SimulationLogsIO.load_pandas(self.robomaker_log_path, episodes_per_iteration)
+        data = SimulationLogsIO.load_buffer(TextIOWrapper(
+            BytesIO(self.fh.get_file(self.fh.robomaker_log_path)), encoding='utf-8'))
+        self.df = SimulationLogsIO.convert_to_pandas(data, episodes_per_iteration)
 
     def dataframe(self):
         """Method that provides the dataframe for analysis of this log.
@@ -308,15 +313,18 @@ class DeepRacerLog:
 
         outside_hyperparams = True
         hyperparameters_string = ""
-        with open(self.robomaker_log_path, 'r') as f:
-            for line in f:
-                if outside_hyperparams:
-                    if "Using the following hyper-parameters" in line:
-                        outside_hyperparams = False
-                else:
-                    hyperparameters_string += line
-                    if "}" in line:
-                        break
+
+        text_io = TextIOWrapper(BytesIO(self.fh.get_file(self.fh.robomaker_log_path)),
+                                encoding='utf-8')
+
+        for line in text_io.readlines():
+            if outside_hyperparams:
+                if "Using the following hyper-parameters" in line:
+                    outside_hyperparams = False
+            else:
+                hyperparameters_string += line
+                if "}" in line:
+                    break
 
         return json.loads(hyperparameters_string)
 
@@ -325,10 +333,12 @@ class DeepRacerLog:
         """
         self._ensure_robomaker_log_exists()
 
-        with open(self.robomaker_log_path, 'r') as f:
-            for line in f:
-                if "ction space from file: " in line:
-                    return json.loads(line.split("file: ")[1].replace("'", '"'))
+        text_io = TextIOWrapper(BytesIO(self.fh.get_file(
+            self.fh.robomaker_log_path)), encoding='utf-8')
+
+        for line in text_io.readlines():
+            if "ction space from file: " in line:
+                return json.loads(line.split("file: ")[1].replace("'", '"'))
 
     def agent_and_network(self):
         """Method that provides the agent and network information for this log.
@@ -339,22 +349,24 @@ class DeepRacerLog:
 
         regex = r'Sensor list (\[[\'a-zA-Z, _-]+\]), network ([a-zA-Z_]+), simapp_version ([\d.]+)'
 
-        with open(self.robomaker_log_path, 'r') as f:
-            result = {}
-            for line in f:
-                if " * /WORLD_NAME: " in line:
-                    result["world"] = line[:-1].split(" ")[-1]
-                elif "Sensor list ['" in line:
-                    m = re.search(regex, line)
+        text_io = TextIOWrapper(BytesIO(self.fh.get_file(
+            self.fh.robomaker_log_path)), encoding='utf-8')
+        result = {}
+        for line in text_io.readlines():
+            if " * /WORLD_NAME: " in line:
+                result["world"] = line[:-1].split(" ")[-1]
+            elif "Sensor list ['" in line:
+                m = re.search(regex, line)
 
-                    result["sensor_list"] = json.loads(m.group(1).replace("'", '"'))
-                    result["network"] = m.group(2)
-                    result["simapp_version"] = m.group(3)
+                result["sensor_list"] = json.loads(m.group(1).replace("'", '"'))
+                result["network"] = m.group(2)
+                result["simapp_version"] = m.group(3)
 
-                    return result
+                return result
 
     def _ensure_robomaker_log_exists(self):
-        if self.robomaker_log_path is None or not os.path.isfile(self.robomaker_log_path):
+        if self.fh.robomaker_log_path is None or \
+                len(self.fh.list_files(self.fh.robomaker_log_path)) == 0:
             raise Exception(
                 "Cannot detect robomaker log file, is model_folder pointing at your model folder?")
 
@@ -362,4 +374,4 @@ class DeepRacerLog:
         if self.df is not None and not force:
             raise Exception(
                 "The dataframe has already been loaded, add force=True"
-                  + " to your load method to load again")
+                + " to your load method to load again")
