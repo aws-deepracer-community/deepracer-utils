@@ -15,8 +15,8 @@ class TestDeepRacerLog:
         assert 14 == len(drl.action_space())
 
     def test_dataframe(self):
-        drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
-        drl.load()
+        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl.load_training_trace()
         df = drl.dataframe()
 
         assert (44247, 20) == df.shape
@@ -26,8 +26,8 @@ class TestDeepRacerLog:
                        'worker', 'unique_episode'] == df.columns)
 
     def test_episode_analysis(self):
-        drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
-        drl.load()
+        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl.load_training_trace()
         df = drl.dataframe()
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
