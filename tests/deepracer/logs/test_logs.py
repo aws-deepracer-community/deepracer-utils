@@ -1,9 +1,11 @@
-from deepracer.logs import DeepRacerLog, AnalysisUtils, SimulationLogsIO,\
-                           LogFolderType, S3FileHandler
+import warnings
+
 import numpy as np
 import pytest
-import warnings
 from boto3.exceptions import PythonDeprecationWarning
+
+from deepracer.logs import (AnalysisUtils, DeepRacerLog, LogFolderType,
+                            S3FileHandler, SimulationLogsIO)
 
 
 class TestDeepRacerLog:
