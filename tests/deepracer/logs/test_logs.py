@@ -1,4 +1,4 @@
-from deepracer.logs import DeepRacerLog, AnalysisUtils, SimulationLogsIO, LogType
+from deepracer.logs import DeepRacerLog, AnalysisUtils, SimulationLogsIO, LogFolderType
 import numpy as np
 import pytest
 
@@ -9,7 +9,7 @@ class TestDeepRacerLog:
         drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
         drl.load()
 
-        assert LogType.CONSOLE_MODEL_WITH_LOGS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
+        assert LogFolderType.CONSOLE_MODEL_WITH_LOGS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert 4 == len(drl.agent_and_network())
         assert 13 == len(drl.hyperparameters())
         assert 14 == len(drl.action_space())

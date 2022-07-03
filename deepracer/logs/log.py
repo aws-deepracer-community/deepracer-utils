@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 from typing import Tuple
 
 
-class LogType(Enum):
+class LogFolderType(Enum):
     CONSOLE_MODEL_WITH_LOGS = 0
     DRFC_MODEL_SINGLE_WORKERS = 1
     DRFC_MODEL_MULTIPLE_WORKERS = 2
@@ -25,7 +25,7 @@ class LogType(Enum):
 
 class FileHandler(ABC):
 
-    type: LogType = LogType.UNKNOWN_FOLDER
+    type: LogFolderType = LogFolderType.UNKNOWN_FOLDER
     training_simtrace_path: str = None
     training_robomaker_log_path: str = None
     evaluation_simtrace_path: str = None
@@ -40,7 +40,7 @@ class FileHandler(ABC):
         pass
 
     @abstractmethod
-    def determine_root_folder_type(self) -> LogType:
+    def determine_root_folder_type(self) -> LogFolderType:
         pass
 
 
@@ -63,10 +63,10 @@ class FSFileHandler(FileHandler):
             bytes_io = BytesIO(fh.read())
         return bytes_io.getvalue()
 
-    def determine_root_folder_type(self) -> LogType:
+    def determine_root_folder_type(self) -> LogFolderType:
 
         if os.path.isdir(os.path.join(self.model_folder, "sim-trace")):
-            self.type = LogType.CONSOLE_MODEL_WITH_LOGS
+            self.type = LogFolderType.CONSOLE_MODEL_WITH_LOGS
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = os.path.join(
                     self.model_folder,
@@ -85,12 +85,12 @@ class FSFileHandler(FileHandler):
                 self.training_robomaker_log_path = glob.glob(os.path.join(
                     self.model_folder, "**", "training", "*-robomaker.log"))[0]
         elif os.path.isdir(os.path.join(self.model_folder, "training-simtrace")):
-            self.type = LogType.DRFC_MODEL_SINGLE_WORKERS
+            self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = os.path.join(
                     self.model_folder, "training-simtrace", "*-iteration.csv")
         elif os.path.isdir(os.path.join(self.model_folder, "0")):
-            self.type = LogType.DRFC_MODEL_MULTIPLE_WORKERS
+            self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = os.path.join(
                     self.model_folder, "**", "training-simtrace", "*-iteration.csv")
@@ -134,10 +134,10 @@ class S3FileHandler(FileHandler):
         self.s3.Object(self.bucket, key).download_fileobj(bytes_io)
         return bytes_io.getvalue()
 
-    def determine_root_folder_type(self) -> LogType:
+    def determine_root_folder_type(self) -> LogFolderType:
 
         if len(self.list_files(filterexp=(self.prefix + r'sim-trace/(.*)'))) > 0:
-            self.type = LogType.CONSOLE_MODEL_WITH_LOGS
+            self.type = LogFolderType.CONSOLE_MODEL_WITH_LOGS
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = self.prefix + \
                     r'sim-trace/training/training-simtrace/(.*)-iteration\.csv'
@@ -147,11 +147,11 @@ class S3FileHandler(FileHandler):
                 self.training_robomaker_log_path = self.prefix + \
                     r'logs/training/(.*)-robomaker\.log'
         elif len(self.list_files(filterexp=(self.prefix + r'training-simtrace/(.*)'))) > 0:
-            self.type = LogType.DRFC_MODEL_SINGLE_WORKERS
+            self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = self.prefix + r'training-simtrace/(.*)-iteration\.csv'
         elif len(self.list_files(filterexp=(self.prefix + r'./training-simtrace/(.*)'))) > 0:
-            self.type = LogType.DRFC_MODEL_MULTIPLE_WORKERS
+            self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = self.prefix + \
                     r'./training-simtrace/(.*)-iteration\.csv'
@@ -263,7 +263,7 @@ class DeepRacerLog:
                     df = pd.read_csv(BytesIO(csv_bytes), names=self.col_names[:-1], header=0)
             df["iteration"] = int(path.split(os.path.sep)[-1].split("-")[0])
             df["worker"] = int(path.split(os.path.sep)[-3] if self.fh.type ==
-                               LogType.DRFC_MODEL_MULTIPLE_WORKERS else 0)
+                               LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS else 0)
             if df.dtypes["action"].name == "object":
                 df["action"] = -1
 
