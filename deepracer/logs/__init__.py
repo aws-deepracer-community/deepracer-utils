@@ -1,4 +1,4 @@
 from .log_utils import ActionBreakdownUtils, AnalysisUtils, EvaluationUtils, NewRewardUtils, \
     PlottingUtils, SimulationLogsIO
 from .metrics import TrainingMetrics
-from .log import DeepRacerLog, FileHandler, FSFileHandler, S3FileHandler, LogFolderType
+from .log import DeepRacerLog, FileHandler, FSFileHandler, S3FileHandler, LogFolderType, LogType

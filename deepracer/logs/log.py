@@ -23,6 +23,11 @@ class LogFolderType(Enum):
     UNKNOWN_FOLDER = 3
 
 
+class LogType(Enum):
+    TRAINING = 0
+    EVALUATION = 1
+
+
 class FileHandler(ABC):
 
     type: LogFolderType = LogFolderType.UNKNOWN_FOLDER
