@@ -1,9 +1,11 @@
-from deepracer.logs.metrics import TrainingMetrics
-import numpy as np
 import warnings
-import pytest
+
 import matplotlib as plt
+import numpy as np
+import pytest
 from boto3.exceptions import PythonDeprecationWarning
+
+from deepracer.logs import TrainingMetrics
 
 
 class TestMetrics:
@@ -27,7 +29,7 @@ class TestMetrics:
         assert 28 == max(training['master_iteration'])
         assert 568 == len(training)
         assert np.all([
-            "r-i", "round", "iteration", "master_iteration", "episode", "r-e", "worker", "trial", 
+            "r-i", "round", "iteration", "master_iteration", "episode", "r-e", "worker", "trial",
             "phase", "reward", "completion", "time", "complete", "start_time",
         ] == training.columns)
 
