@@ -92,8 +92,12 @@ class FSFileHandler(FileHandler):
                 self.training_simtrace_path = os.path.join(
                     self.model_folder, "training-simtrace", "*-iteration.csv")
                 self.training_simtrace_split = r'(.*)/training-simtrace/(.*)-iteration.csv'
+                self.evaluation_simtrace_path = os.path.join(
+                    self.model_folder,
+                    "evaluation-simtrace",
+                    "0-iteration.csv")
                 self.evaluation_simtrace_split = \
-                    r'.*/evaluation/([0-9]{14})-.*/evaluation-simtrace/(.*)-iteration\.csv'
+                    r'.*/(.*)/evaluation-simtrace/(.*)-iteration\.csv'
 
         elif os.path.isdir(os.path.join(self.model_folder, "0")):
             self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
@@ -101,6 +105,12 @@ class FSFileHandler(FileHandler):
                 self.training_simtrace_path = os.path.join(
                     self.model_folder, "**", "training-simtrace", "*-iteration.csv")
                 self.training_simtrace_split = r'.*/(.)/training-simtrace/(.*)-iteration.csv'
+                self.evaluation_simtrace_path = os.path.join(
+                    self.model_folder,
+                    "evaluation-simtrace",
+                    "0-iteration.csv")
+                self.evaluation_simtrace_split = \
+                    r'.*/(.*)/evaluation-simtrace/(.*)-iteration\.csv'
 
         return self.type
 

@@ -111,7 +111,7 @@ class DeepRacerLog:
             df["worker"] = 0
 
         if (type == LogType.EVALUATION):
-            df["stream"] = int(path_split.groups()[0])
+            df["stream"] = path_split.groups()[0]
 
         if df.dtypes["action"].name == "object":
             df["action"] = -1
