@@ -16,10 +16,13 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 from io import BytesIO
+from urllib.request import urlopen
 import json
 import math
+from typing import TypeVar
 
 import boto3
+from matplotlib.figure import Figure
 import numpy as np
 import pandas as pd
 
@@ -32,16 +35,18 @@ class TrainingMetrics:
 
     def __init__(
             self,
-            bucket,
-            model_name=None,
-            pattern="{}/metrics/TrainingMetrics{}.json",
-            s3_endpoint_url=None,
-            region=None,
-            profile=None,
-            training_round=1,
-            display_digits_iteration=3,
-            display_digits_episode=4,
-            display_digits_round=2
+            bucket: str,
+            model_name: str = None,
+            pattern: str = "{}/metrics/TrainingMetrics{}.json",
+            s3_endpoint_url: str = None,
+            region: str = None,
+            profile: str = None,
+            fname: str = None,
+            url: str = None,
+            training_round: int = 1,
+            display_digits_iteration: int = 3,
+            display_digits_episode: int = 4,
+            display_digits_round: int = 2
     ):
         """Creates a TrainingMetrics object. Loads the first metrics file into a DataFrame if
             model name is provided.
@@ -60,6 +65,7 @@ class TrainingMetrics:
         s3_endpoint_url - (str) URL for the S3 endpoint
         region - (str) AWS Region for S3
         profile - (str) Local awscli profile to use when connecting
+        fname - (str) Read in a file, rather than from S3
 
         Returns:
         TrainingMetrics object.
@@ -76,12 +82,37 @@ class TrainingMetrics:
         self.bucket = bucket
         self.pattern = pattern
         if model_name is not None:
+            data = self._getS3File(bucket, self.pattern.format(model_name, ''), False)
             df = self._loadRound(
-                bucket, self.pattern.format(model_name, ''), training_round
+                data, training_round
             )
             self.metrics = df
 
-    def _loadRound(self, bucket, key, training_round=1, worker=0, verbose=False):
+        if fname is not None:
+            data = self._getFile(fname, False)
+            df = self._loadRound(
+                data, training_round
+            )
+            self.metrics = df
+
+        if url is not None:
+            data = self._getUrlFile(url, False)
+            df = self._loadRound(
+                data, training_round
+            )
+            self.metrics = df
+
+    def _getFile(self, fname: str, verbose=False) -> dict:
+        if verbose:
+            print("Reading in file://%s" % (fname))
+
+        f = open(fname)
+        data = json.load(f)
+        f.close()
+
+        return data
+
+    def _getS3File(self, bucket: str, key: str, verbose=False) -> dict:
 
         if verbose:
             print("Downloading s3://%s/%s" % (bucket, key))
@@ -89,6 +120,20 @@ class TrainingMetrics:
         bytes_io = BytesIO()
         self.s3.Object(bucket, key).download_fileobj(bytes_io)
         data = json.loads(bytes_io.getvalue())
+
+        return data
+
+    def _getUrlFile(self, url: str, verbose=False) -> dict:
+        if verbose:
+            print("Downloading %s" % (url))
+
+        bytes_io = BytesIO(urlopen(url).read())
+        data = json.loads(bytes_io.getvalue())
+
+        return data
+
+    def _loadRound(self, data: dict, training_round: int = 1, worker: int = 0,
+                   verbose=False) -> pd.DataFrame:
 
         df = pd.read_json(json.dumps(data["metrics"]), orient="records")
         if worker == 0:
@@ -165,23 +210,21 @@ class TrainingMetrics:
             ]
         ]
 
-    def addRound(self, model_name, training_round=2, workers=1):
+    def addRound(self, model_name: str, fname: str = None, training_round: int = 2,
+                 workers: int = 1):
         """Adds a round of training metrics to the data set
 
         Arguments:
         model_name - (str) Name of the model that will be loaded.
+        fname - (str) Read from file not from S3
         training_round - (int) Integer value that will be used to distinguish data.
         workers - (int) Number of separate workers files to be loaded. (Default: 1)
         """
 
-        for w in range(0, workers):
-            if w > 0:
-                worker_suffix = "_{}".format(w)
-            else:
-                worker_suffix = ""
-
+        if fname is not None:
+            data = self._getFile(fname, False)
             df = self._loadRound(
-                self.bucket, self.pattern.format(model_name, worker_suffix), training_round, w
+                data, training_round
             )
 
             if self.metrics is not None:
@@ -189,7 +232,24 @@ class TrainingMetrics:
             else:
                 self.metrics = df
 
-    def reloadRound(self, model_name, training_round=2, workers=1):
+        else:
+            for w in range(0, workers):
+                if w > 0:
+                    worker_suffix = "_{}".format(w)
+                else:
+                    worker_suffix = ""
+
+                data = self._getS3File(self.bucket, self.pattern.format(model_name, worker_suffix))
+                df = self._loadRound(
+                    data, training_round, w
+                )
+
+                if self.metrics is not None:
+                    self.metrics = self.metrics.append(df, ignore_index=True)
+                else:
+                    self.metrics = df
+
+    def reloadRound(self, model_name: str, training_round: int = 2, workers: int = 1):
         """Adds a round of training metrics to the data set
 
         Arguments:
@@ -216,7 +276,7 @@ class TrainingMetrics:
             else:
                 self.metrics = df
 
-    def getEvaluation(self):
+    def getEvaluation(self) -> pd.DataFrame:
         """Get the Evaluation part of the data.
 
         Returns:
@@ -224,7 +284,7 @@ class TrainingMetrics:
         """
         return self.metrics[self.metrics["phase"] == "evaluation"]
 
-    def getTraining(self):
+    def getTraining(self) -> pd.DataFrame:
         """Get the Training part of the data.
 
         Returns:
@@ -232,12 +292,13 @@ class TrainingMetrics:
         """
         return self.metrics[self.metrics["phase"] == "training"]
 
-    def getSummary(self, rounds=None, method="mean", summary_index=["r-i", "iteration"],
-                   workers=None, completedLapsOnly=False):
+    def getSummary(self, rounds: list = None, method: str = "mean",
+                   summary_index: list = ["r-i", "iteration"], workers: list = None,
+                   completedLapsOnly=False) -> pd.DataFrame:
         """Provides summary per iteration. Data for evaluation and training is separated.
 
         Arguments:
-        rounds - (array) Array of round numbers to be plotted.
+        rounds - (list) Array of round numbers to be plotted.
         method - (str) Statistical value to be calculated. Examples are 'mean', 'median',
             'min' & 'max'. Default: 'mean'.
         summary_index - (list) List of columns to be used as index of summary.
@@ -290,23 +351,25 @@ class TrainingMetrics:
 
         return pd.concat([training_agg, eval_agg], axis=1, sort=False)
 
+    ListStr = TypeVar('ListStr', list, str)
+
     def plotProgress(
             self,
-            method="mean",
-            rolling_average=5,
-            figsize=(12, 5),
-            rounds=None,
-            workers=None,
-            series=[
+            method: ListStr = "mean",
+            rolling_average: int = 5,
+            figsize: tuple = (12, 5),
+            rounds: list = None,
+            workers: list = None,
+            series: list = [
                 ("eval_completion", "Evaluation", "orange"),
                 ("train_completion", "Training", "blue"),
             ],
-            title="Completion per Iteration ({})",
-            xlabel="Iteration",
-            ylabel="Percent complete ({})",
-            completedLapsOnly=False,
-            grid=False,
-    ):
+            title: str = "Completion per Iteration ({})",
+            xlabel: str = "Iteration",
+            ylabel: str = "Percent complete ({})",
+            completedLapsOnly: bool = False,
+            grid: bool = False,
+    ) -> Figure:
         """Plots training progress. Allows selection of multiple iterations.
 
         Arguments:
@@ -329,7 +392,7 @@ class TrainingMetrics:
         workers - (list) List of workers to include in the summary. Defaults to all workers.
 
         Returns:
-        Pandas DataFrame containing the summary table.
+        Matplotlib Figure containing the plot.
         """
 
         plot_methods = []
@@ -338,7 +401,7 @@ class TrainingMetrics:
         else:
             plot_methods = method
 
-        _, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
+        fig, axarr_raw = plt.subplots(1, len(plot_methods), figsize=figsize, sharey=True)
 
         axarr = []
         if type(axarr_raw) is not np.ndarray:
@@ -382,10 +445,11 @@ class TrainingMetrics:
                 label = "{}-{}".format(
                     str(r).zfill(self.max_round_strlen),
                     "0".zfill(self.max_iteration_strlen)
-                    )
+                )
                 ax.axvline(x=label, dashes=[0.25, 0.75], linewidth=0.5, color="black")
 
             if grid:
                 ax.grid()
 
         plt.show()
+        return fig
