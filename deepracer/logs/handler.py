@@ -172,11 +172,18 @@ class S3FileHandler(FileHandler):
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = self.prefix + r'training-simtrace/(.*)-iteration\.csv'
                 self.training_simtrace_split = r'(.*)/training-simtrace/(.*)-iteration.csv'
+                self.evaluation_simtrace_path = self.prefix + \
+                    r'evaluation-simtrace/(.*)-iteration\.csv'
+                self.evaluation_simtrace_split = \
+                    r'(.*)/evaluation-simtrace/(.*)-iteration\.csv'
         elif len(self.list_files(filterexp=(self.prefix + r'./training-simtrace/(.*)'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = self.prefix + \
                     r'(.)/training-simtrace/(.*)-iteration\.csv'
                 self.training_simtrace_split = r'.*/(.)/training-simtrace/(.*)-iteration.csv'
-
+                self.evaluation_simtrace_path = self.prefix + \
+                    r'evaluation-simtrace/(.*)-iteration\.csv'
+                self.evaluation_simtrace_split = \
+                    r'(.*)/evaluation-simtrace/(.*)-iteration\.csv'
         return self.type

@@ -8,7 +8,7 @@ from deepracer.logs import (AnalysisUtils, DeepRacerLog, LogFolderType,
                             LogType, S3FileHandler, SimulationLogsIO)
 
 
-class TestDeepRacerLog:
+class TestTrainingLogs:
 
     @pytest.fixture(autouse=True)
     def run_before_and_after_tests(tmpdir):
@@ -150,6 +150,11 @@ class TestDeepRacerLog:
 
 
 class TestEvaluationLogs:
+    @pytest.fixture(autouse=True)
+    def run_before_and_after_tests(tmpdir):
+        warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
+        yield
+
     def test_load_evaluation_logs(self):
         logs = [['deepracer/logs/sample-console-logs/logs/evaluation/'
                  'evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log', 'log-1'],
@@ -199,7 +204,7 @@ class TestEvaluationLogs:
     @pytest.mark.skip(reason="Requires AWS access")
     def test_evaluation_analysis_s3(self):
         fh = S3FileHandler(bucket="X",
-                           prefix="Y")
+                           prefix="Analysis-Demo")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_evaluation_trace()
         df = drl.dataframe()
@@ -227,8 +232,44 @@ class TestEvaluationLogs:
                        'time_if_complete'] == simulation_agg.columns)
         assert 13.740 == pytest.approx(fastest.iloc[0, 5])
 
+    @pytest.mark.skip(reason="Requires AWS access")
+    def test_evaluation_analysis_drfc1_s3(self):
+        fh = S3FileHandler(bucket="X",
+                           prefix="Analysis-Demo-DRFC-1")
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_evaluation_trace()
+        df = drl.dataframe()
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
+        fastest = complete_ones.nsmallest(5, 'time')
+
+        assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
+        assert LogType.EVALUATION == drl.active
+        assert (5, 8) == simulation_agg.shape
+        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
+                       'time_if_complete'] == simulation_agg.columns)
+        assert 13.740 == pytest.approx(fastest.iloc[0, 5])
+
     def test_evaluation_analysis_drfc3_local(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-3-logs')
+        drl.load_evaluation_trace()
+        df = drl.dataframe()
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
+        fastest = complete_ones.nsmallest(5, 'time')
+
+        assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
+        assert LogType.EVALUATION == drl.active
+        assert (5, 8) == simulation_agg.shape
+        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
+                       'time_if_complete'] == simulation_agg.columns)
+        assert 15.133 == pytest.approx(fastest.iloc[0, 5])
+
+    @pytest.mark.skip(reason="Requires AWS access")
+    def test_evaluation_analysis_drfc3_s3(self):
+        fh = S3FileHandler(bucket="X",
+                           prefix="Analysis-Demo-DRFC-3")
+        drl = DeepRacerLog(filehandler=fh)
         drl.load_evaluation_trace()
         df = drl.dataframe()
         simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
