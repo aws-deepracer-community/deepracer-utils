@@ -160,6 +160,7 @@ class DeepRacerLog:
 
         logging.debug("workers_count: {}".format(workers_count))
         logging.debug("episodes_per_worker: {}".format(episodes_per_worker))
+        logging.debug("episodes_until_worker: {}".format(episodes_until_worker))
         logging.debug("episodes_per_iteration: {}".format(episodes_per_iteration))
 
         df["unique_episode"] = df["episode"] % np.array([episodes_per_worker[worker]

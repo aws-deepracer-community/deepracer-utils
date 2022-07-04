@@ -52,6 +52,26 @@ class TestDeepRacerLog:
         assert 213.0 == fastest.iloc[0, 2]
         assert 14.128 == pytest.approx(fastest.iloc[0, 5])
 
+    def test_episode_analysis_drfc3_s3(self):
+        fh = S3FileHandler(bucket="larsll-deepracer-us-1",
+                           prefix="Analysis-Demo-DRFC-3")
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace()
+        df = drl.dataframe()
+
+        simulation_agg = AnalysisUtils.simulation_agg(df, secondgroup='unique_episode')
+        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
+        fastest = complete_ones.nsmallest(5, 'time')
+
+        assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
+        assert np.all(['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
+                       'new_reward', 'speed', 'reward', 'time_if_complete',
+                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
+        assert (690, 12) == simulation_agg.shape
+        assert 402 == fastest.iloc[0, 1]
+        assert 189.0 == fastest.iloc[0, 2]
+        assert 12.548 == pytest.approx(fastest.iloc[0, 5])
+
     def test_evaluation_analysis(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
         drl.load_evaluation_trace()
