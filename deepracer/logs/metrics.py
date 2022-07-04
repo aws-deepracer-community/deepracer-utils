@@ -15,18 +15,17 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from io import BytesIO
-from urllib.request import urlopen
 import json
 import math
+from io import BytesIO
 from typing import TypeVar
+from urllib.request import urlopen
 
 import boto3
-from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 
 class TrainingMetrics:

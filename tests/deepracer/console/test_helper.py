@@ -1,10 +1,12 @@
+import warnings
+
+import numpy as np
+import pytest
+from boto3.exceptions import PythonDeprecationWarning
+
 from deepracer.console import ConsoleHelper, LeaderboardSubmissionType
 from deepracer.logs import AnalysisUtils
 from deepracer.logs.metrics import TrainingMetrics
-import numpy as np
-import warnings
-import pytest
-from boto3.exceptions import PythonDeprecationWarning
 
 
 @pytest.mark.skip(reason="Requires AWS access")
