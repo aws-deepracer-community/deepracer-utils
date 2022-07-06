@@ -51,12 +51,17 @@ python setup.py version
 
 Marking new release:
 ```
-git tag deepracer-utils-version
-git push origin deepracer-utils-version
+git tag deepracer-utils-<version>
+git push origin deepracer-utils-<version>
 ```
 
+The version number should conform with [PEP 440](https://peps.python.org/pep-0440).
+
+Example: `<version>` can be `0.25` for a release version or `0.25b1` for the first beta of 0.25.
+ 
 Building the package:
 ```
+rm dist/*
 python setup.py sdist bdist_wheel
 ```
 
