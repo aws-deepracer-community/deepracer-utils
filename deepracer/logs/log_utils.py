@@ -16,6 +16,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import logging
 from datetime import datetime
 from decimal import Decimal
 
@@ -283,6 +284,12 @@ class AnalysisUtils:
         Returns:
         Aggregated dataframe
         """
+
+        if 'worker' in panda and secondgroup == 'episode':
+            if panda.nunique(axis=0)['worker'] > 1:
+                logging.warning('Multiple workers found, consider using'
+                                'secondgroup="unique_episode"')
+
         grouped = panda.groupby([firstgroup, secondgroup])
 
         by_steps = grouped['steps'].agg(np.max).reset_index()
@@ -506,7 +513,7 @@ class PlottingUtils:
         PlottingUtils._plot_line(ax, line, color)
 
     @staticmethod
-    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="unique_episode",
+    def plot_selected_laps(sorted_idx, df, track: Track, section_to_plot="episode",
                            single_plot=False):
         """Plot n laps in the training, referenced by episode ids
 
