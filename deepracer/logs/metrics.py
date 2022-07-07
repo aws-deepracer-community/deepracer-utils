@@ -248,7 +248,8 @@ class TrainingMetrics:
                 else:
                     self.metrics = df
 
-    def reloadRound(self, model_name: str, training_round: int = 2, workers: int = 1):
+    def reloadRound(self, model_name: str, fname: str = None, training_round: int = 2,
+                    workers: int = 1):
         """Adds a round of training metrics to the data set
 
         Arguments:
@@ -260,20 +261,32 @@ class TrainingMetrics:
         print("Reloading round {}".format(training_round))
         self.metrics = self.metrics[self.metrics['round'] != training_round]
 
-        for w in range(0, workers):
-            if w > 0:
-                worker_suffix = "_{}".format(w)
-            else:
-                worker_suffix = ""
-
+        if fname is not None:
+            data = self._getFile(fname, False)
             df = self._loadRound(
-                self.bucket, self.pattern.format(model_name, worker_suffix), training_round, w
+                data, training_round
             )
 
             if self.metrics is not None:
                 self.metrics = self.metrics.append(df, ignore_index=True)
             else:
                 self.metrics = df
+        else:
+            for w in range(0, workers):
+                if w > 0:
+                    worker_suffix = "_{}".format(w)
+                else:
+                    worker_suffix = ""
+
+                data = self._getS3File(self.bucket, self.pattern.format(model_name, worker_suffix))
+                df = self._loadRound(
+                    data, training_round, w
+                )
+
+                if self.metrics is not None:
+                    self.metrics = self.metrics.append(df, ignore_index=True)
+                else:
+                    self.metrics = df
 
     def getEvaluation(self) -> pd.DataFrame:
         """Get the Evaluation part of the data.
