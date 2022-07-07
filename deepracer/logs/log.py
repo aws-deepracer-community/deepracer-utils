@@ -213,12 +213,24 @@ class DeepRacerLog:
                 BytesIO(self.fh.get_file(self.fh.training_robomaker_log_path)), encoding='utf-8'))
             self.df = SimulationLogsIO.convert_to_pandas(data, episodes_per_iteration)
             self.active = LogType.TRAINING
-        else:
-            if type == LogType.EVALUATION:
-                self.active = LogType.EVALUATION
+        elif type == LogType.EVALUATION:
+            self.active = LogType.EVALUATION
+        elif type == LogType.LEADERBOARD:
 
-            elif type == LogType.LEADERBOARD:
-                self.active = LogType.LEADERBOARD
+            dfs = []
+            leaderboard_submissions = self.fh.list_files(
+                                            filterexp=self.fh.leaderboard_robomaker_log_path)
+            splitRegex = re.compile(self.fh.leaderboard_robomaker_log_split)
+
+            for leaderboard_log in leaderboard_submissions:
+                path_split = splitRegex.search(leaderboard_log)
+
+                data = SimulationLogsIO.load_buffer(TextIOWrapper(
+                    BytesIO(self.fh.get_file(leaderboard_log)), encoding='utf-8'))
+                dfs.append(SimulationLogsIO.convert_to_pandas(data, stream=path_split.groups()[0]))
+
+            self.df = pd.concat(dfs, ignore_index=True)
+            self.active = LogType.LEADERBOARD
 
     def dataframe(self):
         """Method that provides the dataframe for analysis of this log.

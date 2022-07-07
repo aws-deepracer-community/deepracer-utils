@@ -185,7 +185,7 @@ class TestEvaluationLogs:
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
                        'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 0 == fastest.iloc[0, 1]
-        assert 240.0 == fastest.iloc[0, 2]
+        assert 238.0 == fastest.iloc[0, 2]
         assert 15.800 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis(self):
@@ -282,3 +282,26 @@ class TestEvaluationLogs:
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
                        'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 15.133 == pytest.approx(fastest.iloc[0, 5])
+
+
+class TestLeadershipLogs:
+    @pytest.fixture(autouse=True)
+    def run_before_and_after_tests(tmpdir):
+        warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
+        yield
+
+    def test_load_robomaker_logs(self):
+        drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
+        drl.load_robomaker_logs(type=LogType.LEADERBOARD)
+        df = drl.dataframe()
+
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
+        fastest = complete_ones.nsmallest(5, 'time')
+
+        assert (6, 9) == simulation_agg.shape  # four more episodes in the log
+        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
+                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        assert 2 == fastest.iloc[0, 1]
+        assert 234.0 == fastest.iloc[0, 2]
+        assert 15.532 == pytest.approx(fastest.iloc[0, 5])

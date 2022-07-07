@@ -16,9 +16,10 @@ class FileHandler(ABC):
     training_simtrace_split: str = None
     training_robomaker_log_path: str = None
     evaluation_simtrace_path: str = None
-    evaluation_robomaker_log_path: list = None
+    evaluation_robomaker_log_path: str = None
     evaluation_simtrace_split: str = None
-    leaderboard_robomaker_log_path: list = None
+    leaderboard_robomaker_log_path: str = None
+    leaderboard_robomaker_log_split: str = None
 
     @abstractmethod
     def list_files(self, filterexp: str = None) -> list:
@@ -58,19 +59,11 @@ class FSFileHandler(FileHandler):
             self.type = LogFolderType.CONSOLE_MODEL_WITH_LOGS
             if self.training_simtrace_path is None:
                 self.training_simtrace_path = os.path.join(
-                    self.model_folder,
-                    "sim-trace",
-                    "training",
-                    "training-simtrace",
+                    self.model_folder, "sim-trace", "training", "training-simtrace",
                     "*-iteration.csv")
-                self.training_simtrace_split = \
-                    r'(.*)/training/training-simtrace/(.*)-iteration.csv'
+                self.training_simtrace_split = r'(.*)/training/training-simtrace/(.*)-iteration.csv'
                 self.evaluation_simtrace_path = os.path.join(
-                    self.model_folder,
-                    "sim-trace",
-                    "evaluation",
-                    "*",
-                    "evaluation-simtrace",
+                    self.model_folder, "sim-trace", "evaluation", "*", "evaluation-simtrace",
                     "0-iteration.csv")
                 self.evaluation_simtrace_split = \
                     r'.*/evaluation/([0-9]{14})-.*/evaluation-simtrace/(.*)-iteration\.csv'
@@ -79,12 +72,16 @@ class FSFileHandler(FileHandler):
                     self.model_folder, "**", "training", "*-robomaker.log"))[0]
 
             if self.evaluation_robomaker_log_path is None:
-                self.evaluation_robomaker_log_path = glob.glob(os.path.join(
-                    self.model_folder, "**", "evaluation", "*-robomaker.log"))
+                self.evaluation_robomaker_log_path = os.path.join(
+                    self.model_folder, "**", "evaluation", "*-robomaker.log")
 
             if self.leaderboard_robomaker_log_path is None:
-                self.leaderboard_robomaker_log_path = glob.glob(os.path.join(
-                    self.model_folder, "**", "leaderboard", "*-robomaker.log"))
+                self.leaderboard_robomaker_log_path = os.path.join(
+                    self.model_folder, "**", "leaderboard", "*-robomaker.log")
+
+            if self.leaderboard_robomaker_log_split is None:
+                self.leaderboard_robomaker_log_split = \
+                    r'.*/leaderboard/leaderboard-([0-9]{14})-(.*)-robomaker.log'
 
         elif os.path.isdir(os.path.join(self.model_folder, "training-simtrace")):
             self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
@@ -93,11 +90,8 @@ class FSFileHandler(FileHandler):
                     self.model_folder, "training-simtrace", "*-iteration.csv")
                 self.training_simtrace_split = r'(.*)/training-simtrace/(.*)-iteration.csv'
                 self.evaluation_simtrace_path = os.path.join(
-                    self.model_folder,
-                    "evaluation-simtrace",
-                    "0-iteration.csv")
-                self.evaluation_simtrace_split = \
-                    r'.*/(.*)/evaluation-simtrace/(.*)-iteration\.csv'
+                    self.model_folder, "evaluation-simtrace", "0-iteration.csv")
+                self.evaluation_simtrace_split = r'.*/(.*)/evaluation-simtrace/(.*)-iteration\.csv'
 
         elif os.path.isdir(os.path.join(self.model_folder, "0")):
             self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
@@ -155,35 +149,29 @@ class S3FileHandler(FileHandler):
 
         if len(self.list_files(filterexp=(self.prefix + r'sim-trace/(.*)'))) > 0:
             self.type = LogFolderType.CONSOLE_MODEL_WITH_LOGS
-            if self.training_simtrace_path is None:
-                self.training_simtrace_path = self.prefix + \
-                    r'sim-trace/training/training-simtrace/(.*)-iteration\.csv'
-                self.training_simtrace_split = \
-                    r'(.*)/sim-trace/training/training-simtrace/(.*)-iteration.csv'
-                self.evaluation_simtrace_path = self.prefix + \
-                    r'sim-trace/evaluation/(.*)/evaluation-simtrace/0-iteration\.csv'
-                self.evaluation_simtrace_split = \
-                    r'.*sim-trace/evaluation/([0-9]{14})-.*/evaluation-simtrace/(.*)-iteration\.csv'
-            if self.training_robomaker_log_path is None:
-                self.training_robomaker_log_path = self.prefix + \
-                    r'logs/training/(.*)-robomaker\.log'
+            self.training_simtrace_path = self.prefix + \
+                r'sim-trace/training/training-simtrace/(.*)-iteration\.csv'
+            self.training_simtrace_split = \
+                r'(.*)/sim-trace/training/training-simtrace/(.*)-iteration.csv'
+            self.evaluation_simtrace_path = self.prefix + \
+                r'sim-trace/evaluation/(.*)/evaluation-simtrace/0-iteration\.csv'
+            self.evaluation_simtrace_split = \
+                r'.*sim-trace/evaluation/([0-9]{14})-.*/evaluation-simtrace/(.*)-iteration\.csv'
+            self.training_robomaker_log_path = self.prefix + \
+                r'logs/training/(.*)-robomaker\.log'
         elif len(self.list_files(filterexp=(self.prefix + r'training-simtrace/(.*)'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
-            if self.training_simtrace_path is None:
-                self.training_simtrace_path = self.prefix + r'training-simtrace/(.*)-iteration\.csv'
-                self.training_simtrace_split = r'(.*)/training-simtrace/(.*)-iteration.csv'
-                self.evaluation_simtrace_path = self.prefix + \
-                    r'evaluation-simtrace/(.*)-iteration\.csv'
-                self.evaluation_simtrace_split = \
-                    r'(.*)/evaluation-simtrace/(.*)-iteration\.csv'
+            self.training_simtrace_path = self.prefix + r'training-simtrace/(.*)-iteration\.csv'
+            self.training_simtrace_split = r'(.*)/training-simtrace/(.*)-iteration.csv'
+            self.evaluation_simtrace_path = self.prefix + \
+                r'evaluation-simtrace/(.*)-iteration\.csv'
+            self.evaluation_simtrace_split = r'(.*)/evaluation-simtrace/(.*)-iteration\.csv'
         elif len(self.list_files(filterexp=(self.prefix + r'./training-simtrace/(.*)'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
-            if self.training_simtrace_path is None:
-                self.training_simtrace_path = self.prefix + \
-                    r'(.)/training-simtrace/(.*)-iteration\.csv'
-                self.training_simtrace_split = r'.*/(.)/training-simtrace/(.*)-iteration.csv'
-                self.evaluation_simtrace_path = self.prefix + \
-                    r'evaluation-simtrace/(.*)-iteration\.csv'
-                self.evaluation_simtrace_split = \
-                    r'(.*)/evaluation-simtrace/(.*)-iteration\.csv'
+            self.training_simtrace_path = self.prefix + \
+                r'(.)/training-simtrace/(.*)-iteration\.csv'
+            self.training_simtrace_split = r'.*/(.)/training-simtrace/(.*)-iteration.csv'
+            self.evaluation_simtrace_path = self.prefix + \
+                r'evaluation-simtrace/(.*)-iteration\.csv'
+            self.evaluation_simtrace_split = r'(.*)/evaluation-simtrace/(.*)-iteration\.csv'
         return self.type

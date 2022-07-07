@@ -110,7 +110,7 @@ class SimulationLogsIO:
         return data
 
     @staticmethod
-    def convert_to_pandas(data, episodes_per_iteration=20):
+    def convert_to_pandas(data, episodes_per_iteration=20, stream=None):
         """Load the log data to pandas dataframe
 
         Reads the loaded log files and parses them according to this format of print:
@@ -182,6 +182,10 @@ class SimulationLogsIO:
                   'closest_waypoint', 'track_len', 'tstamp', 'episode_status', 'pause_duration']
 
         df = pd.DataFrame(df_list, columns=header)
+
+        if stream is not None:
+            df["stream"] = stream
+
         return df
 
     @staticmethod
@@ -292,7 +296,7 @@ class AnalysisUtils:
 
         grouped = df.groupby([firstgroup, secondgroup])
 
-        by_steps = grouped['steps'].agg(np.max).reset_index()
+        by_steps = grouped['steps'].agg(np.ptp).reset_index()
         by_start = grouped.first()['closest_waypoint'].reset_index() \
             .rename(index=str, columns={"closest_waypoint": "start_at"})
         by_progress = grouped['progress'].agg(np.max).reset_index()
@@ -319,6 +323,7 @@ class AnalysisUtils:
             by_reward = grouped['reward'].agg(np.sum).reset_index()
             result = result.merge(by_reward, on=[firstgroup, secondgroup])
 
+        result['steps'] += 1
         result['time_if_complete'] = result['time'] * 100 / result['progress']
 
         if not is_eval:
