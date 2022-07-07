@@ -14,6 +14,7 @@ from .misc import LogFolderType, LogType
 
 class DeepRacerLog:
 
+    _MAX_JOBS = 5
     fh: FileHandler = None
     active: LogType = LogType.NOT_DEFINED
 
@@ -137,7 +138,7 @@ class DeepRacerLog:
         model_iterations = self.fh.list_files(filterexp=self.fh.training_simtrace_path)
         splitRegex = re.compile(self.fh.training_simtrace_split)
 
-        dfs = Parallel(n_jobs=-1, prefer="threads")(
+        dfs = Parallel(n_jobs=self._MAX_JOBS, prefer="threads")(
             delayed(self.read_csv)(path, splitRegex, LogType.TRAINING) for path in model_iterations
         )
 
@@ -184,7 +185,7 @@ class DeepRacerLog:
         model_iterations = self.fh.list_files(filterexp=self.fh.evaluation_simtrace_path)
         splitRegex = re.compile(self.fh.evaluation_simtrace_split)
 
-        dfs = Parallel(n_jobs=-1, prefer="threads")(
+        dfs = Parallel(n_jobs=self._MAX_JOBS, prefer="threads")(
             delayed(self.read_csv)(path, splitRegex, LogType.EVALUATION)
             for path in model_iterations
         )
