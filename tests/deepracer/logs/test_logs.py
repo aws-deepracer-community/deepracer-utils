@@ -44,10 +44,10 @@ class TestTrainingLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (560, 12) == simulation_agg.shape
+        assert (560, 13) == simulation_agg.shape
         assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
                        'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
+                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
         assert 432 == fastest.iloc[0, 1]
         assert 213.0 == fastest.iloc[0, 2]
         assert 14.128 == pytest.approx(fastest.iloc[0, 5])
@@ -60,12 +60,12 @@ class TestTrainingLogs:
         simulation_agg = AnalysisUtils.simulation_agg(df, secondgroup='unique_episode')
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
-
+        AnalysisUtils.analyze_training_progress(simulation_agg, title='Training progress')
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert np.all(['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
                        'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
-        assert (690, 12) == simulation_agg.shape
+                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
+        assert (690, 13) == simulation_agg.shape
         assert 402 == fastest.iloc[0, 1]
         assert 189.0 == fastest.iloc[0, 2]
         assert 12.548 == pytest.approx(fastest.iloc[0, 5])
@@ -85,8 +85,8 @@ class TestTrainingLogs:
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert np.all(['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
                        'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
-        assert (690, 12) == simulation_agg.shape
+                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
+        assert (690, 13) == simulation_agg.shape
         assert 402 == fastest.iloc[0, 1]
         assert 189.0 == fastest.iloc[0, 2]
         assert 12.548 == pytest.approx(fastest.iloc[0, 5])
@@ -103,8 +103,8 @@ class TestTrainingLogs:
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
                        'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
-        assert (540, 12) == simulation_agg.shape
+                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
+        assert (540, 13) == simulation_agg.shape
         assert 385 == fastest.iloc[0, 1]
         assert 184.0 == fastest.iloc[0, 2]
         assert 12.212 == pytest.approx(fastest.iloc[0, 5])
@@ -124,8 +124,8 @@ class TestTrainingLogs:
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
                        'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
-        assert (540, 12) == simulation_agg.shape
+                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
+        assert (540, 13) == simulation_agg.shape
         assert 385 == fastest.iloc[0, 1]
         assert 184.0 == fastest.iloc[0, 2]
         assert 12.212 == pytest.approx(fastest.iloc[0, 5])
@@ -140,10 +140,10 @@ class TestTrainingLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (564, 12) == simulation_agg.shape  # four more episodes in the log
+        assert (564, 13) == simulation_agg.shape  # four more episodes in the log
         assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
                        'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
+                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
         assert 432 == fastest.iloc[0, 1]
         assert 213.0 == fastest.iloc[0, 2]
         assert 14.128 == pytest.approx(fastest.iloc[0, 5])
@@ -181,9 +181,9 @@ class TestEvaluationLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (6, 8) == simulation_agg.shape  # four more episodes in the log
+        assert (6, 9) == simulation_agg.shape  # four more episodes in the log
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete'] == simulation_agg.columns)
+                       'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 0 == fastest.iloc[0, 1]
         assert 240.0 == fastest.iloc[0, 2]
         assert 15.800 == pytest.approx(fastest.iloc[0, 5])
@@ -196,9 +196,9 @@ class TestEvaluationLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (6, 8) == simulation_agg.shape
+        assert (6, 9) == simulation_agg.shape
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete'] == simulation_agg.columns)
+                       'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
     @pytest.mark.skip(reason="Requires AWS access")
@@ -212,9 +212,9 @@ class TestEvaluationLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (6, 8) == simulation_agg.shape
+        assert (6, 9) == simulation_agg.shape
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete'] == simulation_agg.columns)
+                       'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_drfc1_local(self):
@@ -227,9 +227,9 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, 8) == simulation_agg.shape
+        assert (5, 9) == simulation_agg.shape
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete'] == simulation_agg.columns)
+                       'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 13.740 == pytest.approx(fastest.iloc[0, 5])
 
     @pytest.mark.skip(reason="Requires AWS access")
@@ -245,9 +245,9 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, 8) == simulation_agg.shape
+        assert (5, 9) == simulation_agg.shape
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete'] == simulation_agg.columns)
+                       'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 13.740 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_drfc3_local(self):
@@ -260,9 +260,9 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, 8) == simulation_agg.shape
+        assert (5, 9) == simulation_agg.shape
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete'] == simulation_agg.columns)
+                       'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 15.133 == pytest.approx(fastest.iloc[0, 5])
 
     @pytest.mark.skip(reason="Requires AWS access")
@@ -278,7 +278,7 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, 8) == simulation_agg.shape
+        assert (5, 9) == simulation_agg.shape
         assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete'] == simulation_agg.columns)
+                       'time_if_complete', 'complete'] == simulation_agg.columns)
         assert 15.133 == pytest.approx(fastest.iloc[0, 5])

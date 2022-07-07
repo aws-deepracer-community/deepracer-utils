@@ -250,7 +250,7 @@ class AnalysisUtils:
     in form which allows drawing conclusions from them
     """
     @staticmethod
-    def simulation_agg(panda, firstgroup='iteration', secondgroup='episode',
+    def simulation_agg(df, firstgroup='iteration', secondgroup='episode',
                        add_tstamp=False, is_eval=False):
         """Groups all log data by episodes and other information and returns
         a pandas dataframe with aggregated information
@@ -275,7 +275,7 @@ class AnalysisUtils:
         * tstamp - when given episode ended
 
         Arguments:
-        panda - panda dataframe with simulation data
+        df - panda dataframe with simulation data
         firstgroup - first group to group by, by default iteration,
         for multiple log files loaded stream would be preferred
         add_tstamp - whether to add a timestamp, by default False
@@ -285,12 +285,12 @@ class AnalysisUtils:
         Aggregated dataframe
         """
 
-        if 'worker' in panda and secondgroup == 'episode':
-            if panda.nunique(axis=0)['worker'] > 1:
+        if 'worker' in df and secondgroup == 'episode':
+            if df.nunique(axis=0)['worker'] > 1:
                 logging.warning('Multiple workers found, consider using'
                                 'secondgroup="unique_episode"')
 
-        grouped = panda.groupby([firstgroup, secondgroup])
+        grouped = df.groupby([firstgroup, secondgroup])
 
         by_steps = grouped['steps'].agg(np.max).reset_index()
         by_start = grouped.first()['closest_waypoint'].reset_index() \
@@ -307,9 +307,9 @@ class AnalysisUtils:
             .merge(by_time, on=[firstgroup, secondgroup])
 
         if not is_eval:
-            if 'new_reward' not in panda.columns:
+            if 'new_reward' not in df.columns:
                 print('new reward not found, using reward as its values')
-                panda['new_reward'] = panda['reward']
+                df['new_reward'] = df['reward']
             by_new_reward = grouped['new_reward'].agg(np.sum).reset_index()
             result = result.merge(by_new_reward, on=[firstgroup, secondgroup])
 
@@ -330,6 +330,8 @@ class AnalysisUtils:
             by_tstamp = grouped['tstamp'].agg(np.max).astype(float).reset_index()
             by_tstamp['tstamp'] = pd.to_datetime(by_tstamp['tstamp'], unit='s')
             result = result.merge(by_tstamp, on=[firstgroup, secondgroup])
+
+        result['complete'] = np.where(result['progress'] == 100, 1, 0)
 
         return result
 
@@ -416,7 +418,11 @@ class AnalysisUtils:
         aggregates - aggregated dataframe to analyze
         title - what title to put over the charts, default: None
         """
-        aggregates['complete'] = np.where(aggregates['progress'] == 100, 1, 0)
+
+        if groupby_field not in aggregates:
+            if 'unique_episode' in aggregates:
+                groupby_field = 'unique_episode'
+                print("Grouping by 'unique_episode'")
 
         grouped = aggregates.groupby('iteration')
 
@@ -559,6 +565,11 @@ class PlottingUtils:
         """Plot graphs for evaluations
         """
         from math import ceil
+
+        if groupby_field not in evaluations:
+            if 'unique_episode' in evaluations:
+                groupby_field = 'unique_episode'
+                print("Grouping by 'unique_episode'")
 
         streams = evaluations.sort_values(
             'tstamp', ascending=False).groupby('stream', sort=False)
@@ -734,6 +745,11 @@ class EvaluationUtils:
                                   groupby_field='episode'):
         """Plot all episodes of a single evaluation
         """
+        if groupby_field not in eval_df:
+            if 'unique_episode' in eval_df:
+                groupby_field = 'unique_episode'
+                print("Grouping by 'unique_episode'")
+
         episodes = eval_df.groupby(groupby_field).groups
         for e in episodes:
             PlottingUtils.plot_grid_world(
