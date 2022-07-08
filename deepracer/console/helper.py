@@ -16,14 +16,14 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
+import tarfile
 from enum import Enum
 from io import BytesIO, TextIOWrapper
 from urllib.request import urlopen
-import tarfile
-
-import pandas as pd
 
 import boto3
+import pandas as pd
+
 from deepracer import boto3_enhancer
 from deepracer.logs import SimulationLogsIO
 
@@ -195,6 +195,7 @@ class ConsoleHelper:
                         log_buf = TextIOWrapper(tar_file.extractfile(member))
                         data = SimulationLogsIO.load_buffer(log_buf)
                         df = SimulationLogsIO.convert_to_pandas(data)
+                        df['stream'] = member.name.split("/")[-1].split("-")[0]
                         return df
         else:
             return None

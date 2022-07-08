@@ -1,6 +1,8 @@
+import os
 import warnings
 
 import numpy as np
+import pandas as pd
 import pytest
 from boto3.exceptions import PythonDeprecationWarning
 
@@ -8,10 +10,29 @@ from deepracer.logs import (AnalysisUtils, DeepRacerLog, LogFolderType,
                             LogType, S3FileHandler, SimulationLogsIO)
 
 
+class Constants:
+
+    RAW_COLUMNS = ['episode', 'steps', 'x', 'y', 'heading', 'steering_angle', 'speed', 'action',
+                   'reward', 'done', 'all_wheels_on_track', 'progress', 'closest_waypoint',
+                   'track_len', 'tstamp', 'episode_status', 'pause_duration', 'iteration',
+                   'worker', 'unique_episode']
+
+    TRAIN_COLUMNS = ['iteration', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist',
+                     'new_reward', 'speed', 'reward', 'time_if_complete',
+                     'reward_if_complete', 'quintile', 'complete']
+
+    TRAIN_COLUMNS_UNIQUE = ['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
+                            'dist', 'new_reward', 'speed', 'reward', 'time_if_complete',
+                            'reward_if_complete', 'quintile', 'complete']
+
+    EVAL_COLUMNS = ['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist', 'speed',
+                    'time_if_complete', 'complete']
+
+
 class TestTrainingLogs:
 
     @pytest.fixture(autouse=True)
-    def run_before_and_after_tests(tmpdir):
+    def run_before_and_after_tests(self, tmpdir):
         warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
         yield
 
@@ -29,11 +50,8 @@ class TestTrainingLogs:
         drl.load_training_trace()
         df = drl.dataframe()
 
-        assert (44247, 20) == df.shape
-        assert np.all(['episode', 'steps', 'x', 'y', 'heading', 'steering_angle', 'speed', 'action',
-                       'reward', 'done', 'all_wheels_on_track', 'progress', 'closest_waypoint',
-                       'track_len', 'tstamp', 'episode_status', 'pause_duration', 'iteration',
-                       'worker', 'unique_episode'] == df.columns)
+        assert (44247, len(Constants.RAW_COLUMNS)) == df.shape
+        assert np.all(Constants.RAW_COLUMNS == df.columns)
 
     def test_episode_analysis(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
@@ -44,10 +62,8 @@ class TestTrainingLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (560, 13) == simulation_agg.shape
-        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
+        assert (560, len(Constants.TRAIN_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.TRAIN_COLUMNS == simulation_agg.columns)
         assert 432 == fastest.iloc[0, 1]
         assert 213.0 == fastest.iloc[0, 2]
         assert 14.128 == pytest.approx(fastest.iloc[0, 5])
@@ -60,19 +76,17 @@ class TestTrainingLogs:
         simulation_agg = AnalysisUtils.simulation_agg(df, secondgroup='unique_episode')
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
-        AnalysisUtils.analyze_training_progress(simulation_agg, title='Training progress')
+
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
-        assert np.all(['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
-        assert (690, 13) == simulation_agg.shape
+        assert (690, len(Constants.TRAIN_COLUMNS_UNIQUE)) == simulation_agg.shape
+        assert np.all(Constants.TRAIN_COLUMNS_UNIQUE == simulation_agg.columns)
         assert 402 == fastest.iloc[0, 1]
         assert 189.0 == fastest.iloc[0, 2]
         assert 12.548 == pytest.approx(fastest.iloc[0, 5])
 
-    @pytest.mark.skip(reason="Requires AWS access")
+    @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_episode_analysis_drfc3_s3(self):
-        fh = S3FileHandler(bucket="X",
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
                            prefix="Analysis-Demo-DRFC-3")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_training_trace()
@@ -83,10 +97,8 @@ class TestTrainingLogs:
         fastest = complete_ones.nsmallest(5, 'time')
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
-        assert np.all(['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
-        assert (690, 13) == simulation_agg.shape
+        assert (690, len(Constants.TRAIN_COLUMNS_UNIQUE)) == simulation_agg.shape
+        assert np.all(Constants.TRAIN_COLUMNS_UNIQUE == simulation_agg.columns)
         assert 402 == fastest.iloc[0, 1]
         assert 189.0 == fastest.iloc[0, 2]
         assert 12.548 == pytest.approx(fastest.iloc[0, 5])
@@ -101,17 +113,16 @@ class TestTrainingLogs:
         fastest = complete_ones.nsmallest(5, 'time')
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
-        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
-        assert (540, 13) == simulation_agg.shape
+        print(simulation_agg.columns)
+        assert (540, len(Constants.TRAIN_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.TRAIN_COLUMNS == simulation_agg.columns)
         assert 385 == fastest.iloc[0, 1]
         assert 184.0 == fastest.iloc[0, 2]
         assert 12.212 == pytest.approx(fastest.iloc[0, 5])
 
-    @pytest.mark.skip(reason="Requires AWS access")
+    @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_episode_analysis_drfc1_s3(self):
-        fh = S3FileHandler(bucket="X",
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
                            prefix="Analysis-Demo-DRFC-1")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_training_trace()
@@ -122,10 +133,8 @@ class TestTrainingLogs:
         fastest = complete_ones.nsmallest(5, 'time')
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
-        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
-        assert (540, 13) == simulation_agg.shape
+        assert (540, len(Constants.TRAIN_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.TRAIN_COLUMNS == simulation_agg.columns)
         assert 385 == fastest.iloc[0, 1]
         assert 184.0 == fastest.iloc[0, 2]
         assert 12.212 == pytest.approx(fastest.iloc[0, 5])
@@ -140,10 +149,8 @@ class TestTrainingLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (564, 13) == simulation_agg.shape  # four more episodes in the log
-        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile', 'complete'] == simulation_agg.columns)
+        assert (564, len(Constants.TRAIN_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.TRAIN_COLUMNS == simulation_agg.columns)
         assert 432 == fastest.iloc[0, 1]
         assert 213.0 == fastest.iloc[0, 2]
         assert 14.128 == pytest.approx(fastest.iloc[0, 5])
@@ -181,9 +188,8 @@ class TestEvaluationLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (6, 9) == simulation_agg.shape  # four more episodes in the log
-        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 0 == fastest.iloc[0, 1]
         assert 238.0 == fastest.iloc[0, 2]
         assert 15.800 == pytest.approx(fastest.iloc[0, 5])
@@ -196,14 +202,13 @@ class TestEvaluationLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (6, 9) == simulation_agg.shape
-        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
-    @pytest.mark.skip(reason="Requires AWS access")
+    @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_s3(self):
-        fh = S3FileHandler(bucket="X",
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
                            prefix="Analysis-Demo")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_evaluation_trace()
@@ -212,9 +217,8 @@ class TestEvaluationLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (6, 9) == simulation_agg.shape
-        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_drfc1_local(self):
@@ -227,14 +231,13 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, 9) == simulation_agg.shape
-        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        assert (5, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 13.740 == pytest.approx(fastest.iloc[0, 5])
 
-    @pytest.mark.skip(reason="Requires AWS access")
+    @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc1_s3(self):
-        fh = S3FileHandler(bucket="X",
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
                            prefix="Analysis-Demo-DRFC-1")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_evaluation_trace()
@@ -245,9 +248,8 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, 9) == simulation_agg.shape
-        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        assert (5, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 13.740 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_drfc3_local(self):
@@ -260,14 +262,13 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, 9) == simulation_agg.shape
-        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        assert (5, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 15.133 == pytest.approx(fastest.iloc[0, 5])
 
-    @pytest.mark.skip(reason="Requires AWS access")
+    @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc3_s3(self):
-        fh = S3FileHandler(bucket="X",
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
                            prefix="Analysis-Demo-DRFC-3")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_evaluation_trace()
@@ -278,9 +279,8 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, 9) == simulation_agg.shape
-        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        assert (5, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 15.133 == pytest.approx(fastest.iloc[0, 5])
 
 
@@ -299,9 +299,9 @@ class TestLeadershipLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (6, 9) == simulation_agg.shape  # four more episodes in the log
-        assert np.all(['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'speed',
-                       'time_if_complete', 'complete'] == simulation_agg.columns)
+        # four more episodes in the log
+        assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 2 == fastest.iloc[0, 1]
         assert 234.0 == fastest.iloc[0, 2]
         assert 15.532 == pytest.approx(fastest.iloc[0, 5])

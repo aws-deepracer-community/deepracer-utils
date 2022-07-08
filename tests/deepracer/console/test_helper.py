@@ -1,3 +1,4 @@
+import os
 import warnings
 
 import numpy as np
@@ -9,7 +10,27 @@ from deepracer.logs import AnalysisUtils
 from deepracer.logs.metrics import TrainingMetrics
 
 
-@pytest.mark.skip(reason="Requires AWS access")
+class Constants:
+
+    RAW_COLUMNS = ['episode', 'steps', 'x', 'y', 'heading', 'steering_angle', 'speed', 'action',
+                   'reward', 'done', 'all_wheels_on_track', 'progress', 'closest_waypoint',
+                   'track_len', 'tstamp', 'episode_status', 'pause_duration', 'iteration',
+                   'worker', 'unique_episode']
+
+    TRAIN_COLUMNS = ['iteration', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist',
+                     'new_reward', 'speed', 'reward', 'time_if_complete',
+                     'reward_if_complete', 'quintile', 'complete']
+
+    TRAIN_COLUMNS_UNIQUE = ['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
+                            'dist', 'new_reward', 'speed', 'reward', 'time_if_complete',
+                            'reward_if_complete', 'quintile', 'complete']
+
+    EVAL_COLUMNS = ['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist', 'speed',
+                    'time_if_complete', 'complete']
+
+
+@pytest.mark.skipif(os.environ.get('TOX_ENABLE_AWS', None) is None,
+                    reason="Requires AWS access")
 class TestConsoleHelper:
 
     @pytest.fixture(autouse=True)
@@ -49,10 +70,8 @@ class TestConsoleHelper:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
-        assert (564, 12) == simulation_agg.shape  # four more episodes in the log
-        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
+        assert (564, len(Constants.TRAIN_COLUMNS)) == simulation_agg.shape  # four more episodes
+        assert np.all(Constants.TRAIN_COLUMNS == simulation_agg.columns)
         assert 432 == fastest.iloc[0, 1]
         assert 213.0 == fastest.iloc[0, 2]
         assert 14.128 == pytest.approx(fastest.iloc[0, 5])
@@ -63,12 +82,10 @@ class TestConsoleHelper:
         df = ch.get_leaderboard_log_robomaker("7bbc2d59-af3c-4e06-ac51-e2c76d9f5734",
                                               select=LeaderboardSubmissionType.RANKED)
 
-        simulation_agg = AnalysisUtils.simulation_agg(df)
+        simulation_agg = AnalysisUtils.simulation_agg(df, 'stream', is_eval=True)
 
-        assert (3, 12) == simulation_agg.shape
-        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
+        assert (3, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
 
     def test_get_leaderboard_logs_latest(self):
 
@@ -76,9 +93,7 @@ class TestConsoleHelper:
         df = ch.get_leaderboard_log_robomaker("7bbc2d59-af3c-4e06-ac51-e2c76d9f5734",
                                               select=LeaderboardSubmissionType.LATEST)
 
-        simulation_agg = AnalysisUtils.simulation_agg(df)
+        simulation_agg = AnalysisUtils.simulation_agg(df, 'stream', is_eval=True)
 
-        assert (3, 12) == simulation_agg.shape
-        assert np.all(['iteration', 'episode', 'steps', 'start_at', 'progress', 'time',
-                       'new_reward', 'speed', 'reward', 'time_if_complete',
-                       'reward_if_complete', 'quintile'] == simulation_agg.columns)
+        assert (3, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)

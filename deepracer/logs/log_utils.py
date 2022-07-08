@@ -297,6 +297,11 @@ class AnalysisUtils:
         grouped = df.groupby([firstgroup, secondgroup])
 
         by_steps = grouped['steps'].agg(np.ptp).reset_index()
+        by_dist = grouped.apply(
+            lambda x: (((x['x'].shift(1) - x['x']) ** 2 +
+                        (x['y'].shift(1) - x['y']) ** 2) ** 0.5).sum()).reset_index() \
+            .rename(columns={0: "dist"})
+
         by_start = grouped.first()['closest_waypoint'].reset_index() \
             .rename(index=str, columns={"closest_waypoint": "start_at"})
         by_progress = grouped['progress'].agg(np.max).reset_index()
@@ -308,7 +313,8 @@ class AnalysisUtils:
         result = by_steps \
             .merge(by_start) \
             .merge(by_progress, on=[firstgroup, secondgroup]) \
-            .merge(by_time, on=[firstgroup, secondgroup])
+            .merge(by_time, on=[firstgroup, secondgroup]) \
+            .merge(by_dist, on=[firstgroup, secondgroup])
 
         if not is_eval:
             if 'new_reward' not in df.columns:
