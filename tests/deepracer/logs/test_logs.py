@@ -231,9 +231,9 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert (9, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
-        assert 13.740 == pytest.approx(fastest.iloc[0, 5])
+        assert 13.325 == pytest.approx(fastest.iloc[0, 5])
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc1_s3(self):
@@ -248,9 +248,9 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert (9, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
-        assert 13.740 == pytest.approx(fastest.iloc[0, 5])
+        assert 13.325 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_drfc3_local(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-3-logs')
@@ -262,9 +262,9 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert (9, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
-        assert 15.133 == pytest.approx(fastest.iloc[0, 5])
+        assert 14.730 == pytest.approx(fastest.iloc[0, 5])
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc3_s3(self):
@@ -279,9 +279,9 @@ class TestEvaluationLogs:
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
-        assert (5, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert (9, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
-        assert 15.133 == pytest.approx(fastest.iloc[0, 5])
+        assert 14.730 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_robomaker_local(self):
         drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
