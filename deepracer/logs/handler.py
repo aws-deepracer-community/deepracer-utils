@@ -17,6 +17,7 @@ class FileHandler(ABC):
     training_robomaker_log_path: str = None
     evaluation_simtrace_path: str = None
     evaluation_robomaker_log_path: str = None
+    evaluation_robomaker_split: str = None
     evaluation_simtrace_split: str = None
     leaderboard_robomaker_log_path: str = None
     leaderboard_robomaker_log_split: str = None
@@ -74,6 +75,10 @@ class FSFileHandler(FileHandler):
             if self.evaluation_robomaker_log_path is None:
                 self.evaluation_robomaker_log_path = os.path.join(
                     self.model_folder, "**", "evaluation", "*-robomaker.log")
+
+            if self.evaluation_robomaker_split is None:
+                self.evaluation_robomaker_split = \
+                    r'.*/evaluation/evaluation-([0-9]{14})-(.*)-robomaker.log'
 
             if self.leaderboard_robomaker_log_path is None:
                 self.leaderboard_robomaker_log_path = os.path.join(
@@ -159,6 +164,15 @@ class S3FileHandler(FileHandler):
                 r'.*sim-trace/evaluation/([0-9]{14})-.*/evaluation-simtrace/(.*)-iteration\.csv'
             self.training_robomaker_log_path = self.prefix + \
                 r'logs/training/(.*)-robomaker\.log'
+            self.evaluation_robomaker_log_path = self.prefix + \
+                r'logs/evaluation/(.*)-robomaker\.log'
+            self.evaluation_robomaker_split = \
+                r'.*/evaluation/evaluation-([0-9]{14})-(.*)-robomaker.log'
+            self.leaderboard_robomaker_log_path = self.prefix + \
+                r'logs/leaderboard/(.*)-robomaker\.log'
+            self.leaderboard_robomaker_log_split = \
+                r'.*/leaderboard/leaderboard-([0-9]{14})-(.*)-robomaker.log'
+
         elif len(self.list_files(filterexp=(self.prefix + r'training-simtrace/(.*)'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
             self.training_simtrace_path = self.prefix + r'training-simtrace/(.*)-iteration\.csv'

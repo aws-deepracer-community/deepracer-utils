@@ -283,6 +283,41 @@ class TestEvaluationLogs:
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 15.133 == pytest.approx(fastest.iloc[0, 5])
 
+    def test_evaluation_analysis_robomaker_local(self):
+        drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
+        drl.load_robomaker_logs(type=LogType.EVALUATION)
+        df = drl.dataframe()
+
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
+        fastest = complete_ones.nsmallest(5, 'time')
+
+        # four more episodes in the log
+        assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
+        assert 0 == fastest.iloc[0, 1]
+        assert 238.0 == fastest.iloc[0, 2]
+        assert 15.800 == pytest.approx(fastest.iloc[0, 5])
+
+    @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
+    def test_evaluation_analysis_robomaker_s3(self):
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
+                           prefix="Analysis-Demo")
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_robomaker_logs(type=LogType.EVALUATION)
+        df = drl.dataframe()
+
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
+        fastest = complete_ones.nsmallest(5, 'time')
+
+        # four more episodes in the log
+        assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
+        assert 0 == fastest.iloc[0, 1]
+        assert 238.0 == fastest.iloc[0, 2]
+        assert 15.800 == pytest.approx(fastest.iloc[0, 5])
+
 
 class TestLeadershipLogs:
     @pytest.fixture(autouse=True)
@@ -292,6 +327,25 @@ class TestLeadershipLogs:
 
     def test_load_robomaker_logs(self):
         drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
+        drl.load_robomaker_logs(type=LogType.LEADERBOARD)
+        df = drl.dataframe()
+
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
+        fastest = complete_ones.nsmallest(5, 'time')
+
+        # four more episodes in the log
+        assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
+        assert 2 == fastest.iloc[0, 1]
+        assert 234.0 == fastest.iloc[0, 2]
+        assert 15.532 == pytest.approx(fastest.iloc[0, 5])
+
+    @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
+    def test_evaluation_analysis_drfc3_s3(self):
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
+                           prefix="Analysis-Demo")
+        drl = DeepRacerLog(filehandler=fh)
         drl.load_robomaker_logs(type=LogType.LEADERBOARD)
         df = drl.dataframe()
 
