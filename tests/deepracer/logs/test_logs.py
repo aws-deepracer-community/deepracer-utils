@@ -26,7 +26,7 @@ class Constants:
                             'reward_if_complete', 'quintile', 'complete']
 
     EVAL_COLUMNS = ['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist', 'speed',
-                    'time_if_complete', 'complete']
+                    'crashed', 'off_track', 'time_if_complete', 'complete']
 
 
 class TestTrainingLogs:
