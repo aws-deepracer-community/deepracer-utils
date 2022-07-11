@@ -309,12 +309,15 @@ class AnalysisUtils:
         by_time = grouped['tstamp'].agg(np.ptp).reset_index() \
             .rename(index=str, columns={"tstamp": "time"})
         by_time['time'] = by_time['time'].astype(float)
+        by_reset = grouped['episode_status'].agg(crashed=pd.NamedAgg('episode_status', lambda x: x == 'crashed').sum(),
+                                                 off_track=pd.NamedAgg('episode_status', lambda x: x == 'off_track').sum()).reset_index()
 
         result = by_steps \
             .merge(by_start) \
             .merge(by_progress, on=[firstgroup, secondgroup]) \
             .merge(by_time, on=[firstgroup, secondgroup]) \
-            .merge(by_dist, on=[firstgroup, secondgroup])
+            .merge(by_dist, on=[firstgroup, secondgroup]) \
+            .merge(by_reset, on=[firstgroup, secondgroup])
 
         if not is_eval:
             if 'new_reward' not in df.columns:
