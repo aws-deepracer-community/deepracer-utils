@@ -309,8 +309,9 @@ class AnalysisUtils:
         by_time = grouped['tstamp'].agg(np.ptp).reset_index() \
             .rename(index=str, columns={"tstamp": "time"})
         by_time['time'] = by_time['time'].astype(float)
-        by_reset = grouped['episode_status'].agg([('crashed', lambda x: (x == 'crashed').sum()),
-                                                 ('off_track', lambda x: (x == 'off_track').sum())]).reset_index()
+        by_reset = grouped['episode_status'] \
+            .agg([('crashed', lambda x: (x == 'crashed').sum()),
+                  ('off_track', lambda x: (x == 'off_track').sum())]).reset_index()
 
         result = by_steps \
             .merge(by_start) \
