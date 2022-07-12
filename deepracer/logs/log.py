@@ -13,72 +13,97 @@ from .misc import LogFolderType, LogType
 
 
 class DeepRacerLog:
+    """A class that wraps around a DeepRacer model folder, either in file system or in
+    S3 bucket. The class supports both console and DRfC file layouts.
+
+    Methods are exposed to load training logs, evaluation logs or leaderboard submissions.
+    """
+
+    # Column names we support in the CSV file.
+    _COL_NAMES = [
+        "episode",
+        "steps",
+        "x",
+        "y",
+        "heading",
+        "steering_angle",
+        "speed",
+        "action",
+        "reward",
+        "done",
+        "all_wheels_on_track",
+        "progress",
+        "closest_waypoint",
+        "track_len",
+        "tstamp",
+        "episode_status",
+        "pause_duration"
+    ]
+    # TODO Column names as a workaround for an excess comma in the CSV file
+    _COL_NAMES_WORKAROUND = [
+        "episode",
+        "steps",
+        "x",
+        "y",
+        "heading",
+        "steering_angle",
+        "speed",
+        "action",
+        "action_b",
+        "reward",
+        "done",
+        "all_wheels_on_track",
+        "progress",
+        "closest_waypoint",
+        "track_len",
+        "tstamp",
+        "episode_status",
+        "pause_duration"
+    ]
+    _HYPERPARAM_KEYS = [
+        "batch_size",
+        "beta_entropy",
+        "e_greedy_value",
+        "epsilon_steps",
+        "exploration_type",
+        "loss_type",
+        "lr",
+        "num_episodes_between_training",
+        "num_epochs",
+        "stack_size",
+        "term_cond_avg_score",
+        "term_cond_max_episodes"
+    ]
 
     _MAX_JOBS = 5
     fh: FileHandler = None
     active: LogType = LogType.NOT_DEFINED
 
-    def __init__(self, model_folder=None, filehandler: FileHandler = None,
+    def __init__(self, model_folder: str = None, filehandler: FileHandler = None,
                  simtrace_path=None, robomaker_log_path=None):
-        # Column names we support in the CSV file.
-        self.col_names = [
-            "episode",
-            "steps",
-            "x",
-            "y",
-            "heading",
-            "steering_angle",
-            "speed",
-            "action",
-            "reward",
-            "done",
-            "all_wheels_on_track",
-            "progress",
-            "closest_waypoint",
-            "track_len",
-            "tstamp",
-            "episode_status",
-            "pause_duration"
-        ]
-        # TODO Column names as a workaround for an excess comma in the CSV file
-        self.col_names_workaround = [
-            "episode",
-            "steps",
-            "x",
-            "y",
-            "heading",
-            "steering_angle",
-            "speed",
-            "action",
-            "action_b",
-            "reward",
-            "done",
-            "all_wheels_on_track",
-            "progress",
-            "closest_waypoint",
-            "track_len",
-            "tstamp",
-            "episode_status",
-            "pause_duration"
-        ]
-        self.hyperparam_keys = [
-            "batch_size",
-            "beta_entropy",
-            "e_greedy_value",
-            "epsilon_steps",
-            "exploration_type",
-            "loss_type",
-            "lr",
-            "num_episodes_between_training",
-            "num_epochs",
-            "stack_size",
-            "term_cond_avg_score",
-            "term_cond_max_episodes"
-        ]
+        """Initializes an object by pointing the class instance to a folder.
 
+        Folder can be on local file system using the model_folder attribute or
+        in a custom location through a FileHandler, which also supports S3 locations.
+
+        Args:
+            filehandler (FileHandler): Provides an instantiated FileHandler that
+                is the proxy for listing and retreiving files.
+            model_folder (str): If FileHandler is None, then model_folder will create
+                an FSFileHandler pointing to the provided folder.
+            simtrace_path (str): Deprecated. Use a custom file handler instead.
+            robomaker_log_path (str): Deprecated. Use a custom file handler instead.
+
+        """
         self.model_folder = model_folder
-        self.simtrace_path = simtrace_path
-        self.robomaker_log_path = robomaker_log_path
+
+        if simtrace_path is not None:
+            raise Exception("Overriding simtrace_path is no longer supported. "
+                            "Override path using custom File Handler if required.")
+
+        if robomaker_log_path is not None:
+            raise Exception("Overriding robomaker_log_path is no longer supported. "
+                            "Override path using custom File Handler if required.")
 
         if filehandler is not None:
             self.fh = filehandler
@@ -89,19 +114,19 @@ class DeepRacerLog:
 
         self.df = None
 
-    def read_csv(self, path: str, splitRegex, type: LogType = LogType.TRAINING):
+    def _read_csv(self, path: str, splitRegex, type: LogType = LogType.TRAINING):
         try:
             csv_bytes = self.fh.get_file(path)
             # TODO: this is a workaround and should be removed when logs are fixed
             df = pd.read_csv(BytesIO(csv_bytes), encoding='utf8',
-                             names=self.col_names_workaround, header=0)
+                             names=self._COL_NAMES_WORKAROUND, header=0)
             df = df.drop("action_b", axis=1)
         except pd.errors.ParserError:
             try:
-                df = pd.read_csv(BytesIO(csv_bytes), names=self.col_names, header=0)
+                df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES, header=0)
             except pd.errors.ParserError:
                 # Older logs don't have pause_duration, so we're handling this
-                df = pd.read_csv(BytesIO(csv_bytes), names=self.col_names[:-1], header=0)
+                df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES[:-1], header=0)
 
         path_split = splitRegex.search(path)
         df["iteration"] = int(path_split.groups()[1])
@@ -121,29 +146,44 @@ class DeepRacerLog:
 
     def load(self, force=False):
         """ Method that loads DeepRacer training trace logs into a dataframe.
-            This method is deprecated, use load_training_trace.
+
+        This method is deprecated, use load_training_trace.
+
         """
         self.load_training_trace(force)
 
-    def load_training_trace(self, force=False):
+    def load_training_trace(self, force: bool = False):
         """ Method that loads DeepRacer training trace logs into a dataframe.
-            The method will load in all available workers and iterations from one training run.
+
+        The method will load in all available workers and iterations from one training run.
+
+        Args:
+            force:
+                Enables the reloading of logs. If `False` then loading will be blocked
+                if the dataframe is already populates.
         """
         self._block_duplicate_load(force)
 
         if self.fh.training_simtrace_path is None:
             raise Exception(
-                "Cannot detect training-simtrace, is model_folder pointing at your model folder?")
+                "Path to training-simtrace not configured. Check FileHandler configuration.")
 
-        model_iterations = self.fh.list_files(filterexp=self.fh.training_simtrace_path)
+        model_iterations = self.fh.list_files(check_exist=True,
+                                              filterexp=self.fh.training_simtrace_path)
+
+        if len(model_iterations) == 0:
+            raise Exception(
+                "No training-simtrace files found.")
+
         splitRegex = re.compile(self.fh.training_simtrace_split)
 
         dfs = Parallel(n_jobs=self._MAX_JOBS, prefer="threads")(
-            delayed(self.read_csv)(path, splitRegex, LogType.TRAINING) for path in model_iterations
+            delayed(self._read_csv)(path, splitRegex, LogType.TRAINING) for path in model_iterations
         )
 
         if len(dfs) == 0:
-            return
+            raise Exception(
+                "No training-simtrace files loaded.")
 
         # Merge into single large DataFrame
         df = pd.concat(dfs, ignore_index=True)
@@ -172,26 +212,39 @@ class DeepRacerLog:
         self.df = df.sort_values(['unique_episode', 'steps']).reset_index(drop=True)
         self.active = LogType.TRAINING
 
-    def load_evaluation_trace(self, force=False):
-        """ Method that loads DeepRacer training trace logs into a dataframe.
-            The method will load in all available workers and iterations from one training run.
+    def load_evaluation_trace(self, force: bool = False):
+        """ Method that loads DeepRacer evaluation trace logs into a dataframe.
+
+        The method will load in all available evaluations found in a model folder.
+
+        Args:
+            force:
+                Enables the reloading of logs. If `False` then loading will be blocked
+                if the dataframe is already populates.
         """
         self._block_duplicate_load(force)
 
-        if self.fh.training_simtrace_path is None:
+        if self.fh.evaluation_simtrace_path is None:
             raise Exception(
-                "Cannot detect training-simtrace, is model_folder pointing at your model folder?")
+                "Path to evaluation-simtrace not configured. Check FileHandler configuration.")
 
-        model_iterations = self.fh.list_files(filterexp=self.fh.evaluation_simtrace_path)
+        model_iterations = self.fh.list_files(check_exist=True,
+                                              filterexp=self.fh.evaluation_simtrace_path)
+
+        if len(model_iterations) == 0:
+            raise Exception(
+                "No evaluation-simtrace files found.")
+
         splitRegex = re.compile(self.fh.evaluation_simtrace_split)
 
         dfs = Parallel(n_jobs=self._MAX_JOBS, prefer="threads")(
-            delayed(self.read_csv)(path, splitRegex, LogType.EVALUATION)
+            delayed(self._read_csv)(path, splitRegex, LogType.EVALUATION)
             for path in model_iterations
         )
 
         if len(dfs) == 0:
-            return
+            raise Exception(
+                "No evaluation-simtrace files loaded.")
 
         # Merge into single large DataFrame
         df = pd.concat(dfs, ignore_index=True)
@@ -199,12 +252,21 @@ class DeepRacerLog:
         self.df = df.sort_values(['stream', 'episode', 'steps']).reset_index(drop=True)
         self.active = LogType.EVALUATION
 
-    def load_robomaker_logs(self, type: LogType = LogType.TRAINING, force=False):
-        """Method that loads a single DeepRacer RoboMaker log into a dataframe.
+    def load_robomaker_logs(self, type: LogType = LogType.TRAINING, force: bool = False):
+        """ Method that loads DeepRacer robomaker log into a dataframe.
+
+        The method will load in all available workers and iterations from one training run.
+
+        Args:
+            type:
+                By specifying `LogType` as either `TRAINING`, `EVALUATION` or `LEADERBOARD`
+                then different logs will be loaded. In the case of `EVALUATION` or `LEADERBOARD`
+                multiple logs may be loaded.
+            force:
+                Enables the reloading of logs. If `False` then loading will be blocked
+                if the dataframe is already populates.
         """
         self._block_duplicate_load(force)
-
-        self._ensure_file_exists()
 
         if self.fh.type is not LogFolderType.CONSOLE_MODEL_WITH_LOGS:
             raise Exception("Only supported with LogFolderType.CONSOLE_MODEL_WITH_LOGS")
@@ -220,13 +282,13 @@ class DeepRacerLog:
             dfs = []
 
             if type == LogType.EVALUATION:
-                submissions = self.fh.list_files(
-                                                filterexp=self.fh.evaluation_robomaker_log_path)
+                submissions = self.fh.list_files(check_exist=True,
+                                                 filterexp=self.fh.evaluation_robomaker_log_path)
                 splitRegex = re.compile(self.fh.evaluation_robomaker_split)
 
             elif type == LogType.LEADERBOARD:
-                submissions = self.fh.list_files(
-                                                filterexp=self.fh.leaderboard_robomaker_log_path)
+                submissions = self.fh.list_files(check_exist=True,
+                                                 filterexp=self.fh.leaderboard_robomaker_log_path)
                 splitRegex = re.compile(self.fh.leaderboard_robomaker_log_split)
 
             for log in submissions:
@@ -250,7 +312,10 @@ class DeepRacerLog:
     def hyperparameters(self):
         """Method that provides the hyperparameters for this log.
         """
-        self._ensure_file_exists()
+
+        if self.fh.type != LogFolderType.CONSOLE_MODEL_WITH_LOGS:
+            raise Exception("Method only available for {}"
+                            .format(LogFolderType.CONSOLE_MODEL_WITH_LOGS))
 
         outside_hyperparams = True
         hyperparameters_string = ""
@@ -272,7 +337,9 @@ class DeepRacerLog:
     def action_space(self):
         """Method that provides the action space for this log.
         """
-        self._ensure_file_exists()
+        if self.fh.type != LogFolderType.CONSOLE_MODEL_WITH_LOGS:
+            raise Exception("Method only available for {}"
+                            .format(LogFolderType.CONSOLE_MODEL_WITH_LOGS))
 
         text_io = TextIOWrapper(BytesIO(self.fh.get_file(
             self.fh.training_robomaker_log_path)), encoding='utf-8')
@@ -286,7 +353,10 @@ class DeepRacerLog:
         Resulting dictionary includes the name of environment used,
         list of sensors and type of network.
         """
-        self._ensure_file_exists()
+
+        if self.fh.type != LogFolderType.CONSOLE_MODEL_WITH_LOGS:
+            raise Exception("Method only available for {}"
+                            .format(LogFolderType.CONSOLE_MODEL_WITH_LOGS))
 
         regex = r'Sensor list (\[[\'a-zA-Z, _-]+\]), network ([a-zA-Z_]+), simapp_version ([\d.]+)'
 
@@ -305,13 +375,7 @@ class DeepRacerLog:
 
                 return result
 
-    def _ensure_file_exists(self, file: str = None):
-        if self.fh.training_robomaker_log_path is None or \
-                len(self.fh.list_files(self.fh.training_robomaker_log_path)) == 0:
-            raise Exception(
-                "Cannot detect robomaker log file, is model_folder pointing at your model folder?")
-
-    def _block_duplicate_load(self, force=False):
+    def _block_duplicate_load(self, force: bool = False):
         if self.df is not None and not force:
             raise Exception(
                 "The dataframe has already been loaded, add force=True"
