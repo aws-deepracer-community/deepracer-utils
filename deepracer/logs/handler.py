@@ -27,6 +27,8 @@ class FileHandler(ABC):
     evaluation_simtrace_split: str = None
     leaderboard_robomaker_log_path: str = None
     leaderboard_robomaker_log_split: str = None
+    model_metadata_path: str = None
+    hyperparameters_path: str = None
 
     @abstractmethod
     def list_files(self, filterexp: str = None, check_exist: bool = False) -> list:
@@ -135,6 +137,14 @@ class FSFileHandler(FileHandler):
                 self.leaderboard_robomaker_log_split = \
                     r'.*/leaderboard/leaderboard-([0-9]{14})-(.*)-robomaker.log'
 
+            if self.model_metadata_path is None:
+                self.model_metadata_path = os.path.join(
+                    self.model_folder, "model", "model_metadata.json")
+
+            if self.hyperparameters_path is None:
+                self.hyperparameters_path = os.path.join(
+                    self.model_folder, "ip", "hyperparameters.json")
+
         elif os.path.isdir(os.path.join(self.model_folder, "training-simtrace")):
             self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
             if self.training_simtrace_path is None:
@@ -146,6 +156,14 @@ class FSFileHandler(FileHandler):
                 self.evaluation_simtrace_split = \
                     r'.*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
 
+            if self.model_metadata_path is None:
+                self.model_metadata_path = os.path.join(
+                    self.model_folder, "model", "model_metadata.json")
+
+            if self.hyperparameters_path is None:
+                self.hyperparameters_path = os.path.join(
+                    self.model_folder, "ip", "hyperparameters.json")
+
         elif os.path.isdir(os.path.join(self.model_folder, "0")):
             self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
             if self.training_simtrace_path is None:
@@ -156,6 +174,14 @@ class FSFileHandler(FileHandler):
                     self.model_folder, "evaluation-*", "evaluation-simtrace", "0-iteration.csv")
                 self.evaluation_simtrace_split = \
                     r'.*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+
+            if self.model_metadata_path is None:
+                self.model_metadata_path = os.path.join(
+                    self.model_folder, "model", "model_metadata.json")
+
+            if self.hyperparameters_path is None:
+                self.hyperparameters_path = os.path.join(
+                    self.model_folder, "ip", "hyperparameters.json")
 
         return self.type
 
@@ -277,6 +303,10 @@ class S3FileHandler(FileHandler):
                 r'logs/leaderboard/(.*)-robomaker\.log'
             self.leaderboard_robomaker_log_split = \
                 r'.*/leaderboard/leaderboard-([0-9]{14})-(.*)-robomaker.log'
+            self.model_metadata_path = self.prefix + \
+                r'model/model_metadata.json'
+            self.hyperparameters_path = self.prefix + \
+                r'ip/hyperparameters.json'
 
         elif len(self.list_files(filterexp=(self.prefix + r'training-simtrace/(.*)'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
@@ -286,6 +316,10 @@ class S3FileHandler(FileHandler):
                 r'evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
             self.evaluation_simtrace_split = \
                 r'.*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+            self.model_metadata_path = self.prefix + \
+                r'model/model_metadata.json'
+            self.hyperparameters_path = self.prefix + \
+                r'ip/hyperparameters.json'
         elif len(self.list_files(filterexp=(self.prefix + r'./training-simtrace/(.*)'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
             self.training_simtrace_path = self.prefix + \
@@ -295,4 +329,8 @@ class S3FileHandler(FileHandler):
                 r'evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
             self.evaluation_simtrace_split = \
                 r'.*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+            self.model_metadata_path = self.prefix + \
+                r'model/model_metadata.json'
+            self.hyperparameters_path = self.prefix + \
+                r'ip/hyperparameters.json'
         return self.type

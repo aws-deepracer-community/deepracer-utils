@@ -155,7 +155,7 @@ class DeepRacerLog:
         """
         self.load_training_trace(force)
 
-    def load_training_trace(self, force: bool = False):
+    def load_training_trace(self, force: bool = False, ignore_metadata: bool = False):
         """ Method that loads DeepRacer training trace logs into a dataframe.
 
         The method will load in all available workers and iterations from one training run.
@@ -166,6 +166,9 @@ class DeepRacerLog:
                 if the dataframe is already populates.
         """
         self._block_duplicate_load(force)
+
+        if not ignore_metadata:
+            self._parse_trace_metadata()
 
         if self.fh.training_simtrace_path is None:
             raise Exception(
@@ -215,7 +218,7 @@ class DeepRacerLog:
         self.df = df.sort_values(['unique_episode', 'steps']).reset_index(drop=True)
         self.active = LogType.TRAINING
 
-    def load_evaluation_trace(self, force: bool = False):
+    def load_evaluation_trace(self, force: bool = False, ignore_metadata: bool = False):
         """ Method that loads DeepRacer evaluation trace logs into a dataframe.
 
         The method will load in all available evaluations found in a model folder.
@@ -226,6 +229,9 @@ class DeepRacerLog:
                 if the dataframe is already populates.
         """
         self._block_duplicate_load(force)
+
+        if not ignore_metadata:
+            self._parse_trace_metadata()
 
         if self.fh.evaluation_simtrace_path is None:
             raise Exception(
@@ -359,6 +365,29 @@ class DeepRacerLog:
 
         data_wrapper.seek(0)
 
+    def _parse_trace_metadata(self):
+
+        _ = self.fh.list_files(check_exist=True,
+                               filterexp=self.fh.model_metadata_path)
+
+        _ = self.fh.list_files(check_exist=True,
+                               filterexp=self.fh.hyperparameters_path)
+
+        model_metadata: dict = None
+        model_metadata = json.load(TextIOWrapper(
+            BytesIO(self.fh.get_file(self.fh.model_metadata_path)),
+            encoding='utf-8'))
+        self._action_space = model_metadata["action_space"]
+
+        self._agent_and_network = {}
+        self._agent_and_network["sensor_list"] = model_metadata["sensor"]
+        self._agent_and_network["network"] = model_metadata["neural_network"]
+        self._agent_and_network["simapp_version"] = model_metadata["version"]
+
+        self._hyperparameters = json.load(TextIOWrapper(
+            BytesIO(self.fh.get_file(self.fh.hyperparameters_path)),
+            encoding='utf-8'))
+
     def dataframe(self):
         """Method that provides the dataframe for analysis of this log.
         """
@@ -384,7 +413,7 @@ class DeepRacerLog:
         else:
             raise Exception("Action space not yet loaded")
 
-    def agent_and_network(self):
+    def agent_and_network(self) -> dict:
         """Method that provides the agent and network information for this log.
         Resulting dictionary includes the name of environment used,
         list of sensors and type of network.

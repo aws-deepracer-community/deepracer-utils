@@ -38,13 +38,13 @@ class TestTrainingLogs:
 
     def test_load_model_path(self):
         drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
-        drl.load()
+        drl.load_training_trace(ignore_metadata=True)
 
         assert LogFolderType.CONSOLE_MODEL_WITH_LOGS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
 
     def test_dataframe(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
-        drl.load_training_trace()
+        drl.load_training_trace(ignore_metadata=True)
         df = drl.dataframe()
 
         assert (44247, len(Constants.RAW_COLUMNS)) == df.shape
@@ -52,7 +52,7 @@ class TestTrainingLogs:
 
     def test_episode_analysis(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
-        drl.load_training_trace()
+        drl.load_training_trace(ignore_metadata=True)
         df = drl.dataframe()
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
@@ -138,6 +138,16 @@ class TestTrainingLogs:
 
     def test_load_robomaker_logs(self):
         drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
+
+        with pytest.raises(Exception):
+            assert drl.hyperparameters()
+
+        with pytest.raises(Exception):
+            assert drl.action_space()
+
+        with pytest.raises(Exception):
+            assert drl.agent_and_network()
+
         drl.load_robomaker_logs()
 
         df = drl.dataframe()
@@ -197,7 +207,7 @@ class TestEvaluationLogs:
 
     def test_evaluation_analysis(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
-        drl.load_evaluation_trace()
+        drl.load_evaluation_trace(ignore_metadata=True)
         df = drl.dataframe()
         simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
@@ -218,6 +228,10 @@ class TestEvaluationLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
+        assert 3 == len(drl.agent_and_network())
+        assert 13 == len(drl.hyperparameters())
+        assert 14 == len(drl.action_space())
+
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
@@ -229,6 +243,10 @@ class TestEvaluationLogs:
         simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
+
+        assert 3 == len(drl.agent_and_network())
+        assert 13 == len(drl.hyperparameters())
+        assert 14 == len(drl.action_space())
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
