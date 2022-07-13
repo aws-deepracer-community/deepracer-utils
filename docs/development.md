@@ -1,6 +1,6 @@
 # Development
 
-### Prepare the environment
+## Prepare the environment
 For pip/venv:
 ```
 python3 -m venv env

@@ -47,6 +47,7 @@ An overview of the different modules provided, and the key classes involved:
 ## Other information
 
 * Refer to [development.md](docs/development.md) for instructions on coding standards, unit tests etc.
+* Refer to [examples.md](docs/examples.md) for usage guidance.
 
 ## License
 This project retains the license of the 
