@@ -78,12 +78,15 @@ class DeepRacerLog:
     _MAX_JOBS = 5
     fh: FileHandler = None
     active: LogType = LogType.NOT_DEFINED
+    _hyperparameters: dict = None
+    _action_space: dict = None
+    _agent_and_network: dict = None
 
     def __init__(self, model_folder: str = None, filehandler: FileHandler = None,
                  simtrace_path=None, robomaker_log_path=None):
         """Initializes an object by pointing the class instance to a folder.
 
-        Folder can be on local file system using the model_folder attribute or
+         Folder can be on local file system using the model_folder attribute or
         in a custom location through a FileHandler, which also supports S3 locations.
 
         Args:
@@ -272,12 +275,18 @@ class DeepRacerLog:
             raise Exception("Only supported with LogFolderType.CONSOLE_MODEL_WITH_LOGS")
 
         if type == LogType.TRAINING:
-            episodes_per_iteration = self.hyperparameters()["num_episodes_between_training"]
 
-            data = SimulationLogsIO.load_buffer(TextIOWrapper(
-                BytesIO(self.fh.get_file(self.fh.training_robomaker_log_path)), encoding='utf-8'))
+            raw_data = self.fh.get_file(self.fh.training_robomaker_log_path)
+
+            self._parse_robomaker_metadata(raw_data)
+
+            episodes_per_iteration = self._hyperparameters["num_episodes_between_training"]
+
+            data: list[str] = SimulationLogsIO.load_buffer(TextIOWrapper(
+                BytesIO(raw_data), encoding='utf-8'))
             self.df = SimulationLogsIO.convert_to_pandas(data, episodes_per_iteration)
             self.active = LogType.TRAINING
+
         else:
             dfs = []
 
@@ -291,15 +300,64 @@ class DeepRacerLog:
                                                  filterexp=self.fh.leaderboard_robomaker_log_path)
                 splitRegex = re.compile(self.fh.leaderboard_robomaker_log_split)
 
-            for log in submissions:
+            for i, log in enumerate(submissions):
                 path_split = splitRegex.search(log)
+                raw_data = self.fh.get_file(log)
+
+                if i == 0:
+                    self._parse_robomaker_metadata(raw_data)
 
                 data = SimulationLogsIO.load_buffer(TextIOWrapper(
-                    BytesIO(self.fh.get_file(log)), encoding='utf-8'))
+                    BytesIO(raw_data), encoding='utf-8'))
                 dfs.append(SimulationLogsIO.convert_to_pandas(data, stream=path_split.groups()[0]))
 
             self.df = pd.concat(dfs, ignore_index=True)
             self.active = type
+
+    def _parse_robomaker_metadata(self, raw_data: bytes):
+
+        outside_hyperparams = True
+        hyperparameters_string = ""
+
+        data_wrapper = TextIOWrapper(BytesIO(raw_data), encoding='utf-8')
+
+        for line in data_wrapper.readlines():
+            if outside_hyperparams:
+                if "Using the following hyper-parameters" in line:
+                    outside_hyperparams = False
+            else:
+                hyperparameters_string += line
+                if "}" in line:
+                    self._hyperparameters = json.loads(hyperparameters_string)
+                    break
+
+        data_wrapper.seek(0)
+
+        if self._hyperparameters is None:
+            raise Exception("Cound not load hyperparameters. Exiting.")
+
+        for line in data_wrapper.readlines():
+            if "ction space from file: " in line:
+                self._action_space = json.loads(line.split("file: ")[1].replace("'", '"'))
+
+        data_wrapper.seek(0)
+
+        regex = r'Sensor list (\[[\'a-zA-Z, _-]+\]), network ([a-zA-Z_]+), simapp_version ([\d.]+)'
+        agent_and_network = {}
+        for line in data_wrapper.readlines():
+            if " * /WORLD_NAME: " in line:
+                agent_and_network["world"] = line[:-1].split(" ")[-1]
+            elif "Sensor list ['" in line:
+                m = re.search(regex, line)
+
+                agent_and_network["sensor_list"] = json.loads(m.group(1).replace("'", '"'))
+                agent_and_network["network"] = m.group(2)
+                agent_and_network["simapp_version"] = m.group(3)
+
+                self._agent_and_network = agent_and_network
+                break
+
+        data_wrapper.seek(0)
 
     def dataframe(self):
         """Method that provides the dataframe for analysis of this log.
@@ -309,44 +367,22 @@ class DeepRacerLog:
 
         return self.df
 
-    def hyperparameters(self):
+    def hyperparameters(self) -> dict:
         """Method that provides the hyperparameters for this log.
         """
 
-        if self.fh.type != LogFolderType.CONSOLE_MODEL_WITH_LOGS:
-            raise Exception("Method only available for {}"
-                            .format(LogFolderType.CONSOLE_MODEL_WITH_LOGS))
+        if self._hyperparameters is not None:
+            return self._hyperparameters
+        else:
+            raise Exception("Hyperparameters not yet loaded")
 
-        outside_hyperparams = True
-        hyperparameters_string = ""
-
-        text_io = TextIOWrapper(BytesIO(self.fh.get_file(self.fh.training_robomaker_log_path)),
-                                encoding='utf-8')
-
-        for line in text_io.readlines():
-            if outside_hyperparams:
-                if "Using the following hyper-parameters" in line:
-                    outside_hyperparams = False
-            else:
-                hyperparameters_string += line
-                if "}" in line:
-                    break
-
-        return json.loads(hyperparameters_string)
-
-    def action_space(self):
+    def action_space(self) -> dict:
         """Method that provides the action space for this log.
         """
-        if self.fh.type != LogFolderType.CONSOLE_MODEL_WITH_LOGS:
-            raise Exception("Method only available for {}"
-                            .format(LogFolderType.CONSOLE_MODEL_WITH_LOGS))
-
-        text_io = TextIOWrapper(BytesIO(self.fh.get_file(
-            self.fh.training_robomaker_log_path)), encoding='utf-8')
-
-        for line in text_io.readlines():
-            if "ction space from file: " in line:
-                return json.loads(line.split("file: ")[1].replace("'", '"'))
+        if self._action_space is not None:
+            return self._action_space
+        else:
+            raise Exception("Action space not yet loaded")
 
     def agent_and_network(self):
         """Method that provides the agent and network information for this log.
@@ -354,26 +390,10 @@ class DeepRacerLog:
         list of sensors and type of network.
         """
 
-        if self.fh.type != LogFolderType.CONSOLE_MODEL_WITH_LOGS:
-            raise Exception("Method only available for {}"
-                            .format(LogFolderType.CONSOLE_MODEL_WITH_LOGS))
-
-        regex = r'Sensor list (\[[\'a-zA-Z, _-]+\]), network ([a-zA-Z_]+), simapp_version ([\d.]+)'
-
-        text_io = TextIOWrapper(BytesIO(self.fh.get_file(
-            self.fh.training_robomaker_log_path)), encoding='utf-8')
-        result = {}
-        for line in text_io.readlines():
-            if " * /WORLD_NAME: " in line:
-                result["world"] = line[:-1].split(" ")[-1]
-            elif "Sensor list ['" in line:
-                m = re.search(regex, line)
-
-                result["sensor_list"] = json.loads(m.group(1).replace("'", '"'))
-                result["network"] = m.group(2)
-                result["simapp_version"] = m.group(3)
-
-                return result
+        if self._agent_and_network is not None:
+            return self._agent_and_network
+        else:
+            raise Exception("Agent and Network not yet loaded")
 
     def _block_duplicate_load(self, force: bool = False):
         if self.df is not None and not force:

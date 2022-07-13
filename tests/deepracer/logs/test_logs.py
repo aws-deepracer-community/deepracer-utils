@@ -41,9 +41,6 @@ class TestTrainingLogs:
         drl.load()
 
         assert LogFolderType.CONSOLE_MODEL_WITH_LOGS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
-        assert 4 == len(drl.agent_and_network())
-        assert 13 == len(drl.hyperparameters())
-        assert 14 == len(drl.action_space())
 
     def test_dataframe(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
@@ -144,10 +141,14 @@ class TestTrainingLogs:
         drl.load_robomaker_logs()
 
         df = drl.dataframe()
-
+        print(df)
         simulation_agg = AnalysisUtils.simulation_agg(df)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
+
+        assert 4 == len(drl.agent_and_network())
+        assert 13 == len(drl.hyperparameters())
+        assert 14 == len(drl.action_space())
 
         assert (564, len(Constants.TRAIN_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.TRAIN_COLUMNS == simulation_agg.columns)
@@ -292,6 +293,10 @@ class TestEvaluationLogs:
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
 
+        assert 4 == len(drl.agent_and_network())
+        assert 13 == len(drl.hyperparameters())
+        assert 14 == len(drl.action_space())
+
         # four more episodes in the log
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
@@ -310,6 +315,10 @@ class TestEvaluationLogs:
         simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
+
+        assert 4 == len(drl.agent_and_network())
+        assert 13 == len(drl.hyperparameters())
+        assert 14 == len(drl.action_space())
 
         # four more episodes in the log
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
