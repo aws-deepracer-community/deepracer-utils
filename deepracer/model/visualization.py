@@ -17,8 +17,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import cv2
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 from tensorflow.gfile import GFile
 
 

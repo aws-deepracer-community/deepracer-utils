@@ -1,5 +1,6 @@
-from deepracer.tracks import GeometryUtils
 import numpy as np
+
+from deepracer.tracks import GeometryUtils
 
 
 class TestGeometryUtils:

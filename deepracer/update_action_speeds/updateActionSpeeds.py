@@ -34,7 +34,8 @@ def update(filename, edit_value, change_left_steering, change_right_steering, ad
 
 
 def save(action_space_data, filename):
-    # Create randomly named temporary file to avoid interference with other thread/asynchronous request
+    # Create randomly named temporary file to avoid interference with other
+    # thread/asynchronous request
     temp_file = os.path.join(os.path.dirname(filename), str(uuid.uuid4()))
 
     with open(temp_file, 'w') as temp:
@@ -60,8 +61,9 @@ class UpdateActionSpeeds:
 
 # Change your parameter values here.
 # edit_value can be positive or negative
-updated_action_speeds = UpdateActionSpeeds(filename='action_space.json', edit_value=0.5, change_left_steering=True,
-                                           change_right_steering=True, add_indexer=True)
+updated_action_speeds = UpdateActionSpeeds(filename='action_space.json', edit_value=0.5,
+                                           change_left_steering=True, change_right_steering=True,
+                                           add_indexer=True)
 
 
 def run():

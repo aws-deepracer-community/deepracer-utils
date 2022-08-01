@@ -1,17 +1,28 @@
-# deepracer-utils
-A set of utilities to take your DeepRacer experience to the next level.
+# Deepracer Utilities - Analyzing Your DeepRacer Model
+This is a set of utilities that will take your DeepRacer experience to the next level by allowing you to analyze your model, step by step, episode by episode. Only through analyzing what your model does will you be able to write the right reward function, choose the right action space and to tune the hyperparameters!
 
-# Add deepracer to AWS CLI and boto3
-Make sure you have deepracer-utils >= 0.9 installed.
+## Installation
+
+You can install the latest version of deepracer-utils via pip through
+```
+pip install deepracer-utils
+```
+Otherwise you can build your own version with 
+```
+python3 setup.py build
+python3 setup.py install
+```
+
+### AWS CLI and boto3 extension
+This package contains an extension to the AWS CLI and Boto3 that allows you to interact
+with the Deepracer Console through commands starting with `aws deepracer`. For details run
+```
+aws deepracer help
+```
 
 Then run this to install:
 ```
 python -m deepracer install-cli
-```
-
-If you want to ensure you have the latest deepracer service definition, you can run:
-```
-python -m deepracer install-cli --force
 ```
 
 To remove deepracer support from aws-cli and boto3, run:
@@ -19,77 +30,24 @@ To remove deepracer support from aws-cli and boto3, run:
 python -m deepracer remove-cli
 ```
 
-## Development
+## About the Utilities
 
-### Prepare the environment
-For pip/venv:
-```
-python3 -m venv env
-source env/bin/activate
-pip install -r requirements.txt
-```
-_(For newer systems python3 may be referred to as python)_
+The best reference on how to use the utilities can be found in the [deepracer-analysis](https://github.com/aws-deepracer-community/deepracer-analysis) Jupyter notebooks.
 
-For Anaconda:
-```
-conda create --name env pip
-conda activate pip
-pip install -r requirements.txt
-```
+An overview of the different modules provided, and the key classes involved:
+| Module | Class | Description |
+|--------|-------|-------------|
+|`deepracer.logs` | DeepRacerLog | Class that is pointed to a Deepracer Model folder, locally or in an S3 bucket, and that reads in and processes trace files from simtrace or robomaker log files.|
+|`deepracer.logs` | AnalysisUtils | Class that processes the raw log input and summarizes by episode.|
+|`deepracer.logs` | PlottingUtils | Class that visualises the track and plots each step in an episode.|
+|`deepracer.logs` | TrainingMetrics | Class that reads in Metrics data and provides data similar to the training graph in the Console.|
+|`deepracer.console` | ConsoleHelper | Class that reads out logfiles directly from the console, and together with e.g. TrainingMetrics can be used to visualize training progress in real time.|
+|`deepracer.tracks` | TrackIO | Class that processes track routes (.npy files) and displays waypoints graphically.|
+|`deepracer.model` | n/a | Methods to run inference on individual images and to perform visual analysis.|
+## Other information
 
-### Install deepracer-utils for development
-```
-python setup.py develop
-```
-Once finished working, run:
-```
-python setup.py develop --uninstall
-```
-
-See [Python Packaging User Guide](https://packaging.python.org/guides/distributing-packages-using-setuptools/#id70) for more info.
-
-### Testing
-
-Run:
-```
-tox
-```
-This will package the project, install and run tests.
-
-### Verifying the style guide
-
-Run:
-```
-pycodestyle
-```
-
-### Releasing, Packaging, distribution
-
-Checking the current version:
-```
-python setup.py version
-```
-
-Marking new release:
-```
-git tag deepracer-utils-version
-git push origin deepracer-utils-version
-```
-
-Building the package:
-```
-python setup.py sdist bdist_wheel
-```
-
-Uploading to test.pypi.org:
-```
-python -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-```
-
-Uploading to pypi.org:
-```
-python -m twine upload dist/*
-```
+* Refer to [development.md](docs/development.md) for instructions on coding standards, unit tests etc.
+* Refer to [examples.md](docs/examples.md) for usage guidance.
 
 ## License
 This project retains the license of the 

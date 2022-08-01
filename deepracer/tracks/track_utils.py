@@ -16,15 +16,14 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import numpy as np
-
-# Shapely Library
-from shapely.geometry import Polygon
-from shapely.geometry.polygon import LineString
-
 # os tools to list things
 from os import listdir
 from os.path import isfile, join
+
+import numpy as np
+# Shapely Library
+from shapely.geometry import Polygon
+from shapely.geometry.polygon import LineString
 
 
 class TrackIO:
