@@ -183,6 +183,24 @@ class FSFileHandler(FileHandler):
                 self.hyperparameters_path = os.path.join(
                     self.model_folder, "ip", "hyperparameters.json")
 
+        elif os.path.isdir(os.path.join(self.model_folder, "model")):
+            self.type = LogFolderType.DRFC_MODEL_UPLOAD
+            if self.training_simtrace_path is None:
+                self.training_simtrace_path = None
+                self.training_simtrace_split = None
+                self.evaluation_simtrace_path = os.path.join(
+                    self.model_folder, "evaluation-*", "evaluation-simtrace", "0-iteration.csv")
+                self.evaluation_simtrace_split = \
+                    r'.*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+
+            if self.model_metadata_path is None:
+                self.model_metadata_path = os.path.join(
+                    self.model_folder, "model", "model_metadata.json")
+
+            if self.hyperparameters_path is None:
+                self.hyperparameters_path = os.path.join(
+                    self.model_folder, "ip", "hyperparameters.json")
+
         return self.type
 
 
