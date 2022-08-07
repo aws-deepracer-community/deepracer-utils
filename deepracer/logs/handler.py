@@ -353,7 +353,7 @@ class S3FileHandler(FileHandler):
             self.hyperparameters_path = self.prefix + \
                 r'ip/hyperparameters.json'
 
-        elif len(self.list_files(filterexp=(self.prefix + r'./evaluation-simtrace(.*)'))) > 0:
+        elif len(self.list_files(filterexp=(self.prefix + r'./evaluation-([0-9]{14})'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_UPLOAD
             self.training_simtrace_path = None
             self.training_simtrace_split = None
