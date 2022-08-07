@@ -338,6 +338,7 @@ class S3FileHandler(FileHandler):
                 r'model/model_metadata.json'
             self.hyperparameters_path = self.prefix + \
                 r'ip/hyperparameters.json'
+
         elif len(self.list_files(filterexp=(self.prefix + r'./training-simtrace/(.*)'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
             self.training_simtrace_path = self.prefix + \
@@ -351,4 +352,18 @@ class S3FileHandler(FileHandler):
                 r'model/model_metadata.json'
             self.hyperparameters_path = self.prefix + \
                 r'ip/hyperparameters.json'
+
+        elif len(self.list_files(filterexp=(self.prefix + r'./evaluation-simtrace(.*)'))) > 0:
+            self.type = LogFolderType.DRFC_MODEL_UPLOAD
+            self.training_simtrace_path = None
+            self.training_simtrace_split = None
+            self.evaluation_simtrace_path = self.prefix + \
+                r'evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+            self.evaluation_simtrace_split = \
+                r'.*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+            self.model_metadata_path = self.prefix + \
+                r'model/model_metadata.json'
+            self.hyperparameters_path = self.prefix + \
+                r'ip/hyperparameters.json'
+
         return self.type
