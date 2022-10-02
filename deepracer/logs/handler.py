@@ -88,7 +88,7 @@ class FSFileHandler(FileHandler):
                 return []
 
     def get_file(self, key: str) -> bytes:
-        """Downloads a given gile as byte array.
+        """Downloads a given file as byte array.
 
         Args:
             key:
@@ -170,6 +170,24 @@ class FSFileHandler(FileHandler):
                 self.training_simtrace_path = os.path.join(
                     self.model_folder, "**", "training-simtrace", "*-iteration.csv")
                 self.training_simtrace_split = r'.*/(.)/training-simtrace/(.*)-iteration.csv'
+                self.evaluation_simtrace_path = os.path.join(
+                    self.model_folder, "evaluation-*", "evaluation-simtrace", "0-iteration.csv")
+                self.evaluation_simtrace_split = \
+                    r'.*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+
+            if self.model_metadata_path is None:
+                self.model_metadata_path = os.path.join(
+                    self.model_folder, "model", "model_metadata.json")
+
+            if self.hyperparameters_path is None:
+                self.hyperparameters_path = os.path.join(
+                    self.model_folder, "ip", "hyperparameters.json")
+
+        elif os.path.isdir(os.path.join(self.model_folder, "model")):
+            self.type = LogFolderType.DRFC_MODEL_UPLOAD
+            if self.training_simtrace_path is None:
+                self.training_simtrace_path = None
+                self.training_simtrace_split = None
                 self.evaluation_simtrace_path = os.path.join(
                     self.model_folder, "evaluation-*", "evaluation-simtrace", "0-iteration.csv")
                 self.evaluation_simtrace_split = \
@@ -320,6 +338,7 @@ class S3FileHandler(FileHandler):
                 r'model/model_metadata.json'
             self.hyperparameters_path = self.prefix + \
                 r'ip/hyperparameters.json'
+
         elif len(self.list_files(filterexp=(self.prefix + r'./training-simtrace/(.*)'))) > 0:
             self.type = LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS
             self.training_simtrace_path = self.prefix + \
@@ -333,4 +352,18 @@ class S3FileHandler(FileHandler):
                 r'model/model_metadata.json'
             self.hyperparameters_path = self.prefix + \
                 r'ip/hyperparameters.json'
+
+        elif len(self.list_files(filterexp=(self.prefix + r'evaluation-([0-9]{14})'))) > 0:
+            self.type = LogFolderType.DRFC_MODEL_UPLOAD
+            self.training_simtrace_path = None
+            self.training_simtrace_split = None
+            self.evaluation_simtrace_path = self.prefix + \
+                r'evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+            self.evaluation_simtrace_split = \
+                r'.*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv'
+            self.model_metadata_path = self.prefix + \
+                r'model/model_metadata.json'
+            self.hyperparameters_path = self.prefix + \
+                r'ip/hyperparameters.json'
+
         return self.type
