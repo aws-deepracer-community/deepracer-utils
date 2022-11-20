@@ -711,8 +711,9 @@ class PlottingUtils:
                 track_img[y, x] = row[value_field]
             except:
                 error_coords.append((x,y))
-     
-        logging.warning(f'An error was thrown when trying to calculate coordinates: {",".join("(%s,%s)" % tup for tup in error_coords)}')
+
+        if len(error_coords) > 0:
+            logging.warning(f'An error was thrown when trying to calculate coordinates: {",".join("(%s,%s)" % tup for tup in error_coords)}')
 
         fig = plt.figure(1, figsize=(12, 16))
         ax = fig.add_subplot(111)
