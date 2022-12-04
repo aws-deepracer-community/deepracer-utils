@@ -693,6 +693,9 @@ class PlottingUtils:
         x_compensation = track.outer_border[:, 0].min()
         y_compensation = track.outer_border[:, 1].min()
 
+        ## The coordinates that were out of range and an error was thrown
+        error_coords=[]
+
         for _, row in df.iterrows():
             x = int((row["x"] - x_compensation + margin) * 100)
             y = int((row["y"] - y_compensation + margin) * 100)
@@ -704,7 +707,13 @@ class PlottingUtils:
             if x >= track_size[x_coord]:
                 x = track_size[x_coord] - 1
 
-            track_img[y, x] = row[value_field]
+            try:
+                track_img[y, x] = row[value_field]
+            except:
+                error_coords.append((x,y))
+
+        if len(error_coords) > 0:
+            logging.warning(f'An error was thrown when trying to calculate coordinates: {",".join("(%s,%s)" % tup for tup in error_coords)}')
 
         fig = plt.figure(1, figsize=(12, 16))
         ax = fig.add_subplot(111)

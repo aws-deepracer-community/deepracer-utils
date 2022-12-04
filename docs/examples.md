@@ -7,7 +7,7 @@ In the lastest version of Deepracer Utils the foundation class to use is `DeepRa
 
 ### Local
 
-The basic example covers a model directory, either downloaded from the console or stored in a minio folder, and where the training simtrace files, the `model_metadata.json` and `hyperparameters.json` files are available.
+The basic example covers a model director downloaded from the console ~~or stored in a minio folder~~, and where the training simtrace files, the `model_metadata.json` and `hyperparameters.json` files are available.
 
 ```
 from deepracer.logs import (AnalysisUtils, DeepRacerLog)
