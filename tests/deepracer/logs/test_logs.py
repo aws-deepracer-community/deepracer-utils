@@ -112,6 +112,10 @@ class TestTrainingLogs:
         drl.load()
         df = drl.dataframe()
 
+        drl.action_space()
+        drl.hyperparameters()
+        drl.agent_and_network()
+
         simulation_agg = AnalysisUtils.simulation_agg(df)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
@@ -131,6 +135,10 @@ class TestTrainingLogs:
         drl = DeepRacerLog(filehandler=fh)
         drl.load_training_trace()
         df = drl.dataframe()
+
+        drl.action_space()
+        drl.hyperparameters()
+        drl.agent_and_network()
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
