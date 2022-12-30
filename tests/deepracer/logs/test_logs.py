@@ -50,6 +50,13 @@ class TestTrainingLogs:
         assert (44247, len(Constants.RAW_COLUMNS)) == df.shape
         assert np.all(Constants.RAW_COLUMNS == df.columns)
 
+    def test_dataframe_load(self):
+        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl.load(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert (44840, len(Constants.RAW_COLUMNS[:-2])) == df.shape
+
     def test_episode_analysis(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
         drl.load_training_trace(ignore_metadata=True)
@@ -102,8 +109,12 @@ class TestTrainingLogs:
 
     def test_episode_analysis_drfc1_local(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-1-logs')
-        drl.load_training_trace()
+        drl.load()
         df = drl.dataframe()
+
+        drl.action_space()
+        drl.hyperparameters()
+        drl.agent_and_network()
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
@@ -124,6 +135,10 @@ class TestTrainingLogs:
         drl = DeepRacerLog(filehandler=fh)
         drl.load_training_trace()
         df = drl.dataframe()
+
+        drl.action_space()
+        drl.hyperparameters()
+        drl.agent_and_network()
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]

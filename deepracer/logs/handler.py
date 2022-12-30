@@ -88,7 +88,7 @@ class FSFileHandler(FileHandler):
                 return []
 
     def get_file(self, key: str) -> bytes:
-        """Downloads a given gile as byte array.
+        """Downloads a given file as byte array.
 
         Args:
             key:

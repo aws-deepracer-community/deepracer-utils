@@ -147,13 +147,22 @@ class DeepRacerLog:
 
         return df
 
-    def load(self, force=False):
+    def load(self, force=False, ignore_metadata=None):
         """ Method that loads DeepRacer training trace logs into a dataframe.
 
-        This method is deprecated, use load_training_trace.
+        This method is trying to load logs based on folder type.
 
         """
-        self.load_training_trace(force)
+        if self.fh.type == LogFolderType.CONSOLE_MODEL_WITH_LOGS:
+            self.load_robomaker_logs(force=force)
+        elif self.fh.type == LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS:
+            self.load_training_trace(force=force, ignore_metadata=ignore_metadata)
+        elif self.fh.type == LogFolderType.DRFC_MODEL_SINGLE_WORKERS:
+            self.load_training_trace(force=force, ignore_metadata=ignore_metadata)
+        else:
+            raise Exception(
+                "Unable to load logs from folder.")            
+
 
     def load_training_trace(self, force: bool = False, ignore_metadata: bool = False):
         """ Method that loads DeepRacer training trace logs into a dataframe.
