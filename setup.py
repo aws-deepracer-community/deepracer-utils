@@ -38,7 +38,7 @@ setup(
         'boto3>=1.12.0',
         'python-dateutil<3.0.0,>=2.1',
         'numpy>=1.18.0',
-        'shapely>=1.7.0',
+        'shapely>=1.7.0,<2.0',
         'matplotlib>=3.1.0',
         'pandas>=1.0.0',
         'scikit-learn>=0.22.0',
