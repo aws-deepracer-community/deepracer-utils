@@ -1,6 +1,6 @@
 import numpy as np
 
-from deepracer.tracks import GeometryUtils
+from deepracer.tracks import GeometryUtils, TrackIO
 
 
 class TestGeometryUtils:
@@ -67,3 +67,10 @@ class TestGeometryUtils:
                 [0.0, 0.0], [2.0, -1.0], [4.0, 3.0]
             )
         )
+
+
+class TestLoadTrack:
+
+    def test_load_a_track(self):
+        tu = TrackIO(base_path='./deepracer/track_utils/tracks')
+        tu.load_track('reinvent_base')
