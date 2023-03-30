@@ -55,7 +55,7 @@ class TestTrainingLogs:
         drl.load(ignore_metadata=True)
         df = drl.dataframe()
 
-        assert (44840, len(Constants.RAW_COLUMNS[:-2])) == df.shape
+        assert (44842, len(Constants.RAW_COLUMNS[:-2])) == df.shape
 
     def test_episode_analysis(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
@@ -196,7 +196,7 @@ class TestEvaluationLogs:
 
         bulk = SimulationLogsIO.load_a_list_of_logs(logs)
 
-        assert (1475, 20) == bulk.shape
+        assert (1479, 20) == bulk.shape
         assert np.all(['index', 'iteration', 'episode', 'steps', 'x', 'y', 'yaw',
                        'steering_angle', 'speed', 'action', 'reward', 'done', 'on_track',
                        'progress', 'closest_waypoint', 'track_len', 'tstamp', 'episode_status',
@@ -217,8 +217,8 @@ class TestEvaluationLogs:
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 0 == fastest.iloc[0, 1]
-        assert 238.0 == fastest.iloc[0, 2]
-        assert 15.800 == pytest.approx(fastest.iloc[0, 5])
+        assert 240.0 == fastest.iloc[0, 2]
+        assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
@@ -231,6 +231,34 @@ class TestEvaluationLogs:
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
+
+    def test_evaluation_laptime_single_laps(self):
+        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl.load_evaluation_trace(ignore_metadata=True)
+        df = drl.dataframe()
+        df = df[df['stream'] == '20220612082523']
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+
+        total_time = simulation_agg.groupby('stream').agg({'time': ['sum']}).iloc[0,0]
+        start_to_finish_time = df['tstamp'].max() - df['tstamp'].min()
+
+        assert (3, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
+        assert start_to_finish_time > total_time
+
+    def test_evaluation_laptime_cont_laps(self):
+        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-1-logs')
+        drl.load_evaluation_trace(ignore_metadata=True)
+        df = drl.dataframe()
+        df = df[df['stream'] == '20220709200242']
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+
+        total_time = simulation_agg.groupby('stream').agg({'time': ['sum']}).iloc[0,0]
+        start_to_finish_time = df['tstamp'].max() - df['tstamp'].min()
+
+        assert (3, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
+        assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
+        assert start_to_finish_time == total_time
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_s3(self):
@@ -267,7 +295,7 @@ class TestEvaluationLogs:
         assert LogType.EVALUATION == drl.active
         assert (9, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
-        assert 13.325 == pytest.approx(fastest.iloc[0, 5])
+        assert 13.405 == pytest.approx(fastest.iloc[0, 5])
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc1_s3(self):
@@ -284,7 +312,7 @@ class TestEvaluationLogs:
         assert LogType.EVALUATION == drl.active
         assert (9, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
-        assert 13.325 == pytest.approx(fastest.iloc[0, 5])
+        assert 13.405 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_drfc3_local(self):
         drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-3-logs')
@@ -334,8 +362,8 @@ class TestEvaluationLogs:
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 0 == fastest.iloc[0, 1]
-        assert 238.0 == fastest.iloc[0, 2]
-        assert 15.800 == pytest.approx(fastest.iloc[0, 5])
+        assert 240.0 == fastest.iloc[0, 2]
+        assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_robomaker_s3(self):
@@ -357,8 +385,8 @@ class TestEvaluationLogs:
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 0 == fastest.iloc[0, 1]
-        assert 238.0 == fastest.iloc[0, 2]
-        assert 15.800 == pytest.approx(fastest.iloc[0, 5])
+        assert 240.0 == fastest.iloc[0, 2]
+        assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
 
 class TestLeadershipLogs:
@@ -381,7 +409,7 @@ class TestLeadershipLogs:
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 2 == fastest.iloc[0, 1]
         assert 234.0 == fastest.iloc[0, 2]
-        assert 15.532 == pytest.approx(fastest.iloc[0, 5])
+        assert 15.598 == pytest.approx(fastest.iloc[0, 5])
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc3_s3(self):
@@ -400,4 +428,4 @@ class TestLeadershipLogs:
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 2 == fastest.iloc[0, 1]
         assert 234.0 == fastest.iloc[0, 2]
-        assert 15.532 == pytest.approx(fastest.iloc[0, 5])
+        assert 15.598 == pytest.approx(fastest.iloc[0, 5])
