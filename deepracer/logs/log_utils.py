@@ -141,8 +141,7 @@ class SimulationLogsIO:
 
         df_list = list()
 
-        # ignore the first two dummy values that coach throws at the start.
-        for d in data[2:]:
+        for d in data[:]:
             parts = d.rstrip().split(",")
             # TODO: this is a workaround and should be removed when logs are fixed
             parts_workaround = 0
@@ -294,21 +293,28 @@ class AnalysisUtils:
                 logging.warning('Multiple workers found, consider using'
                                 'secondgroup="unique_episode"')
 
+        df.loc[:,'delta_time'] = df['tstamp'].astype(float)-df['tstamp'].shift(1).astype(float)
+        df.loc[df['episode_status'] == 'prepare', 'delta_time'] = 0.0
+        df.loc[:,'delta_dist']=(((df['x'].shift(1)-df['x']) ** 2 + (df['y'].shift(1)-df['y']) ** 2) ** 0.5)
+        df.loc[df['episode_status'] == 'prepare', 'delta_dist'] = 0.0
+        
         grouped = df.groupby([firstgroup, secondgroup])
 
         by_steps = grouped['steps'].agg(np.ptp).reset_index()
-        by_dist = grouped.apply(
-            lambda x: (((x['x'].shift(1) - x['x']) ** 2 +
-                        (x['y'].shift(1) - x['y']) ** 2) ** 0.5).sum()).reset_index() \
-            .rename(columns={0: "dist"})
+        by_dist = grouped['delta_dist'].agg(np.sum).reset_index() \
+            .rename(columns={'delta_dist': 'dist'})
 
         by_start = grouped.first()['closest_waypoint'].reset_index() \
             .rename(index=str, columns={"closest_waypoint": "start_at"})
+        
         by_progress = grouped['progress'].agg(np.max).reset_index()
+        
         by_speed = grouped['speed'].agg(np.mean).reset_index()
-        by_time = grouped['tstamp'].agg(np.ptp).reset_index() \
-            .rename(index=str, columns={"tstamp": "time"})
+        
+        by_time = grouped['delta_time'].agg(np.sum).reset_index() \
+            .rename(index=str, columns={"delta_time": "time"})
         by_time['time'] = by_time['time'].astype(float)
+        
         by_reset = grouped['episode_status'] \
             .agg([('crashed', lambda x: (x == 'crashed').sum()),
                   ('off_track', lambda x: (x == 'off_track').sum())]).reset_index()
