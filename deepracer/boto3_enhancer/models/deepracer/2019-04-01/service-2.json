@@ -7,7 +7,7 @@
     "jsonVersion": "1.1",
     "protocol": "json",
     "serviceFullName": "AWS DeepRacer",
-    "serviceId": "ID",
+    "serviceId": "DeepRacer",
     "signatureVersion": "v4",
     "targetPrefix": "AwsSilverstoneCloudService",
     "uid": "deepracer-2019-04-01"
@@ -25,27 +25,77 @@
       "output": {
         "shape": "AddLeaderboardAccessPermissionResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Join a community race.</p><p>Using this method you can join the race without having to open the AWS DeepRacer Console.</p><p>When successful, the leaderboard for a given race will be available to you in the leaderboards list</p>"
+    },
+    "AdminGetAccountConfig": {
+      "name": "AdminGetAccountConfig",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "AdminGetAccountConfigRequest"
+      },
+      "output": {
+        "shape": "AdminGetAccountConfigResponse"
+      },
+      "documentation": "<p>TODO</p>"
+    },
+    "AdminListAssociatedResources": {
+      "name": "AdminListAssociatedResources",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "AdminListAssociatedResourcesRequest"
+      },
+      "output": {
+        "shape": "AdminListAssociatedResourcesResponse"
+      },
+      "documentation": "<p>TODO</p>"
+    },
+    "AdminListAssociatedUsers": {
+      "name": "AdminListAssociatedUsers",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "AdminListAssociatedUsersRequest"
+      },
+      "output": {
+        "shape": "AdminListAssociatedUsersResponse"
+      },
+      "documentation": "<p>TODO</p>"
+    },
+    "AdminManageUser": {
+      "name": "AdminManageUser",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "AdminManageUserRequest"
+      },
+      "output": {
+        "shape": "AdminManageUserResponse"
+      },
+      "documentation": "<p>TODO</p>"
+    },
+    "AdminSetAccountConfig": {
+      "name": "AdminSetAccountConfig",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "AdminSetAccountConfigRequest"
+      },
+      "output": {
+        "shape": "AdminSetAccountConfigResponse"
+      },
+      "documentation": "<p>TODO</p>"
     },
     "CloneReinforcementLearningModel": {
       "name": "CloneReinforcementLearningModel",
@@ -59,61 +109,7 @@
       "output": {
         "shape": "CloneReinforcementLearningModelResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceAlreadyExistsException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Clones an existing model and continues training with new instructions</p>"
-    },
-    "CreateAccountResources": {
-      "name": "CreateAccountResources",
-      "http": {
-        "method": "POST",
-        "requestUri": "/"
-      },
-      "input": {
-        "shape": "CreateAccountResourcesRequest"
-      },
-      "output": {
-        "shape": "CreateAccountResourcesResponse"
-      },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceAlreadyExistsException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>This method is no longer supported and should not be used.</p>"
     },
     "CreateCar": {
       "name": "CreateCar",
@@ -127,24 +123,21 @@
       "output": {
         "shape": "CreateCarResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceLimitExceededException"
-        },
-        {
-          "shape": "ResourceAlreadyExistsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Create a new car to train your model with.</p><p>You can choose various settings for your car including the action space, name or look.</p><p>There is a limit of 20 cars that you can create. If you reach this limit, update an existing car instead using update-car</p>"
+    },
+    "CreateLeaderboard": {
+      "name": "CreateLeaderboard",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "CreateLeaderboardRequest"
+      },
+      "output": {
+        "shape": "CreateLeaderboardResponse"
+      },
+      "documentation": "<p>Creates a race</p>"
     },
     "CreateLeaderboardAccessToken": {
       "name": "CreateLeaderboardAccessToken",
@@ -158,26 +151,6 @@
       "output": {
         "shape": "CreateLeaderboardAccessTokenResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Create a new invitation token for the community race. It is useful if your existing invitation link has been shared outside of your desired users.</p><p>To use the new token simply put it in place of [token] in url https://console.aws.amazon.com/deepracer/home#raceToken/[token]</p><p>Creation of a new access token makes the old token invalid.</p>"
     },
     "CreateLeaderboardSubmission": {
@@ -192,64 +165,7 @@
       "output": {
         "shape": "CreateLeaderboardSubmissionResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Submit a model to a race.</p><p>Simply choose the model and a race and your submission will be created</p><p>When creating your first submission you need to confirm that you accept the terms and conditions of it. If you don't, you will not be allowed to submit your entry.</p>"
-    },
-    "CreatePrivateLeaderboard": {
-      "name": "CreatePrivateLeaderboard",
-      "http": {
-        "method": "POST",
-        "requestUri": "/"
-      },
-      "input": {
-        "shape": "CreatePrivateLeaderboardRequest"
-      },
-      "output": {
-        "shape": "CreatePrivateLeaderboardResponse"
-      },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceAlreadyExistsException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "ResourceLimitExceededException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>Creates a community race</p>"
     },
     "CreateReinforcementLearningModel": {
       "name": "CreateReinforcementLearningModel",
@@ -263,119 +179,21 @@
       "output": {
         "shape": "CreateReinforcementLearningModelResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceAlreadyExistsException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Starts a new training with instructions provided.</p><p>A new model is created and used in the training session to gather experiences, then it is updated in the learning session based on the reward gathered.</p><p>While you can start training through the cli/boto3, it is recommended that you use the Deepracer Console instead for a richer experience.</p>"
     },
-    "DeleteAccountResources": {
-      "name": "DeleteAccountResources",
+    "DeleteLeaderboard": {
+      "name": "DeleteLeaderboard",
       "http": {
         "method": "POST",
         "requestUri": "/"
       },
       "input": {
-        "shape": "DeleteAccountResourcesRequest"
+        "shape": "DeleteLeaderboardRequest"
       },
       "output": {
-        "shape": "DeleteAccountResourcesResponse"
+        "shape": "DeleteLeaderboardResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>This method is no longer supported and should not be used.</p>"
-    },
-    "DeleteCar": {
-      "name": "DeleteCar",
-      "http": {
-        "method": "POST",
-        "requestUri": "/"
-      },
-      "input": {
-        "shape": "DeleteCarRequest"
-      },
-      "output": {
-        "shape": "DeleteCarResponse"
-      },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
-      "internalonly": true,
-      "documentation": "<p>This method is for internal use only and should not be used.</p>"
-    },
-    "DeleteCars": {
-      "name": "DeleteCars",
-      "http": {
-        "method": "POST",
-        "requestUri": "/"
-      },
-      "input": {
-        "shape": "DeleteCarsRequest"
-      },
-      "output": {
-        "shape": "DeleteCarsResponse"
-      },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
-      "internalonly": true,
-      "documentation": "<p>This method is for internal use only and should not be used.</p>"
+      "documentation": "<p>Deletes a race</p>"
     },
     "DeleteModel": {
       "name": "DeleteModel",
@@ -389,120 +207,35 @@
       "output": {
         "shape": "DeleteModelResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>Delete existing model.</p><p>This method lets you limit your AWS DeepRacer model storage costs "
     },
-    "DeletePrivateLeaderboard": {
-      "name": "DeletePrivateLeaderboard",
+    "EditLeaderboard": {
+      "name": "EditLeaderboard",
       "http": {
         "method": "POST",
         "requestUri": "/"
       },
       "input": {
-        "shape": "DeletePrivateLeaderboardRequest"
+        "shape": "EditLeaderboardRequest"
       },
       "output": {
-        "shape": "DeletePrivateLeaderboardResponse"
+        "shape": "EditLeaderboardResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>Deletes a community race</p>"
+      "documentation": "<p>Updates a race</p>"
     },
-    "EditPrivateLeaderboard": {
-      "name": "EditPrivateLeaderboard",
+    "GetAccountConfig": {
+      "name": "GetAccountConfig",
       "http": {
         "method": "POST",
         "requestUri": "/"
       },
       "input": {
-        "shape": "EditPrivateLeaderboardRequest"
+        "shape": "GetAccountConfigRequest"
       },
       "output": {
-        "shape": "EditPrivateLeaderboardResponse"
+        "shape": "GetAccountConfigResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>Updates a community race</p>"
-    },
-    "GetAccountResources": {
-      "name": "GetAccountResources",
-      "http": {
-        "method": "POST",
-        "requestUri": "/"
-      },
-      "input": {
-        "shape": "GetAccountResourcesRequest"
-      },
-      "output": {
-        "shape": "GetAccountResourcesResponse"
-      },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>This method is no longer supported and should not be used.</p>"
+      "documentation": "<p>TODO</p>"
     },
     "GetAlias": {
       "name": "GetAlias",
@@ -513,14 +246,6 @@
       "output": {
         "shape": "GetAliasResponse"
       },
-      "errors": [
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Displays the racer alias assigned to given account</p>"
     },
     "GetAssetUrl": {
@@ -535,21 +260,21 @@
       "output": {
         "shape": "GetAssetUrlResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
-      "documentation": "<p>Used to fetch various assets related to a model, training or race submission</p><p>Returns a Url that you can use to fetch things like logs, models etc.</p><p>Asset types prefixed with \"S3_\" are for copying assets to S3 (operations available in a model view under Actions->Copy to S3)."
+      "documentation": "<p>Used to fetch various assets related to a model, training or race submission</p><p>Returns a Url that you can use to fetch things like logs, models etc.</p><p>Asset types prefixed with S3 are for copying assets to S3 (operations available in a model view under Actions->Copy to S3 )."
+    },
+    "GetBYOAJob": {
+      "name": "GetBYOAJob",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "GetBYOAJobRequest"
+      },
+      "output": {
+        "shape": "GetBYOAJobResponse"
+      },
+      "documentation": "<p>TODO</p>"
     },
     "GetCar": {
       "name": "GetCar",
@@ -563,20 +288,6 @@
       "output": {
         "shape": "GetCarResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>Returns current car settings.</p>"
     },
     "GetCars": {
@@ -591,14 +302,6 @@
       "output": {
         "shape": "GetCarsResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Returns a list of configured cars</p>"
     },
     "GetEvaluation": {
@@ -613,20 +316,6 @@
       "output": {
         "shape": "GetEvaluationResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Get evaluation details.</p><p>Returns information about a given evaluation</p>"
     },
     "GetLatestUserSubmission": {
@@ -641,20 +330,6 @@
       "output": {
         "shape": "GetLatestUserSubmissionResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Returns information about the most recent model submission status</p><p>This is the information that you will see next to your name on the race page.</p>"
     },
     "GetLeaderboard": {
@@ -669,20 +344,6 @@
       "output": {
         "shape": "GetLeaderboardResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Returns a details for a race</p><p>Does not return the entrants ranking - that is available through ListLeaderboardSubmissions (list-leaderboard-submissions for AWS CLI).</p>"
     },
     "GetModel": {
@@ -697,49 +358,7 @@
       "output": {
         "shape": "GetModelResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>Fetch information about the model</p>"
-    },
-    "GetPrivateLeaderboard": {
-      "name": "GetPrivateLeaderboard",
-      "http": {
-        "method": "POST",
-        "requestUri": "/"
-      },
-      "input": {
-        "shape": "GetPrivateLeaderboardRequest"
-      },
-      "output": {
-        "shape": "GetPrivateLeaderboardResponse"
-      },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>Returns a details for a race</p><p>Don't quote me on that but it does look like an aliast for GetLeaderboard (get-leaderboard) which returns both community and public leaderboards</p><p>Does not return the entrants ranking - that is available through ListLeaderboardSubmissions (list-leaderboard-submissions for AWS CLI).</p>"
     },
     "GetRankedUserSubmission": {
       "name": "GetRankedUserSubmission",
@@ -753,21 +372,18 @@
       "output": {
         "shape": "GetRankedUserSubmissionResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Returns current user's best submission for a given race.</p>"
+    },
+    "GetRecords": {
+      "name": "GetRecords",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "output": {
+        "shape": "GetRecordsResponse"
+      },
+      "documentation": "<p>TODO</p>"
     },
     "GetTournament": {
       "name": "GetTournament",
@@ -781,20 +397,6 @@
       "output": {
         "shape": "GetTournamentResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>TODO</p>"
     },
     "GetTrack": {
@@ -809,20 +411,6 @@
       "output": {
         "shape": "GetTrackResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>Provides information about a given track.</p>"
     },
     "GetTrainingJob": {
@@ -837,20 +425,6 @@
       "output": {
         "shape": "GetTrainingJobResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>Get information about how a model is being trained</p>"
     },
     "ImportModel": {
@@ -865,21 +439,21 @@
       "output": {
         "shape": "ImportModelResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceAlreadyExistsException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Import a model from S3 into console</p><p>Allows to import a model from backup or alternative training solution and clone for more training or submit to a race.</p>"
+    },
+    "ListBYOAJobs": {
+      "name": "ListBYOAJobs",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "ListBYOAJobsRequest"
+      },
+      "output": {
+        "shape": "ListBYOAJobsResponse"
+      },
+      "documentation": "<p>TODO</p>"
     },
     "ListEvaluations": {
       "name": "ListEvaluations",
@@ -893,17 +467,6 @@
       "output": {
         "shape": "ListEvaluationsResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Returns a list of evaluations performed on a given model.</p>"
     },
     "ListLeaderboardSubmissions": {
@@ -918,20 +481,6 @@
       "output": {
         "shape": "ListLeaderboardSubmissionsResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Returns an ordered list of a given race entries.</p>"
     },
     "ListLeaderboardWinners": {
@@ -946,20 +495,6 @@
       "output": {
         "shape": "ListLeaderboardWinnersResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>TODO</p>"
     },
     "ListLeaderboards": {
@@ -974,20 +509,6 @@
       "output": {
         "shape": "ListLeaderboardsResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>List races that current user has access to</p>"
     },
     "ListModels": {
@@ -1002,17 +523,6 @@
       "output": {
         "shape": "ListModelsResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>List current user's models</p>"
     },
     "ListPrivateLeaderboardParticipants": {
@@ -1027,77 +537,21 @@
       "output": {
         "shape": "ListPrivateLeaderboardParticipantsResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Lists users which have joined a private race.</p><p>For public race Arn an empty list is returned</p>"
     },
-    "ListPrivateLeaderboards": {
-      "name": "ListPrivateLeaderboards",
+    "ListTagsForResource": {
+      "name": "ListTagsForResource",
       "http": {
         "method": "POST",
         "requestUri": "/"
       },
       "input": {
-        "shape": "ListPrivateLeaderboardsRequest"
+        "shape": "ListTagsForResourceRequest"
       },
       "output": {
-        "shape": "ListPrivateLeaderboardsResponse"
+        "shape": "ListTagsForResourceResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>Lists community races that current user has created.</p>"
-    },
-    "ListSubscribedPrivateLeaderboards": {
-      "name": "ListSubscribedPrivateLeaderboards",
-      "http": {
-        "method": "POST",
-        "requestUri": "/"
-      },
-      "input": {
-        "shape": "ListSubscribedPrivateLeaderboardsRequest"
-      },
-      "output": {
-        "shape": "ListSubscribedPrivateLeaderboardsResponse"
-      },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>Lists community races that current user has joined.</p>"
+      "documentation": "<p>TODO</p>"
     },
     "ListTracks": {
       "name": "ListTracks",
@@ -1111,17 +565,6 @@
       "output": {
         "shape": "ListTracksResponse"
       },
-      "errors": [
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>List available tracks</p>"
     },
     "ListTrainingJobs": {
@@ -1136,43 +579,21 @@
       "output": {
         "shape": "ListTrainingJobsResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>List current user's training jobs</p><p>Training jobs are associated with models that user has.</p>"
     },
-    "MigrateModels": {
-      "name": "MigrateModels",
+    "PerformLeaderboardOperation": {
+      "name": "PerformLeaderboardOperation",
       "http": {
         "method": "POST",
         "requestUri": "/"
       },
       "input": {
-        "shape": "MigrateModelsRequest"
+        "shape": "PerformLeaderboardOperationRequest"
       },
       "output": {
-        "shape": "MigrateModelsResponse"
+        "shape": "PerformLeaderboardOperationResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>This method is no longer be relevant and you should not use it</p>"
+      "documentation": "<p>TODO</p>"
     },
     "RemoveLeaderboardAccessPermission": {
       "name": "RemoveLeaderboardAccessPermission",
@@ -1186,26 +607,6 @@
       "output": {
         "shape": "RemoveLeaderboardAccessPermissionResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Removes a racer from a community race administrated by the current user.</p>"
     },
     "RunTournament": {
@@ -1220,20 +621,6 @@
       "output": {
         "shape": "RunTournamentResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>TODO</p>"
     },
     "SetAlias": {
@@ -1245,18 +632,21 @@
       "input": {
         "shape": "SetAliasRequest"
       },
-      "errors": [
-        {
-          "shape": "ResourceAlreadyExistsException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
-      "documentation": "<p>Set your racer name. You can only set your racer name once so choose wisely!</p>\n<p>The names are checked in terms approprietness. You may have your name rejected if a disallowed word is a substring of it.</p>"
+      "documentation": "<p>Set your racer name.</p>\n<p>The names are checked in terms approprietness. You may have your name rejected if a disallowed word is a substring of it.</p>"
+    },
+    "StartBYOAJob": {
+      "name": "StartBYOAJob",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "StartBYOAJobRequest"
+      },
+      "output": {
+        "shape": "StartBYOAJobResponse"
+      },
+      "documentation": "<p>TODO</p>"
     },
     "StartEvaluation": {
       "name": "StartEvaluation",
@@ -1270,27 +660,21 @@
       "output": {
         "shape": "StartEvaluationResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceInUseException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Evaluate your model in conditions of your choice.</p><p>This is a great opportunity to check how your model is doing without the entropy altering it actions which happens during the training. But there's more: you can try a different track, different racing format or even race your model against a car with another model that you have trained.</p>"
+    },
+    "StopBYOAJob": {
+      "name": "StopBYOAJob",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "StopBYOAJobRequest"
+      },
+      "output": {
+        "shape": "StopBYOAJobResponse"
+      },
+      "documentation": "<p>TODO</p>"
     },
     "StopEvaluation": {
       "name": "StopEvaluation",
@@ -1304,26 +688,6 @@
       "output": {
         "shape": "StopEvaluationResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "JobNotActiveException"
-        },
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Stop performing evaluation</p><p>The system will still take some time to shut everything down, but the evaluation will have been stopped at the time of request</p>"
     },
     "StopTrainingReinforcementLearningModel": {
@@ -1338,24 +702,21 @@
       "output": {
         "shape": "StopTrainingReinforcementLearningModelResponse"
       },
-      "errors": [
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "JobNotActiveException"
-        },
-        {
-          "shape": "ServiceException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        }
-      ],
       "documentation": "<p>Stop the training job.</p><p>The training will be immediately interrupted and will perform a shutdown of the environment which can take a few minutes. Once done, you will be able to evaluate, clone or submit your model to a race. The interrupted iteration is discarded and only the last and the best complete iterations are being stored.</p>"
+    },
+    "TagResource": {
+      "name": "TagResource",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "TagResourceRequest"
+      },
+      "output": {
+        "shape": "TagResourceResponse"
+      },
+      "documentation": "<p>TODO</p>"
     },
     "TestRewardFunction": {
       "name": "TestRewardFunction",
@@ -1369,27 +730,21 @@
       "output": {
         "shape": "TestRewardFunctionResponse"
       },
-      "errors": [
-        {
-          "shape": "TooManyRequestsException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Test reward function. Submit your function to perform a number of tests against it.</p><p>Not all problems are clearly communicated even if caught, for instance whitespace issues. If you don't get the details that could help you, do revert to a code editor of your choice.</p>"
+    },
+    "UntagResource": {
+      "name": "UntagResource",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "UntagResourceRequest"
+      },
+      "output": {
+        "shape": "UntagResourceResponse"
+      },
+      "documentation": "<p>TODO</p>"
     },
     "UpdateCar": {
       "name": "UpdateCar",
@@ -1403,32 +758,27 @@
       "output": {
         "shape": "UpdateCarResponse"
       },
-      "errors": [
-        {
-          "shape": "InvalidRequestException"
-        },
-        {
-          "shape": "CustomerAuthorizationFailedException"
-        },
-        {
-          "shape": "ResourceDoesNotExistException"
-        },
-        {
-          "shape": "ResourceAlreadyExistsException"
-        },
-        {
-          "shape": "ServiceException"
-        }
-      ],
       "documentation": "<p>Change settings of your car</p><p>You can choose various settings for your car including the action space, name or look.</p><p>Changing the settings for a car only affects new models being created from scratch. Old models and their clones will continue to use the old settings which are stored with the model at the start of a new training and then passed on during cloning.</p>"
+    },
+    "VerifyResourcesExistForTagris": {
+      "name": "VerifyResourcesExistForTagris",
+      "http": {
+        "method": "POST",
+        "requestUri": "/"
+      },
+      "input": {
+        "shape": "VerifyResourcesExistForTagrisRequest"
+      },
+      "output": {
+        "shape": "VerifyResourcesExistForTagrisResponse"
+      },
+      "documentation": "<p>TODO</p>"
     }
   },
   "shapes": {
     "AccessToken": {
       "type": "string",
-      "max": 32,
-      "min": 1,
-      "pattern": "^[a-zA-Z0-9\\-_]+$"
+      "sensitive": true
     },
     "AccountId": {
       "type": "string",
@@ -1436,96 +786,47 @@
       "min": 12,
       "pattern": "[0-9]{12}"
     },
-    "AccountResources": {
-      "type": "structure",
-      "required": [
-        "AccountRoles"
-      ],
-      "members": {
-        "AccountRoles": {
-          "shape": "AccountRoles"
-        },
-        "Status": {
-          "shape": "AccountResourcesStatus"
-        },
-        "S3Bucket": {
-          "shape": "S3Bucket"
-        },
-        "RoboMakerSimulationApplication": {
-          "shape": "RoboMakerSimulationApplication"
-        },
-        "VpcStack": {
-          "shape": "VpcStack"
-        },
-        "VersioningStatus": {
-          "shape": "VersioningStatus"
-        }
+    "AttachedRewards": {
+      "type": "list",
+      "member": {
+        "shape": "StandardLengthString"
       }
     },
-    "AccountResourcesStatus": {
+    "Accessories": {
       "type": "string",
       "enum": [
-        "CREATED",
-        "CREATING",
-        "DELETING",
-        "ERROR",
-        "MIGRATING"
+        "Blank",
+        "Prescription02",
+        "Round",
+        "Prescription01",
+        "Sunglasses",
+        "Wayfarers",
+        "Kurt"
       ]
-    },
-    "AccountRoles": {
-      "type": "structure",
-      "required": [
-        "DeepRacerRoleArn",
-        "SageMakerRoleArn",
-        "RoboMakerRoleArn",
-        "LambdaRoleArn",
-        "CloudFormationRoleArn"
-      ],
-      "members": {
-        "DeepRacerRoleArn": {
-          "shape": "RoleArn"
-        },
-        "SageMakerRoleArn": {
-          "shape": "RoleArn"
-        },
-        "RoboMakerRoleArn": {
-          "shape": "RoleArn"
-        },
-        "LambdaRoleArn": {
-          "shape": "RoleArn"
-        },
-        "CloudFormationRoleArn": {
-          "shape": "RoleArn"
-        }
-      }
     },
     "ActionSpace": {
       "type": "structure",
       "required": [
-        "MaximumSteeringAngle",
-        "SteeringGranularity",
-        "MaximumSpeed",
-        "SpeedGranularity"
+        "ActionSpaceType"
       ],
       "members": {
-        "MaximumSteeringAngle": {
-          "shape": "MaximumSteeringAngle"
+        "ActionSpaceType": {
+          "shape": "ActionSpaceType"
         },
-        "SteeringGranularity": {
-          "shape": "SteeringGranularity"
+        "ContinuousActionSpace": {
+          "shape": "ContinuousActionSpace"
         },
-        "MaximumSpeed": {
-          "shape": "MaximumSpeed"
-        },
-        "SpeedGranularity": {
-          "shape": "SpeedGranularity"
+        "DiscreteActionSpace": {
+          "shape": "DiscreteActionSpaceList"
         }
       }
+    },
+    "ActionSpaceType": {
+      "type": "string"
     },
     "ActivityJob": {
       "type": "structure",
       "required": [
-        "ModelArn",
         "CreationTime",
         "StartTime",
         "Status"
@@ -1535,16 +836,16 @@
           "shape": "ModelArn"
         },
         "CreationTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "FailureReason": {
           "shape": "Description"
         },
         "StartTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "EndTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "Status": {
           "shape": "ActivityStatus"
@@ -1559,7 +860,10 @@
           "shape": "ActivityVideos"
         },
         "LogDownloadComplete": {
-          "shape": "Boolean"
+          "shape": "boolean"
+        },
+        "VideoPreSignedUrl": {
+          "shape": "Url"
         }
       }
     },
@@ -1636,6 +940,9 @@
       "members": {
         "AccessToken": {
           "shape": "AccessToken"
+        },
+        "UserIds": {
+          "shape": "UserIds"
         }
       }
     },
@@ -1650,10 +957,119 @@
         }
       }
     },
+    "AdminGetAccountConfigRequest": {
+      "type": "structure",
+      "members": {}
+    },
+    "AdminGetAccountConfigResponse": {
+      "type": "structure",
+      "required": [
+        "MultiracerConfig"
+      ],
+      "members": {
+        "MultiracerConfig": {
+          "shape": "MultiracerConfig"
+        }
+      }
+    },
+    "AdminListAssociatedResourcesRequest": {
+      "type": "structure",
+      "members": {
+        "MaxResults": {
+          "shape": "integer"
+        },
+        "NextToken": {
+          "shape": "NextToken"
+        },
+        "UserId": {
+          "shape": "StandardLengthString"
+        }
+      }
+    },
+    "AdminListAssociatedResourcesResponse": {
+      "type": "structure",
+      "required": [
+        "AssociatedResources"
+      ],
+      "members": {
+        "NextToken": {
+          "shape": "NextToken"
+        },
+        "AssociatedResources": {
+          "shape": "AssociatedResources"
+        }
+      }
+    },
+    "AdminListAssociatedUsersRequest": {
+      "type": "structure",
+      "members": {
+        "MaxResults": {
+          "shape": "integer"
+        },
+        "NextToken": {
+          "shape": "NextToken"
+        },
+        "UserState": {
+          "shape": "UserState"
+        }
+      }
+    },
+    "AdminListAssociatedUsersResponse": {
+      "type": "structure",
+      "required": [
+        "AssociatedUsers"
+      ],
+      "members": {
+        "NextToken": {
+          "shape": "NextToken"
+        },
+        "AssociatedUsers": {
+          "shape": "AssociatedUsers"
+        }
+      }
+    },
+    "AdminManageUserRequest": {
+      "type": "structure",
+      "required": [
+        "UserIds",
+        "Action"
+      ],
+      "members": {
+        "UserIds": {
+          "shape": "UserIds"
+        },
+        "Action": {
+          "shape": "UserAction"
+        },
+        "Limits": {
+          "shape": "UserLimits"
+        }
+      }
+    },
+    "AdminManageUserResponse": {
+      "type": "structure",
+      "members": {}
+    },
+    "AdminSetAccountConfigRequest": {
+      "type": "structure",
+      "required": [
+        "MultiracerConfig"
+      ],
+      "members": {
+        "MultiracerConfig": {
+          "shape": "MultiracerConfig"
+        }
+      }
+    },
+    "AdminSetAccountConfigResponse": {
+      "type": "structure",
+      "members": {}
+    },
     "AgentAlgorithm": {
       "type": "string",
       "enum": [
-        "PPO"
+        "PPO",
+        "SAC"
       ]
     },
     "AgentNetwork": {
@@ -1691,6 +1107,76 @@
         "ROBOMAKER_METRICS"
       ]
     },
+    "AssociatedResource": {
+      "type": "structure",
+      "required": [
+        "UserId",
+        "Models"
+      ],
+      "members": {
+        "UserId": {
+          "shape": "StandardLengthString"
+        },
+        "Models": {
+          "shape": "ModelList"
+        }
+      }
+    },
+    "AssociatedResources": {
+      "type": "list",
+      "member": {
+        "shape": "AssociatedResource"
+      }
+    },
+    "AssociatedUser": {
+      "type": "structure",
+      "required": [
+        "Alias",
+        "UserId",
+        "AssociatedOn",
+        "ComputeMinutesUsed",
+        "ComputeMinutesQueued",
+        "MaxTotalComputeMinutes",
+        "MaxModels",
+        "StorageBytesUsed",
+        "UserState"
+      ],
+      "members": {
+        "Alias": {
+          "shape": "Alias"
+        },
+        "UserId": {
+          "shape": "StandardLengthString"
+        },
+        "AssociatedOn": {
+          "shape": "long"
+        },
+        "ComputeMinutesUsed": {
+          "shape": "integer"
+        },
+        "ComputeMinutesQueued": {
+          "shape": "integer"
+        },
+        "MaxTotalComputeMinutes": {
+          "shape": "integer"
+        },
+        "MaxModels": {
+          "shape": "integer"
+        },
+        "StorageBytesUsed": {
+          "shape": "long"
+        },
+        "UserState": {
+          "shape": "UserState"
+        }
+      }
+    },
+    "AssociatedUsers": {
+      "type": "list",
+      "member": {
+        "shape": "AssociatedUser"
+      }
+    },
     "AutoSubmission": {
       "type": "structure",
       "required": [
@@ -1702,6 +1188,9 @@
         },
         "AutoSubmissionStatus": {
           "shape": "AutoSubmissionStatus"
+        },
+        "TermsAccepted": {
+          "shape": "boolean"
         }
       }
     },
@@ -1715,13 +1204,107 @@
         "SUBMISSION_REQUEST_FAILED"
       ]
     },
-    "Boolean": {
-      "type": "boolean"
+    "AvailableTrackFeatures": {
+      "type": "structure",
+      "members": {
+        "EnabledDirections": {
+          "shape": "Directions"
+        },
+        "DefaultDirection": {
+          "shape": "Direction"
+        }
+      }
     },
-    "BotCarSpeed": {
-      "type": "double",
-      "max": 12,
-      "min": 0.2
+    "AvatarConfig": {
+      "type": "structure",
+      "members": {
+        "Accessories": {
+          "shape": "Accessories"
+        },
+        "Clothing": {
+          "shape": "Clothing"
+        },
+        "ClothingColor": {
+          "shape": "ClothingColor"
+        },
+        "CountryCode": {
+          "shape": "CountryCode"
+        },
+        "Eyes": {
+          "shape": "Eyes"
+        },
+        "Eyebrows": {
+          "shape": "Eyebrows"
+        },
+        "FacialHair": {
+          "shape": "FacialHair"
+        },
+        "FacialHairColor": {
+          "shape": "FacialHairColor"
+        },
+        "HairColor": {
+          "shape": "HairColor"
+        },
+        "HatColor": {
+          "shape": "HatColor"
+        },
+        "Mouth": {
+          "shape": "Mouth"
+        },
+        "SkinColor": {
+          "shape": "SkinColor"
+        },
+        "Top": {
+          "shape": "Top"
+        },
+        "TshirtGraphic": {
+          "shape": "TshirtGraphic"
+        }
+      }
+    },
+    "BYOAJob": {
+      "type": "structure",
+      "required": [
+        "JobArn",
+        "ActivityJob"
+      ],
+      "members": {
+        "JobArn": {
+          "shape": "Arn"
+        },
+        "Name": {
+          "shape": "StandardLengthString"
+        },
+        "ActivityJob": {
+          "shape": "ActivityJob"
+        },
+        "Config": {
+          "shape": "BYOAJobConfig"
+        },
+        "EventResourceConfig": {
+          "shape": "ResourceConfig"
+        },
+        "EventResourcesConfigs": {
+          "shape": "EventResourcesConfigs"
+        }
+      }
+    },
+    "BYOAJobConfig": {
+      "type": "structure",
+      "required": [
+        "TerminationConditions"
+      ],
+      "members": {
+        "TerminationConditions": {
+          "shape": "TerminationConditions"
+        }
+      }
+    },
+    "BYOAJobs": {
+      "type": "list",
+      "member": {
+        "shape": "BYOAJob"
+      }
     },
     "Car": {
       "type": "structure",
@@ -1756,13 +1339,13 @@
     "CarConfiguration": {
       "type": "structure",
       "required": [
-        "ActionSpace",
         "NeuralNetwork",
         "Sensors"
       ],
       "members": {
         "ActionSpace": {
-          "shape": "ActionSpace"
+          "shape": "ActionSpace",
+          "description": "<p>This is not needed anymore, cars no longer have the action space associated with them</p>"
         },
         "NeuralNetwork": {
           "shape": "NeuralNetwork"
@@ -1865,6 +1448,15 @@
         "AutoSubmission": {
           "shape": "AutoSubmission",
           "documentation": "<p>Decide whether after training completion you wish to submit the model to a race</p>"
+        },
+        "Tags": {
+          "shape": "Tags"
+        },
+        "CarArn": {
+          "shape": "CarArn"
+        },
+        "CustomActionSpace": {
+          "shape": "ActionSpace"
         }
       }
     },
@@ -1880,31 +1472,77 @@
       },
       "documentation": "<p>Identifies the model that has been created</p>"
     },
+    "Clothing": {
+      "type": "string",
+      "enum": [
+        "CollarSweater",
+        "Hoodie",
+        "Overall",
+        "BlazerSweater",
+        "BlazerShirt",
+        "ShirtCrewNeck",
+        "GraphicShirt",
+        "ShirtScoopNeck",
+        "ShirtVNeck"
+      ]
+    },
+    "ClothingColor": {
+      "type": "string",
+      "enum": [
+        "Blue01",
+        "Blue02",
+        "Blue03",
+        "Pink",
+        "Red",
+        "PastelBlue",
+        "PastelGreen",
+        "PastelOrange",
+        "PastelRed",
+        "PastelYellow",
+        "Gray01",
+        "Gray02",
+        "Heather",
+        "Black",
+        "White"
+      ]
+    },
     "CodeBlock": {
       "type": "string",
       "max": 100000,
       "min": 1
     },
-    "CreateAccountResourcesRequest": {
+    "ContinuousActionSpace": {
       "type": "structure",
       "required": [
-        "AccountRoles"
+        "Speed",
+        "SteeringAngle"
       ],
       "members": {
-        "AccountRoles": {
-          "shape": "AccountRoles"
+        "Speed": {
+          "shape": "SpeedRange"
+        },
+        "SteeringAngle": {
+          "shape": "SteeringAngleRange"
         }
       }
     },
-    "CreateAccountResourcesResponse": {
-      "type": "structure",
-      "members": {}
+    "CountryCode": {
+      "type": "string",
+      "max": 3,
+      "min": 1,
+      "pattern": "^[A-Z]+$"
     },
     "CreateCarRequest": {
       "type": "structure",
+      "required": [
+        "Car"
+      ],
       "members": {
         "Car": {
           "shape": "Car"
+        },
+        "Tags": {
+          "shape": "Tags"
         }
       }
     },
@@ -1916,18 +1554,50 @@
         }
       }
     },
+    "CreateLeaderboardRequest": {
+      "type": "structure",
+      "required": [
+        "Definition",
+        "RaceConfig",
+        "Features"
+      ],
+      "members": {
+        "Definition": {
+          "shape": "LeaderboardDefinition"
+        },
+        "RaceConfig": {
+          "shape": "RaceConfig"
+        },
+        "Features": {
+          "shape": "Features"
+        },
+        "Tags": {
+          "shape": "Tags"
+        }
+      }
+    },
+    "CreateLeaderboardResponse": {
+      "type": "structure",
+      "required": [
+        "LeaderboardArn"
+      ],
+      "members": {
+        "LeaderboardArn": {
+          "shape": "Arn"
+        }
+      }
+    },
     "CreateLeaderboardAccessTokenRequest": {
       "type": "structure",
       "required": [
-        "LeaderboardArn",
-        "ExpirationTime"
+        "LeaderboardArn"
       ],
       "members": {
         "LeaderboardArn": {
           "shape": "LeaderboardArn"
         },
         "ExpirationTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         }
       }
     },
@@ -1959,69 +1629,25 @@
           "shape": "LeaderboardArn"
         },
         "TermsAccepted": {
-          "shape": "Boolean"
+          "shape": "boolean"
         },
         "RoleArn": {
           "shape": "RoleArn"
         },
         "AutoSubmission": {
           "shape": "AutoSubmission"
+        },
+        "SubmissionOverrides": {
+          "shape": "SubmissionOverrides"
+        },
+        "UserId": {
+          "shape": "StandardLengthString"
         }
       }
     },
     "CreateLeaderboardSubmissionResponse": {
       "type": "structure",
       "members": {}
-    },
-    "CreatePrivateLeaderboardRequest": {
-      "type": "structure",
-      "required": [
-        "LeaderboardName",
-        "LeaderboardDescription",
-        "MinimumLaps",
-        "TotalLaps",
-        "StartTime",
-        "EndTime",
-        "TrackArn",
-        "LeaderboardImage"
-      ],
-      "members": {
-        "LeaderboardName": {
-          "shape": "LeaderboardName"
-        },
-        "LeaderboardDescription": {
-          "shape": "Description"
-        },
-        "MinimumLaps": {
-          "shape": "PositiveInteger"
-        },
-        "TotalLaps": {
-          "shape": "PositiveInteger"
-        },
-        "StartTime": {
-          "shape": "epochTimeMillis"
-        },
-        "EndTime": {
-          "shape": "epochTimeMillis"
-        },
-        "TrackArn": {
-          "shape": "TrackArn"
-        },
-        "LeaderboardImage": {
-          "shape": "LeaderboardImage"
-        }
-      }
-    },
-    "CreatePrivateLeaderboardResponse": {
-      "type": "structure",
-      "required": [
-        "LeaderboardArn"
-      ],
-      "members": {
-        "LeaderboardArn": {
-          "shape": "LeaderboardArn"
-        }
-      }
     },
     "CreateReinforcementLearningModelRequest": {
       "type": "structure",
@@ -2059,6 +1685,12 @@
         },
         "AutoSubmission": {
           "shape": "AutoSubmission"
+        },
+        "Tags": {
+          "shape": "Tags"
+        },
+        "CustomActionSpace": {
+          "shape": "ActionSpace"
         }
       }
     },
@@ -2073,39 +1705,18 @@
         }
       }
     },
-    "CustomerAuthorizationFailedException": {
-      "type": "structure",
-      "members": {},
-      "exception": true
-    },
-    "DeleteAccountResourcesRequest": {
-      "type": "structure",
-      "members": {}
-    },
-    "DeleteAccountResourcesResponse": {
-      "type": "structure",
-      "members": {}
-    },
-    "DeleteCarRequest": {
+    "DeleteLeaderboardRequest": {
       "type": "structure",
       "required": [
-        "Arn"
+        "LeaderboardArn"
       ],
       "members": {
-        "Arn": {
-          "shape": "CarArn"
+        "LeaderboardArn": {
+          "shape": "LeaderboardArn"
         }
       }
     },
-    "DeleteCarResponse": {
-      "type": "structure",
-      "members": {}
-    },
-    "DeleteCarsRequest": {
-      "type": "structure",
-      "members": {}
-    },
-    "DeleteCarsResponse": {
+    "DeleteLeaderboardResponse": {
       "type": "structure",
       "members": {}
     },
@@ -2121,21 +1732,6 @@
       }
     },
     "DeleteModelResponse": {
-      "type": "structure",
-      "members": {}
-    },
-    "DeletePrivateLeaderboardRequest": {
-      "type": "structure",
-      "required": [
-        "LeaderboardArn"
-      ],
-      "members": {
-        "LeaderboardArn": {
-          "shape": "LeaderboardArn"
-        }
-      }
-    },
-    "DeletePrivateLeaderboardResponse": {
       "type": "structure",
       "members": {}
     },
@@ -2166,53 +1762,84 @@
         "shape": "Dimension"
       }
     },
+    "Direction": {
+      "type": "string",
+      "enum": [
+        "CLOCKWISE",
+        "COUNTER_CLOCKWISE"
+      ]
+    },
+    "Directions": {
+      "type": "list",
+      "member": {
+        "shape": "Direction"
+      }
+    },
+    "DiscreteActionSpace": {
+      "type": "structure",
+      "required": [
+        "Speed",
+        "SteeringAngle"
+      ],
+      "members": {
+        "Speed": {
+          "shape": "double"
+        },
+        "SteeringAngle": {
+          "shape": "double"
+        }
+      }
+    },
+    "DiscreteActionSpaceList": {
+      "type": "list",
+      "member": {
+        "shape": "DiscreteActionSpace"
+      }
+    },
     "Division": {
       "type": "string",
       "max": 64,
       "min": 1
     },
-    "EditPrivateLeaderboardRequest": {
+    "EditLeaderboardRequest": {
       "type": "structure",
       "required": [
-        "LeaderboardArn",
-        "LeaderboardDescription",
-        "MinimumLaps",
-        "TotalLaps",
-        "StartTime",
-        "EndTime",
-        "TrackArn",
-        "LeaderboardImage"
+        "Arn",
+        "Definition",
+        "RaceConfig",
+        "Features"
       ],
       "members": {
-        "LeaderboardArn": {
+        "Arn": {
           "shape": "LeaderboardArn"
         },
-        "LeaderboardDescription": {
-          "shape": "Description"
+        "Definition": {
+          "shape": "LeaderboardDefinition"
         },
-        "MinimumLaps": {
-          "shape": "PositiveInteger"
+        "RaceConfig": {
+          "shape": "RaceConfig"
         },
-        "TotalLaps": {
-          "shape": "PositiveInteger"
-        },
-        "StartTime": {
-          "shape": "epochTimeMillis"
-        },
-        "EndTime": {
-          "shape": "epochTimeMillis"
-        },
-        "TrackArn": {
-          "shape": "TrackArn"
-        },
-        "LeaderboardImage": {
-          "shape": "LeaderboardImage"
+        "Features": {
+          "shape": "Features"
         }
       }
     },
-    "EditPrivateLeaderboardResponse": {
+    "EditLeaderboardResponse": {
       "type": "structure",
       "members": {}
+    },
+    "EntryMode": {
+      "type": "string",
+      "enum": [
+        "OPEN_DOOR",
+        "CLOSED_DOOR"
+      ]
+    },
+    "EnabledConsoles": {
+      "type": "list",
+      "member": {
+        "shape": "StandardLengthString"
+      }
     },
     "EntryTypeConfig": {
       "type": "structure",
@@ -2272,7 +1899,10 @@
       ],
       "members": {
         "TrackArn": {
-          "shape": "StandardLengthString"
+          "shape": "TrackArn"
+        },
+        "TrackFeatures": {
+          "shape": "TrackFeatures"
         },
         "TerminationConditions": {
           "shape": "EvaluationTerminationConditions"
@@ -2287,7 +1917,10 @@
           "shape": "ObjectAvoidanceConfig"
         },
         "ResettingBehaviorConfig": {
-          "shape": "ResettingBehaviorConfig"
+          "shape": "ResettingBehaviourConfig"
+        },
+        "EvaluationName": {
+          "shape": "StandardLengthString"
         }
       }
     },
@@ -2314,6 +1947,9 @@
         },
         "RoboMakerJobArn": {
           "shape": "Arn"
+        },
+        "LeaderboardArn": {
+          "shape": "LeaderboardArn"
         }
       }
     },
@@ -2333,16 +1969,25 @@
       "type": "structure",
       "members": {
         "Trial": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "ElapsedTimeInMilliseconds": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "CompletionPercentage": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "EpisodeStatus": {
           "shape": "EpisodeStatus"
+        },
+        "ResetCount": {
+          "shape": "integer"
+        },
+        "OffTrackCount": {
+          "shape": "integer"
+        },
+        "CrashCount": {
+          "shape": "integer"
         }
       }
     },
@@ -2356,36 +2001,206 @@
       "type": "structure",
       "members": {
         "MaxTimeInMinutes": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "MaxLaps": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         }
       }
     },
-    "GetAccountResourcesRequest": {
+    "EventResourceConfig": {
+      "type": "structure",
+      "required": [
+        "Type",
+        "Urls"
+      ],
+      "members": {
+        "Type": {
+          "shape": "StandardLengthString"
+        },
+        "Metadata": {
+          "shape": "StandardLengthString"
+        },
+        "Urls": {
+          "shape": "ResourceUrls"
+        },
+        "ResourceArn": {
+          "shape": "Arn"
+        }
+      }
+    },
+    "EventResourcesConfigs": {
+      "type": "list",
+      "member": {
+        "shape": "EventResourceConfig"
+      }
+    },
+    "EventSchedule": {
+      "type": "structure",
+      "required": [
+        "StartTime",
+        "EndTime"
+      ],
+      "members": {
+        "LeaderboardArn": {
+          "shape": "Arn"
+        },
+        "StartTime": {
+          "shape": "long"
+        },
+        "EndTime": {
+          "shape": "long"
+        }
+      }
+    },
+    "EventScheduleList": {
+      "type": "list",
+      "member": {
+        "shape": "EventSchedule"
+      }
+    },
+    "Eyes": {
+      "type": "string",
+      "enum": [
+        "Close",
+        "Cry",
+        "Default",
+        "EyeRoll",
+        "Happy",
+        "Hearts",
+        "Side",
+        "Squint",
+        "Surprised",
+        "Wink",
+        "WinkWacky"
+      ]
+    },
+    "Eyebrows": {
+      "type": "string",
+      "enum": [
+        "Angry",
+        "AngryNatural",
+        "SadConcerned",
+        "SadConcernedNatural",
+        "RaisedExcited",
+        "RaisedExcitedNatural",
+        "DefaultNatural",
+        "Default",
+        "FlatNatural",
+        "UpDown",
+        "UpDownNatural",
+        "UnibrowNatural"
+      ]
+    },
+    "FacialHair": {
+      "type": "string",
+      "enum": [
+        "Blank",
+        "BeardMajestic",
+        "BeardMedium",
+        "MoustacheFancy",
+        "BeardLight",
+        "MoustacheMagnum"
+      ]
+    },
+    "FacialHairColor": {
+      "type": "string",
+      "enum": [
+        "Red",
+        "Black",
+        "BlondeGolden",
+        "Blonde",
+        "Platinum",
+        "Auburn",
+        "Brown",
+        "BrownDark"
+      ]
+    },
+    "Features": {
+      "type": "structure",
+      "members": {
+        "Theme": {
+          "shape": "ThemeConfig"
+        },
+        "RacingDivisionEnabled": {
+          "shape": "boolean"
+        },
+        "Playoff": {
+          "shape": "PlayoffFeature"
+        },
+        "AttachedRewards": {
+          "shape": "AttachedRewards"
+        },
+        "CountryStatsEnabled": {
+          "shape": "boolean"
+        }
+      }
+    },
+    "GetAccountConfigRequest": {
       "type": "structure",
       "members": {}
     },
-    "GetAccountResourcesResponse": {
+    "GetAccountConfigResponse": {
       "type": "structure",
       "required": [
-        "AccountResources"
+        "MultiRacer"
       ],
       "members": {
-        "AccountResources": {
-          "shape": "AccountResources"
+        "MultiRacer": {
+          "shape": "boolean"
         }
       }
     },
     "GetAliasResponse": {
       "type": "structure",
-      "required": [
-        "Alias"
-      ],
       "members": {
         "Alias": {
           "shape": "Alias"
+        },
+        "TeamName": {
+          "shape": "StandardLengthString"
+        },
+        "RacingDivisionsByRaceType": {
+          "shape": "RacingDivisionsByRaceType"
+        },
+        "RacingDivisionConfig": {
+          "shape": "RacingDivisionConfig"
+        },
+        "Rewards": {
+          "shape": "Rewards"
+        },
+        "UserAvatarConfig": {
+          "shape": "AvatarConfig"
+        },
+        "FirstRaceTime": {
+          "shape": "long"
+        },
+        "MultiUserEnabled": {
+          "shape": "boolean"
+        },
+        "MultiUserProfile": {
+          "shape": "MultiUserProfile"
+        },
+        "AlternativeEmail": {
+          "shape": "StandardLengthString"
+        },
+        "CompetitionCountryCode": {
+          "shape": "CountryCode"
+        },
+        "FirstName": {
+          "shape": "StandardLengthString"
+        },
+        "MiddleName": {
+          "shape": "StandardLengthString"
+        },
+        "LastName": {
+          "shape": "StandardLengthString"
+        },
+        "UserId": {
+          "shape": "StandardLengthString"
+        },
+        "ProfileId": {
+          "shape": "StandardLengthString"
         }
       }
     },
@@ -2402,15 +2217,18 @@
         "AssetType": {
           "shape": "AssetType"
         },
+        "RoleArn": {
+          "shape": "RoleArn",
+          "documentation": "<p>An Arn of a role that current user has assigned, which write files to that bucket</p>"
+        },
         "ModelArtifactsS3Bucket": {
           "shape": "S3Bucket"
         },
         "ModelArtifactsS3Prefix": {
           "shape": "S3ObjectKey"
         },
-        "RoleArn": {
-          "shape": "RoleArn",
-          "documentation": "<p>An Arn of a role that current user has assigned, which write files to that bucket</p>"
+        "FirstCopy": {
+          "shape": "boolean"
         }
       }
     },
@@ -2419,6 +2237,31 @@
       "members": {
         "Url": {
           "shape": "Url"
+        },
+        "ProcessedFileCount": {
+          "shape": "integer"
+        }
+      }
+    },
+    "GetBYOAJobRequest": {
+      "type": "structure",
+      "required": [
+        "BYOAJobArn"
+      ],
+      "members": {
+        "BYOAJobArn": {
+          "shape": "Arn"
+        }
+      }
+    },
+    "GetBYOAJobResponse": {
+      "type": "structure",
+      "required": [
+        "BYOAJob"
+      ],
+      "members": {
+        "BYOAJob": {
+          "shape": "BYOAJob"
         }
       }
     },
@@ -2443,13 +2286,42 @@
     },
     "GetCarsRequest": {
       "type": "structure",
-      "members": {}
+      "members": {
+        "NextToken": {
+          "shape": "NextToken"
+        },
+        "MaxResults": {
+          "shape": "integer"
+        }
+      }
     },
     "GetCarsResponse": {
       "type": "structure",
       "members": {
         "Cars": {
           "shape": "CarsList"
+        },
+        "NextToken": {
+          "shape": "NextToken"
+        }
+      }
+    },
+    "GetConflictingEventSchedulesRequest": {
+      "type": "structure",
+      "members": {
+        "StartTime": {
+          "shape": "long"
+        },
+        "EndTime": {
+          "shape": "long"
+        }
+      }
+    },
+    "GetConflictingEventSchedulesResponse": {
+      "type": "structure",
+      "members": {
+        "EventScheduleList": {
+          "shape": "EventScheduleList"
         }
       }
     },
@@ -2538,25 +2410,6 @@
         }
       }
     },
-    "GetPrivateLeaderboardRequest": {
-      "type": "structure",
-      "required": [
-        "LeaderboardArn"
-      ],
-      "members": {
-        "LeaderboardArn": {
-          "shape": "LeaderboardArn"
-        }
-      }
-    },
-    "GetPrivateLeaderboardResponse": {
-      "type": "structure",
-      "members": {
-        "PrivateLeaderboard": {
-          "shape": "PrivateLeaderboard"
-        }
-      }
-    },
     "GetRankedUserSubmissionRequest": {
       "type": "structure",
       "required": [
@@ -2579,6 +2432,14 @@
         }
       }
     },
+    "GetRecordsResponse": {
+      "type": "structure",
+      "members": {
+        "TrackRecords": {
+          "shape": "TrackRecordList"
+        }
+      }
+    },
     "GetTournamentRequest": {
       "type": "structure",
       "required": [
@@ -2596,6 +2457,9 @@
         "Tournament"
       ],
       "members": {
+        "TournamentStatus": {
+          "shape": "TournamentStatus"
+        },
         "Tournament": {
           "shape": "TournamentResults"
         }
@@ -2645,6 +2509,56 @@
         }
       }
     },
+    "GrandPrix": {
+      "type": "structure",
+      "required": [
+        "RaceArn",
+        "ResultReleaseTime"
+      ],
+      "members": {
+        "RaceArn": {
+          "shape": "Arn"
+        },
+        "ResultReleaseTime": {
+          "shape": "long"
+        }
+      }
+    },
+    "HairColor": {
+      "type": "string",
+      "enum": [
+        "Red",
+        "PastelPink",
+        "SilverGray",
+        "Black",
+        "BlondeGolden",
+        "Blonde",
+        "Platinum",
+        "Auburn",
+        "Brown",
+        "BrownDark"
+      ]
+    },
+    "HatColor": {
+      "type": "string",
+      "enum": [
+        "Blue01",
+        "Blue02",
+        "Blue03",
+        "Pink",
+        "Red",
+        "PastelBlue",
+        "PastelGreen",
+        "PastelOrange",
+        "PastelRed",
+        "PastelYellow",
+        "Gray01",
+        "Gray02",
+        "Heather",
+        "Black",
+        "White"
+      ]
+    },
     "HeadToHeadConfig": {
       "type": "structure",
       "required": [
@@ -2657,20 +2571,35 @@
         "PolicyModelArn": {
           "shape": "ModelArn"
         },
+        "PolicyModelName": {
+          "shape": "StandardLengthString"
+        },
         "NumBotCars": {
-          "shape": "NumBotCars"
+          "shape": "integer"
         },
         "BotCarSpeed": {
-          "shape": "BotCarSpeed"
+          "shape": "double"
         },
         "EnableLaneChange": {
           "shape": "boolean"
         },
         "LowerLaneChangeTime": {
-          "shape": "LaneChangeTime"
+          "shape": "double"
         },
         "UpperLaneChangeTime": {
-          "shape": "LaneChangeTime"
+          "shape": "double"
+        },
+        "NumObstacles": {
+          "shape": "integer"
+        },
+        "ObstaclePositions": {
+          "shape": "ObstaclePositionList"
+        },
+        "ObstacleType": {
+          "shape": "ObstacleType"
+        },
+        "RandomizeLocation": {
+          "shape": "boolean"
         }
       }
     },
@@ -2684,10 +2613,10 @@
     "ImportModelRequest": {
       "type": "structure",
       "required": [
+        "Type",
         "Name",
         "ModelArtifactsS3Path",
-        "RoleArn",
-        "Type"
+        "RoleArn"
       ],
       "members": {
         "ModelArn": {
@@ -2712,6 +2641,9 @@
         "RoleArn": {
           "shape": "RoleArn",
           "documentation": "<p>An Arn of a role that current user has assigned, which allows to fetch files from that bucket</p>"
+        },
+        "TargetUserId": {
+          "shape": "StandardLengthString"
         }
       }
     },
@@ -2726,21 +2658,6 @@
         }
       }
     },
-    "InvalidRequestException": {
-      "type": "structure",
-      "members": {},
-      "exception": true
-    },
-    "JobNotActiveException": {
-      "type": "structure",
-      "members": {},
-      "exception": true
-    },
-    "LaneChangeTime": {
-      "type": "double",
-      "max": 8.0,
-      "min": 1.0
-    },
     "Leaderboard": {
       "type": "structure",
       "required": [
@@ -2751,9 +2668,7 @@
         "CloseTime",
         "Status",
         "MinimumLaps",
-        "ParticipantCount",
-        "ImageUrl",
-        "TrackImageUrl"
+        "ParticipantCount"
       ],
       "members": {
         "Arn": {
@@ -2780,26 +2695,20 @@
         "TrackArn": {
           "shape": "TrackArn"
         },
+        "TrackFeatures": {
+          "shape": "TrackFeatures"
+        },
         "Status": {
           "shape": "LeaderboardStatus"
         },
         "MinimumLaps": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "TotalLaps": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "ParticipantCount": {
-          "shape": "NonNegativeInteger"
-        },
-        "ImageUrl": {
-          "shape": "StandardLengthString"
-        },
-        "TrackImageUrl": {
-          "shape": "StandardLengthString"
-        },
-        "LeaderboardImage": {
-          "shape": "StandardLengthString"
+          "shape": "integer"
         },
         "HeadToHeadConfig": {
           "shape": "HeadToHeadConfig"
@@ -2808,7 +2717,7 @@
           "shape": "ObjectAvoidanceConfig"
         },
         "ResettingBehaviorConfig": {
-          "shape": "ResettingBehaviorConfig"
+          "shape": "ResettingBehaviourConfig"
         },
         "RaceType": {
           "shape": "RaceType"
@@ -2820,7 +2729,7 @@
           "shape": "Tournament"
         },
         "TerminationConditions": {
-          "shape": "TerminationConditions"
+          "shape": "EvaluationTerminationConditions"
         },
         "TimingMethod": {
           "shape": "TimingMethod"
@@ -2829,7 +2738,7 @@
           "shape": "TermsConditionId"
         },
         "TermsAccepted": {
-          "shape": "Boolean"
+          "shape": "boolean"
         },
         "WinnerAlias": {
           "shape": "Alias"
@@ -2844,7 +2753,7 @@
           "shape": "ThemeConfig"
         },
         "NumOfTeamSubmissionsRequired": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "WinningTeamName": {
           "shape": "StandardLengthString"
@@ -2855,18 +2764,48 @@
         "RacingDivision": {
           "shape": "Division"
         },
+        "Tags": {
+          "shape": "StandardLengthString"
+        },
+        "AccessToken": {
+          "shape": "AccessToken"
+        },
         "ParticipationConfig": {
           "shape": "ParticipationConfig"
         },
         "CarControlConfig": {
           "shape": "CarControlConfig"
         },
-        "Tags": {
-          "shape": "StandardLengthString"
-        },
         "Moderated": {
           "shape": "boolean"
+        },
+        "ModerateConfig": {
+          "shape": "ModerateConfig"
+        },
+        "EventResourceConfig": {
+          "shape": "ResourceConfig"
+        },
+        "LeaderboardAccessRoles": {
+          "shape": "LeaderboardAccessRoles"
+        },
+        "AttachedRewards": {
+          "shape": "AttachedRewards"
+        },
+        "SubmissionsPerUser": {
+          "shape": "integer"
+        },
+        "CountryStatsEnabled": {
+          "shape": "boolean"
         }
+      }
+    },
+    "LeaderboardAccessRole": {
+      "type": "string"
+    },
+    "LeaderboardAccessRoles": {
+      "type": "list",
+      "member": {
+        "shape": "LeaderboardAccessRole"
       }
     },
     "LeaderboardArn": {
@@ -2875,16 +2814,51 @@
       "min": 1,
       "pattern": "arn:.*"
     },
-    "LeaderboardImage": {
-      "type": "string",
-      "enum": [
-        "LeaderboardImage1",
-        "LeaderboardImage2",
-        "LeaderboardImage3",
-        "LeaderboardImage4",
-        "LeaderboardImage5",
-        "LeaderboardImage6"
-      ]
+    "LeaderboardDefinition": {
+      "type": "structure",
+      "required": [
+        "Name",
+        "Visibility",
+        "LaunchTime",
+        "CloseTime",
+        "TrackArn",
+        "LeagueType"
+      ],
+      "members": {
+        "Name": {
+          "shape": "LeaderboardName"
+        },
+        "Description": {
+          "shape": "Description"
+        },
+        "Visibility": {
+          "shape": "StandardLengthString"
+        },
+        "LaunchTime": {
+          "shape": "long"
+        },
+        "CloseTime": {
+          "shape": "long"
+        },
+        "TrackArn": {
+          "shape": "Arn"
+        },
+        "TrackFeatures": {
+          "shape": "TrackFeatures"
+        },
+        "Division": {
+          "shape": "Division"
+        },
+        "LeagueType": {
+          "shape": "StandardLengthString"
+        },
+        "Tags": {
+          "shape": "StandardLengthString"
+        },
+        "TermsConditionId": {
+          "shape": "TermsConditionId"
+        }
+      }
     },
     "LeaderboardList": {
       "type": "list",
@@ -2908,13 +2882,6 @@
     },
     "LeaderboardSubmission": {
       "type": "structure",
-      "required": [
-        "Alias",
-        "SubmissionTime",
-        "LapCount",
-        "AvgLapTime",
-        "LeaderboardSubmissionStatusType"
-      ],
       "members": {
         "ActivityArn": {
           "shape": "Arn"
@@ -2922,59 +2889,65 @@
         "Alias": {
           "shape": "Alias"
         },
+        "UserAvatarConfig": {
+          "shape": "AvatarConfig"
+        },
+        "CountryCode": {
+          "shape": "CountryCode"
+        },
         "SubmissionTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "LapCount": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "AvgLapTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "BestLapTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "TotalLapTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "AvgResets": {
           "shape": "double"
         },
         "CollisionCount": {
-          "shape": "NonNegativeInteger"
+          "shape": "integer"
         },
         "OffTrackCount": {
-          "shape": "NonNegativeInteger"
+          "shape": "integer"
         },
         "ResetCount": {
-          "shape": "NonNegativeInteger"
+          "shape": "integer"
         },
         "SubmissionCount": {
-          "shape": "NonNegativeInteger"
+          "shape": "integer"
         },
         "SubmissionVideoS3path": {
           "shape": "Url"
         },
+        "RankingScore": {
+          "shape": "long"
+        },
+        "Rank": {
+          "shape": "integer"
+        },
+        "LeagueRanks": {
+          "shape": "LeagueRanks"
+        },
         "ModelArn": {
           "shape": "ModelArn"
         },
-        "Rank": {
-          "shape": "PositiveInteger"
-        },
-        "JobName": {
-          "shape": "Name"
+        "ModelName": {
+          "shape": "StandardLengthString"
         },
         "LeaderboardSubmissionStatusType": {
           "shape": "LeaderboardSubmissionStatusType"
         },
-        "RankingScore": {
-          "shape": "epochTimeMillis"
-        },
-        "ModelCreatedInDataAccount": {
-          "shape": "Boolean"
-        },
         "LogDownloadComplete": {
-          "shape": "Boolean"
+          "shape": "boolean"
         },
         "TeamName": {
           "shape": "StandardLengthString"
@@ -2984,6 +2957,12 @@
         },
         "UserId": {
           "shape": "StandardLengthString"
+        },
+        "EventResourcesConfigs": {
+          "shape": "EventResourcesConfigs"
+        },
+        "ClearedJob": {
+          "shape": "boolean"
         }
       }
     },
@@ -3003,6 +2982,59 @@
         "ERROR"
       ]
     },
+    "LeagueRanks": {
+      "type": "structure",
+      "members": {
+        "Global": {
+          "shape": "integer"
+        },
+        "Region": {
+          "shape": "integer"
+        },
+        "Country": {
+          "shape": "integer"
+        }
+      }
+    },
+    "LeagueTopRacers": {
+      "type": "structure",
+      "members": {
+        "Global": {
+          "shape": "RacerSubmission"
+        },
+        "Region": {
+          "shape": "RacerSubmission"
+        },
+        "Country": {
+          "shape": "RacerSubmission"
+        }
+      }
+    },
+    "ListBYOAJobsRequest": {
+      "type": "structure",
+      "members": {
+        "NextToken": {
+          "shape": "NextToken"
+        },
+        "MaxResults": {
+          "shape": "integer"
+        },
+        "StatusEquals": {
+          "shape": "ActivityJobStatus"
+        }
+      }
+    },
+    "ListBYOAJobsResponse": {
+      "type": "structure",
+      "members": {
+        "BYOAJobs": {
+          "shape": "BYOAJobs"
+        },
+        "NextToken": {
+          "shape": "NextToken"
+        }
+      }
+    },
     "ListEvaluationsRequest": {
       "type": "structure",
       "required": [
@@ -3016,7 +3048,7 @@
           "shape": "NextToken"
         },
         "MaxResults": {
-          "shape": "MaxResults"
+          "shape": "integer"
         },
         "SortBy": {
           "shape": "SortEvaluationsBy"
@@ -3049,11 +3081,14 @@
         "LeaderboardArn": {
           "shape": "LeaderboardArn"
         },
+        "GetTopRacer": {
+          "shape": "boolean"
+        },
         "NextToken": {
           "shape": "NextToken"
         },
         "MaxResults": {
-          "shape": "MaxResults"
+          "shape": "integer"
         }
       }
     },
@@ -3062,6 +3097,9 @@
       "members": {
         "LeaderboardSubmissions": {
           "shape": "LeaderboardSubmissionList"
+        },
+        "LeagueTopRacers": {
+          "shape": "LeagueTopRacers"
         },
         "NextToken": {
           "shape": "NextToken"
@@ -3078,7 +3116,7 @@
           "shape": "epochTimeMillis"
         },
         "MaxResults": {
-          "shape": "MaxResults"
+          "shape": "integer"
         },
         "NextToken": {
           "shape": "NextToken"
@@ -3087,9 +3125,6 @@
     },
     "ListLeaderboardWinnersResponse": {
       "type": "structure",
-      "required": [
-        "WinnerList"
-      ],
       "members": {
         "WinnerList": {
           "shape": "WinnerList"
@@ -3102,11 +3137,20 @@
     "ListLeaderboardsRequest": {
       "type": "structure",
       "members": {
+        "LeagueType": {
+          "shape": "StandardLengthString"
+        },
+        "LeaderboardAccessRoles": {
+          "shape": "LeaderboardAccessRoles"
+        },
+        "CutoffTime": {
+          "shape": "long"
+        },
         "NextToken": {
           "shape": "NextToken"
         },
         "MaxResults": {
-          "shape": "MaxResults"
+          "shape": "integer"
         }
       }
     },
@@ -3137,7 +3181,7 @@
           "shape": "NextToken"
         },
         "MaxResults": {
-          "shape": "MaxResults"
+          "shape": "integer"
         },
         "SortBy": {
           "shape": "SortModelsBy"
@@ -3167,11 +3211,17 @@
         "LeaderboardArn": {
           "shape": "LeaderboardArn"
         },
+        "IncludeExtendedUserData": {
+          "shape": "boolean"
+        },
+        "LeaderboardAccessRoles": {
+          "shape": "LeaderboardAccessRoles"
+        },
         "NextToken": {
           "shape": "NextToken"
         },
         "MaxResults": {
-          "shape": "MaxResults"
+          "shape": "integer"
         }
       }
     },
@@ -3189,31 +3239,6 @@
         }
       }
     },
-    "ListPrivateLeaderboardsRequest": {
-      "type": "structure",
-      "members": {
-        "NextToken": {
-          "shape": "NextToken"
-        },
-        "MaxResults": {
-          "shape": "MaxResults"
-        }
-      }
-    },
-    "ListPrivateLeaderboardsResponse": {
-      "type": "structure",
-      "required": [
-        "PrivateLeaderboards"
-      ],
-      "members": {
-        "PrivateLeaderboards": {
-          "shape": "PrivateLeaderboardList"
-        },
-        "NextToken": {
-          "shape": "NextToken"
-        }
-      }
-    },
     "ListSortOrder": {
       "type": "string",
       "enum": [
@@ -3221,28 +3246,22 @@
         "DESCENDING"
       ]
     },
-    "ListSubscribedPrivateLeaderboardsRequest": {
+    "ListTagsForResourceRequest": {
       "type": "structure",
+      "required": [
+        "ResourceArn"
+      ],
       "members": {
-        "NextToken": {
-          "shape": "NextToken"
-        },
-        "MaxResults": {
-          "shape": "MaxResults"
+        "ResourceArn": {
+          "shape": "Arn"
         }
       }
     },
-    "ListSubscribedPrivateLeaderboardsResponse": {
+    "ListTagsForResourceResponse": {
       "type": "structure",
-      "required": [
-        "PrivateLeaderboards"
-      ],
       "members": {
-        "PrivateLeaderboards": {
-          "shape": "PrivateLeaderboardList"
-        },
-        "NextToken": {
-          "shape": "NextToken"
+        "Tags": {
+          "shape": "Tags"
         }
       }
     },
@@ -3253,7 +3272,7 @@
           "shape": "NextToken"
         },
         "MaxResults": {
-          "shape": "MaxResults"
+          "shape": "integer"
         }
       }
     },
@@ -3281,7 +3300,7 @@
           "shape": "NextToken"
         },
         "MaxResults": {
-          "shape": "MaxResults"
+          "shape": "integer"
         }
       }
     },
@@ -3296,20 +3315,16 @@
         }
       }
     },
-    "MaxResults": {
-      "type": "integer",
-      "max": 100,
-      "min": 1
-    },
-    "MaximumSpeed": {
-      "type": "double",
-      "max": 12.0,
-      "min": 0.1
-    },
-    "MaximumSteeringAngle": {
-      "type": "double",
-      "max": 30.0,
-      "min": 1.0
+    "Live": {
+      "type": "structure",
+      "required": [
+        "RaceArn"
+      ],
+      "members": {
+        "RaceArn": {
+          "shape": "Arn"
+        }
+      }
     },
     "Message": {
       "type": "string",
@@ -3320,21 +3335,6 @@
       "type": "string",
       "max": 100000,
       "min": 1
-    },
-    "MigrateModelsRequest": {
-      "type": "structure",
-      "members": {
-        "ModelArnList": {
-          "shape": "ModelArnList"
-        },
-        "RoleArn": {
-          "shape": "RoleArn"
-        }
-      }
-    },
-    "MigrateModelsResponse": {
-      "type": "structure",
-      "members": {}
     },
     "Model": {
       "type": "structure",
@@ -3399,7 +3399,16 @@
           "shape": "ModelError"
         },
         "ModelPackagingComplete": {
-          "shape": "Boolean"
+          "shape": "boolean"
+        },
+        "ImportModelS3SrcLocation": {
+          "shape": "StandardLengthString"
+        },
+        "ModelSizeInGb": {
+          "shape": "double"
+        },
+        "CreatedByAlias": {
+          "shape": "Alias"
         }
       }
     },
@@ -3466,6 +3475,125 @@
         "REINFORCEMENT_LEARNING"
       ]
     },
+    "ModerateConfig": {
+      "type": "structure",
+      "required": [
+        "RacersSubmissions"
+      ],
+      "members": {
+        "RacersSubmissions": {
+          "shape": "ModerateConfigRacersSubmissions"
+        },
+        "EntryMode": {
+          "shape": "StandardLengthString"
+        }
+      }
+    },
+    "ModerateConfigRacersSubmission": {
+      "type": "structure",
+      "required": [
+        "UserId",
+        "Alias",
+        "SubmissionStatus"
+      ],
+      "members": {
+        "UserId": {
+          "shape": "StandardLengthString"
+        },
+        "Alias": {
+          "shape": "Alias"
+        },
+        "ModelArn": {
+          "shape": "Arn"
+        },
+        "SubmissionStatus": {
+          "shape": "StandardLengthString"
+        },
+        "SubmissionTime": {
+          "shape": "long"
+        },
+        "EvaluationCompletedTime": {
+          "shape": "long"
+        },
+        "EvaluationStartTime": {
+          "shape": "long"
+        },
+        "UserIndex": {
+          "shape": "long"
+        },
+        "ClearedJob": {
+          "shape": "boolean"
+        }
+      }
+    },
+    "ModerateConfigRacersSubmissions": {
+      "type": "list",
+      "member": {
+        "shape": "ModerateConfigRacersSubmission"
+      }
+    },
+    "Mouth": {
+      "type": "string",
+      "enum": [
+        "Concerned",
+        "Default",
+        "Disbelief",
+        "Eating",
+        "Grimace",
+        "Sad",
+        "ScreamOpen",
+        "Serious",
+        "Smile",
+        "Tongue",
+        "Twinkle"
+      ]
+    },
+    "MultiracerConfig": {
+      "type": "structure",
+      "required": [
+        "MultiracerModeEnabled"
+      ],
+      "members": {
+        "MultiracerModeEnabled": {
+          "shape": "boolean"
+        }
+      }
+    },
+    "MultiUserProfile": {
+      "type": "structure",
+      "required": [
+        "AssociatedOn",
+        "ComputeMinutesUsed",
+        "ComputeMinutesQueued",
+        "MaxTotalComputeMinutes",
+        "MaxModels",
+        "StorageBytesUsed",
+        "UserState"
+      ],
+      "members": {
+        "AssociatedOn": {
+          "shape": "long"
+        },
+        "ComputeMinutesUsed": {
+          "shape": "integer"
+        },
+        "ComputeMinutesQueued": {
+          "shape": "integer"
+        },
+        "MaxTotalComputeMinutes": {
+          "shape": "integer"
+        },
+        "MaxModels": {
+          "shape": "integer"
+        },
+        "StorageBytesUsed": {
+          "shape": "long"
+        },
+        "UserState": {
+          "shape": "UserState"
+        }
+      }
+    },
     "Name": {
       "type": "string",
       "max": 255,
@@ -3493,39 +3621,29 @@
       "type": "integer",
       "min": 0
     },
-    "NumBotCars": {
-      "type": "integer",
-      "max": 6,
-      "min": 1
-    },
-    "NumObstacles": {
-      "type": "integer",
-      "max": 10,
-      "min": 1
-    },
     "ObjectAvoidanceConfig": {
       "type": "structure",
       "required": [
-        "RandomizeLocation",
         "NumObstacles",
-        "ObstacleType"
+        "ObstacleType",
+        "RandomizeLocation"
       ],
       "members": {
-        "RandomizeLocation": {
-          "shape": "boolean"
+        "NumObstacles": {
+          "shape": "integer"
         },
         "ObstaclePositions": {
-          "shape": "ObstablePositionList"
-        },
-        "NumObstacles": {
-          "shape": "NumObstacles"
+          "shape": "ObstaclePositionList"
         },
         "ObstacleType": {
           "shape": "ObstacleType"
+        },
+        "RandomizeLocation": {
+          "shape": "boolean"
         }
       }
     },
-    "ObstablePositionList": {
+    "ObstaclePositionList": {
       "type": "list",
       "member": {
         "shape": "ObstaclePosition"
@@ -3567,6 +3685,46 @@
         }
       }
     },
+    "PerformLeaderboardOperationRequest": {
+      "type": "structure",
+      "required": [
+        "Operation"
+      ],
+      "members": {
+        "LeaderboardArn": {
+          "shape": "Arn"
+        },
+        "Operation": {
+          "shape": "StandardLengthString"
+        },
+        "UserIds": {
+          "shape": "UserIds"
+        },
+        "EntryMode": {
+          "shape": "EntryMode"
+        },
+        "NumberOfBackupResources": {
+          "shape": "integer"
+        },
+        "ResourceIds": {
+          "shape": "ResourceIds"
+        },
+        "ReLaunch": {
+          "shape": "boolean"
+        },
+        "GetConflictingEventSchedulesRequest": {
+          "shape": "GetConflictingEventSchedulesRequest"
+        }
+      }
+    },
+    "PerformLeaderboardOperationResponse": {
+      "type": "structure",
+      "members": {
+        "GetConflictingEventSchedulesResponse": {
+          "shape": "GetConflictingEventSchedulesResponse"
+        }
+      }
+    },
     "PerspectiveCustomization": {
       "type": "structure",
       "members": {
@@ -3575,123 +3733,52 @@
         }
       }
     },
+    "PlayoffFeature": {
+      "type": "structure",
+      "required": [
+        "PlayoffType"
+      ],
+      "members": {
+        "PlayoffType": {
+          "shape": "StandardLengthString"
+        },
+        "LaunchTime": {
+          "shape": "long"
+        },
+        "GrandPrix": {
+          "shape": "GrandPrix"
+        },
+        "Tournament": {
+          "shape": "Tournament"
+        },
+        "Live": {
+          "shape": "Live"
+        }
+      }
+    },
     "PlayoffRaceTypeConfig": {
       "type": "structure",
       "members": {
         "PlayoffRaceTypeID": {
-          "shape": "PlayoffRaceTypeID"
+          "shape": "StandardLengthString"
         },
         "PlayoffRaceArn": {
-          "shape": "LeaderboardArn"
+          "shape": "Arn"
         },
         "PlayoffReleaseTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "PlayoffResultReleaseTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         }
       }
-    },
-    "PlayoffRaceTypeID": {
-      "type": "string",
-      "enum": [
-        "TOURNAMENT",
-        "GRANDPRIX"
-      ]
     },
     "PositiveInteger": {
       "type": "integer",
       "min": 1
     },
-    "PrivateLeaderboard": {
-      "type": "structure",
-      "required": [
-        "Arn",
-        "Name",
-        "Description",
-        "StartTime",
-        "EndTime",
-        "TrackArn",
-        "MinimumLaps",
-        "TotalLaps",
-        "ParticipantCount",
-        "LeaderboardImage",
-        "Status"
-      ],
-      "members": {
-        "Arn": {
-          "shape": "LeaderboardArn"
-        },
-        "Name": {
-          "shape": "LeaderboardName"
-        },
-        "Description": {
-          "shape": "Description"
-        },
-        "StartTime": {
-          "shape": "epochTimeMillis"
-        },
-        "EndTime": {
-          "shape": "epochTimeMillis"
-        },
-        "TrackArn": {
-          "shape": "TrackArn"
-        },
-        "MinimumLaps": {
-          "shape": "PositiveInteger"
-        },
-        "TotalLaps": {
-          "shape": "PositiveInteger"
-        },
-        "ParticipantCount": {
-          "shape": "NonNegativeInteger"
-        },
-        "LeaderboardImage": {
-          "shape": "LeaderboardImage"
-        },
-        "TrackImageUrl": {
-          "shape": "StandardLengthString"
-        },
-        "Alias": {
-          "shape": "Alias"
-        },
-        "Status": {
-          "shape": "LeaderboardStatus"
-        },
-        "AccessToken": {
-          "shape": "AccessToken"
-        },
-        "RaceType": {
-          "shape": "RaceType"
-        },
-        "HeadToHeadConfig": {
-          "shape": "HeadToHeadConfig"
-        },
-        "ObjectAvoidanceConfig": {
-          "shape": "ObjectAvoidanceConfig"
-        },
-        "ResettingBehaviorConfig": {
-          "shape": "ResettingBehaviorConfig"
-        },
-        "TimingMethod": {
-          "shape": "TimingMethod"
-        },
-        "Division": {
-          "shape": "Division"
-        },
-        "PlayoffRaceTypeConfig": {
-          "shape": "PlayoffRaceTypeConfig"
-        },
-        "ThemeConfig": {
-          "shape": "ThemeConfig"
-        }
-      }
-    },
-    "PrivateLeaderboardList": {
-      "type": "list",
-      "member": {
-        "shape": "PrivateLeaderboard"
-      }
+    "PreprocessType": {
+      "type": "string"
     },
     "PrivateLeaderboardParticipant": {
       "type": "structure",
@@ -3699,11 +3786,17 @@
         "AccountId": {
           "shape": "AccountId"
         },
+        "UserId": {
+          "shape": "StandardLengthString"
+        },
         "Alias": {
           "shape": "Alias"
         },
         "JoinTime": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
+        },
+        "UserAvatarConfig": {
+          "shape": "AvatarConfig"
         }
       }
     },
@@ -3736,6 +3829,45 @@
         }
       }
     },
+    "RaceConfig": {
+      "type": "structure",
+      "required": [
+        "MinimumLaps",
+        "RaceTypeConfig",
+        "ResettingBehavior",
+        "TerminationConditions",
+        "TimingMethod"
+      ],
+      "members": {
+        "MinimumLaps": {
+          "shape": "integer"
+        },
+        "RaceTypeConfig": {
+          "shape": "RaceTypeConfig"
+        },
+        "ResettingBehavior": {
+          "shape": "ResettingBehaviourConfig"
+        },
+        "TerminationConditions": {
+          "shape": "EvaluationTerminationConditions"
+        },
+        "TimingMethod": {
+          "shape": "TimingMethod"
+        },
+        "ParticipationConfig": {
+          "shape": "ParticipationConfig"
+        },
+        "CarControlConfig": {
+          "shape": "CarControlConfig"
+        },
+        "Moderated": {
+          "shape": "boolean"
+        },
+        "SubmissionsPerUser": {
+          "shape": "integer"
+        }
+      }
+    },
     "RaceList": {
       "type": "list",
       "member": {
@@ -3750,6 +3882,26 @@
         "HEAD_TO_HEAD_RACING"
       ]
     },
+    "RaceTypeConfig": {
+      "type": "structure",
+      "required": [
+        "RaceType"
+      ],
+      "members": {
+        "RaceType": {
+          "shape": "RaceType"
+        },
+        "TimeTrial": {
+          "shape": "TimeTrial"
+        },
+        "ObjectAvoidance": {
+          "shape": "ObjectAvoidanceConfig"
+        },
+        "HeadToHead": {
+          "shape": "HeadToHeadConfig"
+        }
+      }
+    },
     "RacerStatistics": {
       "type": "structure",
       "members": {
@@ -3757,27 +3909,88 @@
           "shape": "Alias"
         },
         "CrashCount": {
-          "shape": "NonNegativeInteger"
+          "shape": "integer"
         },
         "OffTrackCount": {
-          "shape": "NonNegativeInteger"
+          "shape": "integer"
         },
         "TimeTakenMillis": {
-          "shape": "epochTimeMillis"
+          "shape": "long"
         },
         "VideoUrl": {
           "shape": "Url"
         },
         "SeedNumber": {
-          "shape": "NonNegativeInteger"
+          "shape": "integer"
         }
+      }
+    },
+    "RacerSubmission": {
+      "type": "structure",
+      "members": {
+        "TopRacer": {
+          "shape": "LeaderboardSubmission"
+        },
+        "TotalParticipants": {
+          "shape": "integer"
+        }
+      }
+    },
+    "RacingDivisionsByRaceType": {
+      "type": "structure",
+      "members": {
+        "TimeTrialRacingDivision": {
+          "shape": "Division"
+        },
+        "ObjectAvoidanceRacingDivision": {
+          "shape": "Division"
+        },
+        "H2hRacingDivision": {
+          "shape": "Division"
+        }
+      }
+    },
+    "RacingDivisionConfig": {
+      "type": "structure",
+      "members": {
+        "RacingDivision": {
+          "shape": "Division"
+        },
+        "StartTime": {
+          "shape": "long"
+        },
+        "EndTime": {
+          "shape": "long"
+        }
+      }
+    },
+    "Ranking": {
+      "type": "structure",
+      "members": {
+        "ItemName": {
+          "shape": "StandardLengthString"
+        },
+        "RankingValue": {
+          "shape": "long"
+        },
+        "MediaLink": {
+          "shape": "StandardLengthString"
+        },
+        "UserAvatarConfig": {
+          "shape": "AvatarConfig"
+        }
+      }
+    },
+    "RankingList": {
+      "type": "list",
+      "member": {
+        "shape": "Ranking"
       }
     },
     "RemoveLeaderboardAccessPermissionRequest": {
       "type": "structure",
       "required": [
-        "LeaderboardArn",
-        "AccountId"
+        "LeaderboardArn"
       ],
       "members": {
         "LeaderboardArn": {
@@ -3785,6 +3998,9 @@
         },
         "AccountId": {
           "shape": "AccountId"
+        },
+        "UserId": {
+          "shape": "StandardLengthString"
         }
       }
     },
@@ -3792,7 +4008,7 @@
       "type": "structure",
       "members": {}
     },
-    "ResettingBehaviorConfig": {
+    "ResettingBehaviourConfig": {
       "type": "structure",
       "members": {
         "IsContinuousLap": {
@@ -3802,41 +4018,68 @@
           "shape": "boolean"
         },
         "MaxResetTimes": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "PenaltySeconds": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "CutOffSeconds": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
         },
         "CollisionPenaltySeconds": {
-          "shape": "NonNegativeDouble"
+          "shape": "double"
         },
         "OffTrackPenaltySeconds": {
-          "shape": "NonNegativeDouble"
+          "shape": "double"
         }
       }
     },
-    "ResourceAlreadyExistsException": {
+    "ResourceConfig": {
       "type": "structure",
-      "members": {},
-      "exception": true
+      "required": [
+        "ResourceId",
+        "ResourceStatus"
+      ],
+      "members": {
+        "ResourceId": {
+          "shape": "StandardLengthString"
+        },
+        "ResourceStatus": {
+          "shape": "StandardLengthString"
+        },
+        "ResourceCreationTime": {
+          "shape": "long"
+        },
+        "ResourceFailoverTime": {
+          "shape": "long"
+        }
+      }
     },
-    "ResourceDoesNotExistException": {
-      "type": "structure",
-      "members": {},
-      "exception": true
+    "ResourceIds": {
+      "type": "list",
+      "member": {
+        "shape": "StandardLengthString"
+      }
     },
-    "ResourceInUseException": {
+    "ResourceUrl": {
       "type": "structure",
-      "members": {},
-      "exception": true
+      "members": {
+        "Protocol": {
+          "shape": "StandardLengthString"
+        },
+        "Endpoint": {
+          "shape": "StandardLengthString"
+        },
+        "Expiry": {
+          "shape": "integer"
+        }
+      }
     },
-    "ResourceLimitExceededException": {
-      "type": "structure",
-      "members": {},
-      "exception": true
+    "ResourceUrls": {
+      "type": "list",
+      "member": {
+        "shape": "ResourceUrl"
+      }
     },
     "ResultsReleaseTimes": {
       "type": "list",
@@ -3850,18 +4093,44 @@
       "min": 1,
       "pattern": "[\\s\\S]+"
     },
-    "RoboMakerSimulationApplication": {
+    "Reward": {
       "type": "structure",
-      "required": [
-        "Name"
-      ],
       "members": {
-        "Name": {
+        "RewardId": {
           "shape": "StandardLengthString"
         },
-        "Version": {
+        "RewardName": {
           "shape": "StandardLengthString"
+        },
+        "RewardDescription": {
+          "shape": "StandardLengthString"
+        },
+        "Type": {
+          "shape": "StandardLengthString"
+        },
+        "Context": {
+          "shape": "RewardContext"
+        },
+        "AwardedTime": {
+          "shape": "long"
         }
+      }
+    },
+    "RewardContext": {
+      "type": "structure",
+      "members": {
+        "Leaderboard": {
+          "shape": "Leaderboard"
+        },
+        "CountryCode": {
+          "shape": "CountryCode"
+        }
+      }
+    },
+    "Rewards": {
+      "type": "list",
+      "member": {
+        "shape": "Reward"
       }
     },
     "RoleArn": {
@@ -3878,6 +4147,12 @@
       "members": {
         "LeaderboardArn": {
           "shape": "LeaderboardArn"
+        },
+        "TournamentRacersOverride": {
+          "shape": "TournamentRacersOverride"
+        },
+        "TournamentConfig": {
+          "shape": "TournamentConfig"
         }
       }
     },
@@ -3909,24 +4184,41 @@
         "shape": "SensorType"
       }
     },
-    "ServiceException": {
-      "type": "structure",
-      "members": {},
-      "exception": true
-    },
     "SetAliasRequest": {
       "type": "structure",
-      "required": [
-        "Alias"
-      ],
       "members": {
         "Alias": {
           "shape": "Alias"
         },
-        "AccountId": {
-          "shape": "AccountId"
+        "UserAvatarConfig": {
+          "shape": "AvatarConfig"
+        },
+        "AlternativeEmail": {
+          "shape": "StandardLengthString"
+        },
+        "CompetitionCountryCode": {
+          "shape": "StandardLengthString"
+        },
+        "FirstName": {
+          "shape": "StandardLengthString"
+        },
+        "MiddleName": {
+          "shape": "StandardLengthString"
+        },
+        "LastName": {
+          "shape": "StandardLengthString"
         }
       }
+    },
+    "SkinColor": {
+      "type": "string",
+      "enum": [
+        "Pale",
+        "Light",
+        "Brown",
+        "DarkBrown",
+        "Black"
+      ]
     },
     "SortEvaluationsBy": {
       "type": "string",
@@ -3945,11 +4237,51 @@
       "max": 3,
       "min": 1
     },
+    "SpeedRange": {
+      "type": "structure",
+      "required": [
+        "Low",
+        "High"
+      ],
+      "members": {
+        "Low": {
+          "shape": "double"
+        },
+        "High": {
+          "shape": "double"
+        }
+      }
+    },
     "StandardLengthString": {
       "type": "string",
       "max": 255,
       "min": 1,
       "pattern": "^.+$"
+    },
+    "StartBYOAJobRequest": {
+      "type": "structure",
+      "required": [
+        "TerminationConditions"
+      ],
+      "members": {
+        "Name": {
+          "shape": "StandardLengthString"
+        },
+        "TerminationConditions": {
+          "shape": "TerminationConditions"
+        }
+      }
+    },
+    "StartBYOAJobResponse": {
+      "type": "structure",
+      "required": [
+        "BYOAJobArn"
+      ],
+      "members": {
+        "BYOAJobArn": {
+          "shape": "Arn"
+        }
+      }
     },
     "StartEvaluationRequest": {
       "type": "structure",
@@ -3965,7 +4297,7 @@
           "shape": "EvaluationConfig"
         },
         "RoleArn": {
-          "shape": "RoleArn"
+          "shape": "Arn"
         }
       }
     },
@@ -3980,10 +4312,40 @@
         }
       }
     },
+    "SteeringAngleRange": {
+      "type": "structure",
+      "required": [
+        "Low",
+        "High"
+      ],
+      "members": {
+        "Low": {
+          "shape": "double"
+        },
+        "High": {
+          "shape": "double"
+        }
+      }
+    },
     "SteeringGranularity": {
       "type": "integer",
       "max": 7,
       "min": 1
+    },
+    "StopBYOAJobRequest": {
+      "type": "structure",
+      "required": [
+        "BYOAJobArn"
+      ],
+      "members": {
+        "BYOAJobArn": {
+          "shape": "Arn"
+        }
+      }
+    },
+    "StopBYOAJobResponse": {
+      "type": "structure",
+      "members": {}
     },
     "StopEvaluationRequest": {
       "type": "structure",
@@ -4015,20 +4377,101 @@
       "type": "structure",
       "members": {}
     },
+    "SubmissionOverrides": {
+      "type": "structure",
+      "required": [
+        "AliasOverride",
+        "CarCustomizationOverride"
+      ],
+      "members": {
+        "AliasOverride": {
+          "shape": "StandardLengthString"
+        },
+        "Email": {
+          "shape": "StandardLengthString"
+        },
+        "CarCustomizationOverride": {
+          "shape": "CarCustomization"
+        }
+      }
+    },
+    "TagResourceRequest": {
+      "type": "structure",
+      "required": [
+        "ResourceArn",
+        "Tags"
+      ],
+      "members": {
+        "ResourceArn": {
+          "shape": "Arn"
+        },
+        "Tags": {
+          "shape": "Tags"
+        }
+      }
+    },
+    "TagResourceResponse": {
+      "type": "structure",
+      "members": {}
+    },
+    "Tag": {
+      "type": "structure",
+      "required": [
+        "Key",
+        "Value"
+      ],
+      "members": {
+        "Key": {
+          "shape": "StandardLengthString"
+        },
+        "Value": {
+          "shape": "StandardLengthString"
+        }
+      }
+    },
+    "TagKeys": {
+      "type": "list",
+      "member": {
+        "shape": "StandardLengthString"
+      }
+    },
+    "TagrisSweep": {
+      "type": "structure",
+      "members": {
+        "TagrisAccountId": {
+          "shape": "StandardLengthString"
+        },
+        "TagrisAmazonResourceName": {
+          "shape": "StandardLengthString"
+        },
+        "TagrisInternalId": {
+          "shape": "StandardLengthString"
+        },
+        "TagrisVersion": {
+          "shape": "long"
+        }
+      }
+    },
+    "TagrisSweepList": {
+      "type": "list",
+      "member": {
+        "shape": "TagrisSweep"
+      }
+    },
+    "Tags": {
+      "type": "list",
+      "member": {
+        "shape": "Tag"
+      }
+    },
     "TerminationConditions": {
       "type": "structure",
       "required": [
         "MaxTimeInMinutes"
       ],
       "members": {
-        "RewardScore": {
-          "shape": "double"
-        },
         "MaxTimeInMinutes": {
-          "shape": "NonNegativeInteger"
-        },
-        "MaxEpisodes": {
-          "shape": "NonNegativeInteger"
+          "shape": "integer"
         }
       }
     },
@@ -4078,6 +4521,10 @@
       "max": 64,
       "min": 1
     },
+    "TimeTrial": {
+      "type": "structure",
+      "members": {}
+    },
     "TimingMethod": {
       "type": "string",
       "enum": [
@@ -4086,10 +4533,43 @@
         "TOTAL_TIME"
       ]
     },
-    "TooManyRequestsException": {
-      "type": "structure",
-      "members": {},
-      "exception": true
+    "Top": {
+      "type": "string",
+      "enum": [
+        "Helmet",
+        "Hijab",
+        "Turban",
+        "WinterHat1",
+        "WinterHat2",
+        "WinterHat3",
+        "WinterHat4",
+        "LongHairFrida",
+        "LongHairFro",
+        "LongHairFroBand",
+        "NoHair",
+        "ShortHairSides",
+        "LongHairBigHair",
+        "LongHairBob",
+        "LongHairBun",
+        "LongHairCurly",
+        "LongHairCurvy",
+        "LongHairDreads",
+        "LongHairNotTooLong",
+        "LongHairMiaWallace",
+        "LongHairStraight",
+        "LongHairStraight2",
+        "LongHairStraightStrand",
+        "ShortHairDreads01",
+        "ShortHairDreads02",
+        "ShortHairFrizzle",
+        "ShortHairShaggyMullet",
+        "ShortHairShortCurly",
+        "ShortHairShortFlat",
+        "ShortHairShortRound",
+        "ShortHairShortWaved",
+        "ShortHairTheCaesar",
+        "ShortHairTheCaesarSidePart"
+      ]
     },
     "Tournament": {
       "type": "structure",
@@ -4106,6 +4586,23 @@
         }
       }
     },
+    "TournamentConfig": {
+      "type": "structure",
+      "members": {
+        "MaxLaps": {
+          "shape": "integer"
+        },
+        "ResettingBehavior": {
+          "shape": "ResettingBehaviourConfig"
+        }
+      }
+    },
+    "TournamentRacersOverride": {
+      "type": "list",
+      "member": {
+        "shape": "StandardLengthString"
+      }
+    },
     "TournamentResults": {
       "type": "structure",
       "members": {
@@ -4113,6 +4610,9 @@
           "shape": "RaceList"
         }
       }
+    },
+    "TournamentStatus": {
+      "type": "string"
     },
     "Track": {
       "type": "structure",
@@ -4126,11 +4626,11 @@
         "TrackDescription": {
           "shape": "Description"
         },
-        "TrackReleaseTime": {
-          "shape": "epochTimeMillis"
-        },
         "TrackDifficulty": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
+        },
+        "TrackReleaseTime": {
+          "shape": "long"
         },
         "TrackLength": {
           "shape": "double"
@@ -4138,14 +4638,17 @@
         "TrackWidth": {
           "shape": "double"
         },
-        "TrackPicture": {
-          "shape": "StandardLengthString"
-        },
-        "TrackRaceTypePictureMap": {
-          "shape": "TrackRaceTypePictureMap"
-        },
         "TrackUsageCount": {
-          "shape": "PositiveInteger"
+          "shape": "integer"
+        },
+        "TrackTags": {
+          "shape": "Tags"
+        },
+        "EnabledConsoles": {
+          "shape": "EnabledConsoles"
+        },
+        "AvailableTrackFeatures": {
+          "shape": "AvailableTrackFeatures"
         }
       }
     },
@@ -4166,33 +4669,38 @@
         }
       }
     },
+    "TrackFeatures": {
+      "type": "structure",
+      "required": [
+        "Direction"
+      ],
+      "members": {
+        "Direction": {
+          "shape": "Direction"
+        }
+      }
+    },
     "TrackList": {
       "type": "list",
       "member": {
         "shape": "Track"
       }
     },
-    "TrackRaceTypePictureMap": {
+    "TrackRecord": {
       "type": "structure",
       "members": {
-        "HeadToHeadRacing": {
+        "RecordItemKey": {
           "shape": "StandardLengthString"
         },
-        "HeadToHeadRacingGray": {
-          "shape": "StandardLengthString"
-        },
-        "ObjectAvoidance": {
-          "shape": "StandardLengthString"
-        },
-        "ObjectAvoidanceGray": {
-          "shape": "StandardLengthString"
-        },
-        "TimeTrial": {
-          "shape": "StandardLengthString"
-        },
-        "TimeTrialGray": {
-          "shape": "StandardLengthString"
+        "Rankings": {
+          "shape": "RankingList"
         }
+      }
+    },
+    "TrackRecordList": {
+      "type": "list",
+      "member": {
+        "shape": "TrackRecord"
       }
     },
     "TrainingConfig": {
@@ -4228,6 +4736,12 @@
           "shape": "TrainingTerminationConditions"
         },
         "Hyperparameters": {
+          "shape": "map"
+        },
+        "PreprocessType": {
+          "shape": "PreprocessType"
+        },
+        "PreprocessParameters": {
           "shape": "map"
         },
         "HeadToHeadConfig": {
@@ -4325,8 +4839,38 @@
         }
       }
     },
+    "TshirtGraphic": {
+      "type": "string",
+      "enum": [
+        "Diamond",
+        "Hola",
+        "Pizza"
+      ]
+    },
+    "UntagResourceRequest": {
+      "type": "structure",
+      "required": [
+        "ResourceArn",
+        "TagKeys"
+      ],
+      "members": {
+        "ResourceArn": {
+          "shape": "Arn"
+        },
+        "TagKeys": {
+          "shape": "TagKeys"
+        }
+      }
+    },
+    "UntagResourceResponse": {
+      "type": "structure",
+      "members": {}
+    },
     "UpdateCarRequest": {
       "type": "structure",
+      "required": [
+        "Car"
+      ],
       "members": {
         "Car": {
           "shape": "Car"
@@ -4345,55 +4889,80 @@
       "type": "string",
       "pattern": "^https:\\/\\/.*"
     },
-    "VersioningStatus": {
+    "UserAction": {
       "type": "string",
       "enum": [
-        "OUTDATED",
-        "LATEST"
+        "ENABLE",
+        "DISABLE",
+        "RESTRICT",
+        "DELETE_RESOURCES",
+        "SET_LIMITS"
       ]
     },
-    "VpcStack": {
+    "UserIds": {
+      "type": "list",
+      "member": {
+        "shape": "StandardLengthString"
+      }
+    },
+    "UserLimits": {
       "type": "structure",
-      "required": [
-        "Status"
-      ],
       "members": {
-        "Status": {
-          "shape": "VpcStackStatus"
+        "MaxModels": {
+          "shape": "integer"
+        },
+        "MaxComputeMinutes": {
+          "shape": "integer"
         }
       }
     },
-    "VpcStackStatus": {
+    "UserState": {
       "type": "string",
       "enum": [
-        "CREATED",
-        "FAILED"
+        "ACTIVE",
+        "DISABLED",
+        "RESTRICTED"
       ]
+    },
+    "VerifyResourcesExistForTagrisRequest": {
+      "type": "structure",
+      "required": [
+        "TagrisSweepList"
+      ],
+      "members": {
+        "TagrisSweepList": {
+          "shape": "TagrisSweepList"
+        }
+      }
+    },
+    "VerifyResourcesExistForTagrisResponse": {
+      "type": "structure",
+      "required": [
+        "TagrisSweepListResult"
+      ],
+      "members": {
+        "TagrisSweepListResult": {
+          "shape": "map"
+        }
+      }
     },
     "Winner": {
       "type": "structure",
-      "required": [
-        "LeaderboardArn",
-        "LeaderboardName",
-        "WinnerAlias",
-        "CloseTime",
-        "RaceType"
-      ],
       "members": {
-        "LeaderboardArn": {
-          "shape": "LeaderboardArn"
+        "Id": {
+          "shape": "StandardLengthString"
         },
-        "LeaderboardName": {
-          "shape": "LeaderboardName"
+        "Name": {
+          "shape": "StandardLengthString"
         },
-        "WinnerAlias": {
-          "shape": "Alias"
-        },
-        "CloseTime": {
-          "shape": "epochTimeMillis"
-        },
-        "RaceType": {
+        "Type": {
           "shape": "RaceType"
+        },
+        "Rewards": {
+          "shape": "Rewards"
+        },
+        "UserAvatarConfig": {
+          "shape": "AvatarConfig"
         }
       }
     },
@@ -4414,6 +4983,9 @@
     },
     "integer": {
       "type": "integer"
+    },
+    "long": {
+      "type": "long"
     },
     "map": {
       "type": "map",
