@@ -33,7 +33,7 @@ setup(
         'Topic :: Internet :: Log Analysis'
     ],
     keywords='aws deepracer awsdeepracer',
-    python_requires='>=3.6.*, <4',
+    python_requires='>=3.6.*,<4',
     install_requires=[
         'boto3>=1.12.0',
         'python-dateutil<3.0.0,>=2.1',
