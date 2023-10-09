@@ -134,7 +134,7 @@ class TrainingMetrics:
     def _loadRound(self, data: dict, training_round: int = 1, worker: int = 0,
                    verbose=False) -> pd.DataFrame:
 
-        df = pd.read_json(json.dumps(data["metrics"]), orient="records")
+        df = pd.DataFrame(data["metrics"])
         if worker == 0:
             self.episodes_per_iteration = max(df["trial"])
 
