@@ -21,6 +21,18 @@ class TestMetrics:
         summary = tm.getSummary(method='mean', summary_index=['r-i', 'master_iteration'])
         assert (29, 10) == summary.shape  # CONSOLE_MODEL_WITH_LOGS
 
+    def test_load_multiple_metrics(self):
+
+        tm = TrainingMetrics(None, fname='./deepracer/logs/sample-drfc-3-logs/metrics/'
+                                         'TrainingMetrics.json')
+        tm.addRound(None, fname='./deepracer/logs/sample-drfc-3-logs/metrics/'
+                                'TrainingMetrics_1.json', training_round=1, worker=1)
+        summary = tm.getSummary(method='mean', summary_index=['r-i', 'master_iteration'])
+        assert (24, 10) == summary.shape  # CONSOLE_MODEL_WITH_LOGS
+
+        training = tm.getTraining()
+        assert 479 == len(training)
+
     def test_check_training(self):
         tm = TrainingMetrics(None, fname='./deepracer/logs/sample-console-logs/metrics/training/'
                                          'training-20220611205309-EHNgTNY2T9-77qXhqjBi6A.json')

@@ -210,7 +210,7 @@ class TrainingMetrics:
         ]
 
     def addRound(self, model_name: str, fname: str = None, training_round: int = 2,
-                 workers: int = 1):
+                 workers: int = 1, worker: int = None):
         """Adds a round of training metrics to the data set
 
         Arguments:
@@ -222,12 +222,18 @@ class TrainingMetrics:
 
         if fname is not None:
             data = self._getFile(fname, False)
-            df = self._loadRound(
-                data, training_round
-            )
+
+            if worker is not None:
+                df = self._loadRound(
+                    data, training_round, worker
+                )
+            else:
+                df = self._loadRound(
+                    data, training_round
+                )
 
             if self.metrics is not None:
-                self.metrics = self.metrics.append(df, ignore_index=True)
+                self.metrics = pd.concat([self.metrics, df], ignore_index=True)
             else:
                 self.metrics = df
 
@@ -244,7 +250,7 @@ class TrainingMetrics:
                 )
 
                 if self.metrics is not None:
-                    self.metrics = self.metrics.append(df, ignore_index=True)
+                    self.metrics = pd.concat([self.metrics, df], ignore_index=True)
                 else:
                     self.metrics = df
 
