@@ -442,7 +442,7 @@ class TrainingMetrics:
                 ax.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
                 ax.plot(
                     x,
-                    summary[s[0]].rolling(rolling_average, min_periods=1).mean(),
+                    summary[s[0]].rolling(rolling_average, min_periods=1).mean().values,
                     label=s[1],
                     color=s[2],
                 )
