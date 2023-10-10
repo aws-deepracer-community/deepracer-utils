@@ -367,7 +367,7 @@ class TrainingMetrics:
         eval_cnt = eval_gb.count()
         eval_agg['eval_episodes'] = eval_cnt['complete']
 
-        return pd.concat([training_agg, eval_agg], axis=1, sort=False)
+        return pd.concat([training_agg, eval_agg], axis=1, sort=True)
 
     ListStr = TypeVar('ListStr', list, str)
 
