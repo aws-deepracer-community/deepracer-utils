@@ -24,7 +24,7 @@ setup(
         'Development Status :: 5 - Production/Stable',
 
         # Pick your license as you wish
-        'License :: OSI Approved :: Apache Software License',
+        'License :: OSI Approved :: MIT No Attribution License (MIT-0)',
 
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
