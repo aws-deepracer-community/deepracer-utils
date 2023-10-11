@@ -21,14 +21,15 @@ setup(
     url='https://github.com/aws-deepracer-community/deepracer-utils/',
     author='AWS DeepRacer Community',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
 
         # Pick your license as you wish
         'License :: OSI Approved :: Apache Software License',
 
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
 
         'Topic :: Internet :: Log Analysis'
     ],
