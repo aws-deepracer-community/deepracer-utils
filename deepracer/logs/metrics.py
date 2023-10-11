@@ -134,7 +134,7 @@ class TrainingMetrics:
     def _loadRound(self, data: dict, training_round: int = 1, worker: int = 0,
                    verbose=False) -> pd.DataFrame:
 
-        df = pd.read_json(json.dumps(data["metrics"]), orient="records")
+        df = pd.DataFrame(data["metrics"])
         if worker == 0:
             self.episodes_per_iteration = max(df["trial"])
 
@@ -210,7 +210,7 @@ class TrainingMetrics:
         ]
 
     def addRound(self, model_name: str, fname: str = None, training_round: int = 2,
-                 workers: int = 1):
+                 workers: int = 1, worker: int = None):
         """Adds a round of training metrics to the data set
 
         Arguments:
@@ -222,12 +222,18 @@ class TrainingMetrics:
 
         if fname is not None:
             data = self._getFile(fname, False)
-            df = self._loadRound(
-                data, training_round
-            )
+
+            if worker is not None:
+                df = self._loadRound(
+                    data, training_round, worker
+                )
+            else:
+                df = self._loadRound(
+                    data, training_round
+                )
 
             if self.metrics is not None:
-                self.metrics = self.metrics.append(df, ignore_index=True)
+                self.metrics = pd.concat([self.metrics, df], ignore_index=True)
             else:
                 self.metrics = df
 
@@ -244,7 +250,7 @@ class TrainingMetrics:
                 )
 
                 if self.metrics is not None:
-                    self.metrics = self.metrics.append(df, ignore_index=True)
+                    self.metrics = pd.concat([self.metrics, df], ignore_index=True)
                 else:
                     self.metrics = df
 
@@ -361,7 +367,7 @@ class TrainingMetrics:
         eval_cnt = eval_gb.count()
         eval_agg['eval_episodes'] = eval_cnt['complete']
 
-        return pd.concat([training_agg, eval_agg], axis=1, sort=False)
+        return pd.concat([training_agg, eval_agg], axis=1, sort=True)
 
     ListStr = TypeVar('ListStr', list, str)
 
@@ -436,7 +442,7 @@ class TrainingMetrics:
                 ax.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
                 ax.plot(
                     x,
-                    summary[s[0]].rolling(rolling_average, min_periods=1).mean(),
+                    summary[s[0]].rolling(rolling_average, min_periods=1).mean().values,
                     label=s[1],
                     color=s[2],
                 )

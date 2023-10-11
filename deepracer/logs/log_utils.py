@@ -208,7 +208,7 @@ class SimulationLogsIO:
             dataframe = SimulationLogsIO.convert_to_pandas(eval_data)
             dataframe['stream'] = log[1]
             if full_dataframe is not None:
-                full_dataframe = full_dataframe.append(dataframe)
+                full_dataframe = pd.concat([full_dataframe, dataframe])
             else:
                 full_dataframe = dataframe
 
