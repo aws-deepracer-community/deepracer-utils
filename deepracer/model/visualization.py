@@ -18,9 +18,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import cv2
 import numpy as np
-import tensorflow as tf
-from tensorflow.gfile import GFile
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 
+from tensorflow.compat.v1.io.gfile import GFile
 
 def load_session(pb_path, sensor='FRONT_FACING_CAMERA'):
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True,

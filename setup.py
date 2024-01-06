@@ -26,15 +26,15 @@ setup(
         # Pick your license as you wish
         'License :: OSI Approved :: MIT No Attribution License (MIT-0)',
 
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
 
         'Topic :: Internet :: Log Analysis'
     ],
     keywords='aws deepracer awsdeepracer',
-    python_requires='>=3.6,<4.0',
+    python_requires='>=3.8,<4.0',
     install_requires=[
         'boto3>=1.12.0',
         'python-dateutil<3.0.0,>=2.1',
@@ -46,9 +46,9 @@ setup(
         'joblib>=0.17.0'
     ],
     extras_require={
-        'visualization': ['tensorflow==1.15.4', 'opencv-python', 'python-resize-image'],
+        'visualization': ['tensorflow', 'opencv-python', 'python-resize-image'],
         'dev': ['check-manifest'],
-        'test': ['coverage'],
+        'test': ['tensorflow','coverage','opencv-python','python-resize-image'],
     },
     project_urls={
         'Bug Reports':
