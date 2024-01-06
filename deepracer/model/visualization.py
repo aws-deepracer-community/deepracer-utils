@@ -23,9 +23,9 @@ tf.disable_v2_behavior()
 
 from tensorflow.compat.v1.io.gfile import GFile
 
-def load_session(pb_path, sensor='FRONT_FACING_CAMERA'):
+def load_session(pb_path, sensor='FRONT_FACING_CAMERA', log_device_placement=True):
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
-                                            log_device_placement=True))
+                                            log_device_placement=log_device_placement))
     print("load graph:", pb_path)
     with GFile(pb_path, 'rb') as f:
         graph_def = tf.GraphDef()

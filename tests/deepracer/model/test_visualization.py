@@ -46,7 +46,7 @@ class TestTrainingLogs:
             models_file_path.append("{}/model_{}.pb".format(model_path,n))        
 
         for model_file in models_file_path:
-            model, obs, model_out = load_session(model_file, my_sensor)
+            model, obs, model_out = load_session(model_file, my_sensor, False)
             arr = []
             for f in picture_files[:]:
                 img = cv2.imread(f)
@@ -66,7 +66,7 @@ class TestTrainingLogs:
         view_models = models_file_path[1:3]
 
         for model_file in view_models:
-            model, obs, model_out = load_session(model_file, my_sensor)
+            model, obs, model_out = load_session(model_file, my_sensor, False)
             arr = []
             for f in picture_files:
                 img = cv2.imread(f)
