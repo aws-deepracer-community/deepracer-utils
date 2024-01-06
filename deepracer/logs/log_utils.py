@@ -301,17 +301,17 @@ class AnalysisUtils:
         grouped = df.groupby([firstgroup, secondgroup])
 
         by_steps = grouped['steps'].agg(np.ptp).reset_index()
-        by_dist = grouped['delta_dist'].agg(np.sum).reset_index() \
+        by_dist = grouped['delta_dist'].agg('sum').reset_index() \
             .rename(columns={'delta_dist': 'dist'})
 
         by_start = grouped.first()['closest_waypoint'].reset_index() \
             .rename(index=str, columns={"closest_waypoint": "start_at"})
         
-        by_progress = grouped['progress'].agg(np.max).reset_index()
+        by_progress = grouped['progress'].agg('max').reset_index()
         
-        by_speed = grouped['speed'].agg(np.mean).reset_index()
+        by_speed = grouped['speed'].agg('mean').reset_index()
         
-        by_time = grouped['delta_time'].agg(np.sum).reset_index() \
+        by_time = grouped['delta_time'].agg('sum').reset_index() \
             .rename(index=str, columns={"delta_time": "time"})
         by_time['time'] = by_time['time'].astype(float)
         
@@ -329,13 +329,13 @@ class AnalysisUtils:
             if 'new_reward' not in df.columns:
                 print('new reward not found, using reward as its values')
                 df['new_reward'] = df['reward']
-            by_new_reward = grouped['new_reward'].agg(np.sum).reset_index()
+            by_new_reward = grouped['new_reward'].agg('sum').reset_index()
             result = result.merge(by_new_reward, on=[firstgroup, secondgroup])
 
         result = result.merge(by_speed, on=[firstgroup, secondgroup])
 
         if not is_eval:
-            by_reward = grouped['reward'].agg(np.sum).reset_index()
+            by_reward = grouped['reward'].agg('sum').reset_index()
             result = result.merge(by_reward, on=[firstgroup, secondgroup])
         else:
             result = result.merge(by_reset, on=[firstgroup, secondgroup])

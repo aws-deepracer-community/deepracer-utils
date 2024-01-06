@@ -20,7 +20,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 from os import listdir
 from os.path import isfile, join
 
+import math
 import numpy as np
+
 # Shapely Library
 from shapely.geometry import Polygon
 from shapely.geometry.polygon import LineString
@@ -217,7 +219,7 @@ class Track:
         l_inner_border = LineString(waypoints[:, 2:4])
         l_outer_border = LineString(waypoints[:, 4:6])
         self.road_poly = Polygon(
-            np.vstack((l_outer_border, np.flipud(l_inner_border))))
+            np.vstack((l_outer_border.coords, np.flipud(l_inner_border.coords))))
 
     def size(self):
         """Track bounding box size tuple
@@ -270,7 +272,7 @@ class GeometryUtils:
         The angle size in degrees
         """
 
-        angle = np.math.atan2(np.linalg.det([v1, v2]), np.dot(v1, v2))
+        angle = math.atan2(np.linalg.det([v1, v2]), np.dot(v1, v2))
         return np.degrees(angle)
 
     @staticmethod
