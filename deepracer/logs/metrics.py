@@ -274,7 +274,7 @@ class TrainingMetrics:
             )
 
             if self.metrics is not None:
-                self.metrics = self.metrics.append(df, ignore_index=True)
+                self.metrics = pd.concat([self.metrics, df], ignore_index=True)
             else:
                 self.metrics = df
         else:
@@ -290,7 +290,7 @@ class TrainingMetrics:
                 )
 
                 if self.metrics is not None:
-                    self.metrics = self.metrics.append(df, ignore_index=True)
+                    self.metrics = pd.concat([self.metrics, df], ignore_index=True)
                 else:
                     self.metrics = df
 
