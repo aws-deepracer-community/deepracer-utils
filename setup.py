@@ -30,7 +30,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
-
+        'Programming Language :: Python :: 3.12',
         'Topic :: Internet :: Log Analysis'
     ],
     keywords='aws deepracer awsdeepracer',
@@ -39,7 +39,7 @@ setup(
         'boto3>=1.12.0',
         'python-dateutil<3.0.0,>=2.1',
         'numpy>=1.18.0',
-        'shapely>=1.7.0,<2.0',
+        'shapely>=1.7.0',
         'matplotlib>=3.1.0',
         'pandas>=1.0.0',
         'scikit-learn>=0.22.0',
