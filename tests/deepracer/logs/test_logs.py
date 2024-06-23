@@ -27,7 +27,7 @@ class Constants:
 
     TRAIN_COLUMNS_UNIQUE_PERF = ['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
                             'dist', 'new_reward', 'speed', 'reward', 'time_if_complete',
-                            'reward_if_complete', 'quintile', 'complete', 'step_time_mean', 'step_time_var']
+                            'reward_if_complete', 'quintile', 'complete', 'step_time_mean', 'step_time_max', 'step_time_std']
 
     EVAL_COLUMNS = ['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist', 'speed',
                     'crashed', 'off_track', 'time_if_complete', 'complete']

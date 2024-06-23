@@ -361,10 +361,13 @@ class AnalysisUtils:
         if add_perf:
             by_perf_mean = grouped['delta_time'].agg('mean').reset_index() \
                 .rename(columns={'delta_time': 'step_time_mean'})
-            by_perf_var = grouped['delta_time'].agg('var').reset_index() \
-                .rename(columns={'delta_time': 'step_time_var'})
+            by_perf_max = grouped['delta_time'].agg('max').reset_index() \
+                .rename(columns={'delta_time': 'step_time_max'})
+            by_perf_std = grouped['delta_time'].agg('std').reset_index() \
+                .rename(columns={'delta_time': 'step_time_std'})
             result = result.merge(by_perf_mean, on=[firstgroup, secondgroup]) \
-                .merge(by_perf_var, on=[firstgroup, secondgroup])
+                .merge(by_perf_max, on=[firstgroup, secondgroup]) \
+                .merge(by_perf_std, on=[firstgroup, secondgroup])
 
         return result
 
