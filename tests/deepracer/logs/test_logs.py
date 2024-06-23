@@ -25,6 +25,10 @@ class Constants:
                             'dist', 'new_reward', 'speed', 'reward', 'time_if_complete',
                             'reward_if_complete', 'quintile', 'complete']
 
+    TRAIN_COLUMNS_UNIQUE_PERF = ['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
+                            'dist', 'new_reward', 'speed', 'reward', 'time_if_complete',
+                            'reward_if_complete', 'quintile', 'complete', 'step_time_mean', 'step_time_max', 'step_time_std']
+
     EVAL_COLUMNS = ['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist', 'speed',
                     'crashed', 'off_track', 'time_if_complete', 'complete']
 
@@ -77,16 +81,19 @@ class TestTrainingLogs:
         drl.load_training_trace()
         df = drl.dataframe()
 
-        simulation_agg = AnalysisUtils.simulation_agg(df, secondgroup='unique_episode')
+        simulation_agg = AnalysisUtils.simulation_agg(df, secondgroup='unique_episode', add_perf=True)
         complete_ones = simulation_agg[simulation_agg['progress'] == 100]
         fastest = complete_ones.nsmallest(5, 'time')
+        print(fastest)
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
-        assert (690, len(Constants.TRAIN_COLUMNS_UNIQUE)) == simulation_agg.shape
-        assert np.all(Constants.TRAIN_COLUMNS_UNIQUE == simulation_agg.columns)
-        assert 402 == fastest.iloc[0, 1]
-        assert 189.0 == fastest.iloc[0, 2]
-        assert 12.548 == pytest.approx(fastest.iloc[0, 5])
+        assert (690, len(Constants.TRAIN_COLUMNS_UNIQUE_PERF)) == simulation_agg.shape
+        assert np.all(Constants.TRAIN_COLUMNS_UNIQUE_PERF == simulation_agg.columns)
+        assert 402 == fastest['unique_episode'].iloc[0]
+        assert 189.0 == fastest['steps'].iloc[0]
+        assert 17.12718 == pytest.approx(fastest['dist'].iloc[0], rel=1e-3)
+        assert 0.06639 == pytest.approx(fastest['step_time_mean'].iloc[0], rel=1e-3)
+        assert 12.548 == pytest.approx(fastest['time'].iloc[0])
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_episode_analysis_drfc3_s3(self):

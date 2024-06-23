@@ -375,6 +375,7 @@ class TrainingMetrics:
             self,
             method: ListStr = "mean",
             rolling_average: int = 5,
+            rolling_average_method: str = "mean",
             figsize: tuple = (12, 5),
             rounds: list = None,
             workers: list = None,
@@ -393,8 +394,10 @@ class TrainingMetrics:
         Arguments:
         method - (str / list) Statistical value to be calculated. Examples are 'mean', 'median',
             'min' & 'max'. Default: 'mean'.
-        rolling_average - (int) Plotted line will be averaged with last number of x iterations.
+        rolling_average - (int) Plotted line will be aggregated (e.g. averaged) with last number of x iterations.
             Default: 5.
+        rolling_average_method - (str) Plotted line will be aggregated with method.
+            Default: 'mean'.
         figsize - (tuple) Matplotlib figsize definition.
         series - (list) List of series to plot, contains tuples containing column in summary to
             plot, the legend title and color of plot. Default:
@@ -442,7 +445,7 @@ class TrainingMetrics:
                 ax.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
                 ax.plot(
                     x,
-                    summary[s[0]].rolling(rolling_average, min_periods=1).mean().values,
+                    summary[s[0]].rolling(rolling_average, min_periods=1).agg(rolling_average_method).values,
                     label=s[1],
                     color=s[2],
                 )
