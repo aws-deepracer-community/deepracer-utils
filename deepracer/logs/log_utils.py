@@ -254,7 +254,7 @@ class AnalysisUtils:
     """
     @staticmethod
     def simulation_agg(df, firstgroup='iteration', secondgroup='episode',
-                       add_tstamp=False, is_eval=False):
+                       add_tstamp=False, is_eval=False, add_perf=False):
         """Groups all log data by episodes and other information and returns
         a pandas dataframe with aggregated information
 
@@ -283,7 +283,8 @@ class AnalysisUtils:
         for multiple log files loaded stream would be preferred
         add_tstamp - whether to add a timestamp, by default False
         is_eval - is data for evaluation (training if False), default: False
-
+        add_perf - add performance related data
+        
         Returns:
         Aggregated dataframe
         """
@@ -292,11 +293,13 @@ class AnalysisUtils:
             if df.nunique(axis=0)['worker'] > 1:
                 logging.warning('Multiple workers found, consider using'
                                 'secondgroup="unique_episode"')
+                
+        with pd.option_context("mode.copy_on_write", True):
+            df['delta_time'] = df['tstamp'].astype(float).diff()
+            df.loc[df['episode_status'] == 'prepare', 'delta_time'] = 0.0
 
-        df.loc[:,'delta_time'] = df['tstamp'].astype(float)-df['tstamp'].shift(1).astype(float)
-        df.loc[df['episode_status'] == 'prepare', 'delta_time'] = 0.0
-        df.loc[:,'delta_dist']=(((df['x'].shift(1)-df['x']) ** 2 + (df['y'].shift(1)-df['y']) ** 2) ** 0.5)
-        df.loc[df['episode_status'] == 'prepare', 'delta_dist'] = 0.0
+            df['delta_dist'] = (df['x'].diff() ** 2 + df['y'].diff() ** 2) ** 0.5
+            df.loc[df['episode_status'] == 'prepare', 'delta_dist'] = 0.0
         
         grouped = df.groupby([firstgroup, secondgroup])
 
@@ -354,6 +357,14 @@ class AnalysisUtils:
             result = result.merge(by_tstamp, on=[firstgroup, secondgroup])
 
         result['complete'] = np.where(result['progress'] == 100, 1, 0)
+
+        if add_perf:
+            by_perf_mean = grouped['delta_time'].agg('mean').reset_index() \
+                .rename(columns={'delta_time': 'step_time_mean'})
+            by_perf_var = grouped['delta_time'].agg('var').reset_index() \
+                .rename(columns={'delta_time': 'step_time_var'})
+            result = result.merge(by_perf_mean, on=[firstgroup, secondgroup]) \
+                .merge(by_perf_var, on=[firstgroup, secondgroup])
 
         return result
 
