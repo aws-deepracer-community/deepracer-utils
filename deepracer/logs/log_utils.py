@@ -884,7 +884,7 @@ class NewRewardUtils:
             'speed': df_row['speed'],
             'steps': df_row['steps'],
             'progress': df_row['progress'],
-            'heading': df_row['yaw'] * 180 / 3.14,
+            'heading': df_row['heading'] * 180 / 3.14, #changing yaw to heading as DeepRacerLog class load with column name heading
             'closest_waypoints': closest_waypoints,
             'steering_angle': df_row['steering_angle'] * 180 / 3.14,
             'waypoints': waypoints,
