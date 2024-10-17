@@ -39,8 +39,8 @@ class DeepRacerLog:
         "episode_status",
         "pause_duration"
     ]
-    # TODO Column names as a workaround for an excess comma in the CSV file
-    _COL_NAMES_WORKAROUND = [
+    # Additional obstacle_crash_counter column is added to the CSV file.
+    _COL_NAMES_NEW = [
         "episode",
         "steps",
         "x",
@@ -49,7 +49,6 @@ class DeepRacerLog:
         "steering_angle",
         "speed",
         "action",
-        "action_b",
         "reward",
         "done",
         "all_wheels_on_track",
@@ -58,7 +57,8 @@ class DeepRacerLog:
         "track_len",
         "tstamp",
         "episode_status",
-        "pause_duration"
+        "pause_duration",
+        "obstacle_crash_counter"
     ]
     _HYPERPARAM_KEYS = [
         "batch_size",
@@ -120,10 +120,10 @@ class DeepRacerLog:
     def _read_csv(self, path: str, splitRegex, type: LogType = LogType.TRAINING):
         try:
             csv_bytes = self.fh.get_file(path)
-            # TODO: this is a workaround and should be removed when logs are fixed
+            # Work also with a new column
             df = pd.read_csv(BytesIO(csv_bytes), encoding='utf8',
-                             names=self._COL_NAMES_WORKAROUND, header=0)
-            df = df.drop("action_b", axis=1)
+                             names=self._COL_NAMES_NEW, header=0)
+            df = df.drop("obstacle_crash_counter", axis=1)
         except pd.errors.ParserError:
             try:
                 df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES, header=0)
