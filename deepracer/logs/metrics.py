@@ -29,23 +29,22 @@ from matplotlib.figure import Figure
 
 
 class TrainingMetrics:
-    """ Class used to load in training metrics from S3
-    """
+    """Class used to load in training metrics from S3"""
 
     def __init__(
-            self,
-            bucket: str,
-            model_name: str = None,
-            pattern: str = "{}/metrics/TrainingMetrics{}.json",
-            s3_endpoint_url: str = None,
-            region: str = None,
-            profile: str = None,
-            fname: str = None,
-            url: str = None,
-            training_round: int = 1,
-            display_digits_iteration: int = 3,
-            display_digits_episode: int = 4,
-            display_digits_round: int = 2
+        self,
+        bucket: str,
+        model_name: str = None,
+        pattern: str = "{}/metrics/TrainingMetrics{}.json",
+        s3_endpoint_url: str = None,
+        region: str = None,
+        profile: str = None,
+        fname: str = None,
+        url: str = None,
+        training_round: int = 1,
+        display_digits_iteration: int = 3,
+        display_digits_episode: int = 4,
+        display_digits_round: int = 2,
     ):
         """Creates a TrainingMetrics object. Loads the first metrics file into a DataFrame if
             model name is provided.
@@ -81,24 +80,18 @@ class TrainingMetrics:
         self.bucket = bucket
         self.pattern = pattern
         if model_name is not None:
-            data = self._getS3File(bucket, self.pattern.format(model_name, ''), False)
-            df = self._loadRound(
-                data, training_round
-            )
+            data = self._getS3File(bucket, self.pattern.format(model_name, ""), False)
+            df = self._loadRound(data, training_round)
             self.metrics = df
 
         if fname is not None:
             data = self._getFile(fname, False)
-            df = self._loadRound(
-                data, training_round
-            )
+            df = self._loadRound(data, training_round)
             self.metrics = df
 
         if url is not None:
             data = self._getUrlFile(url, False)
-            df = self._loadRound(
-                data, training_round
-            )
+            df = self._loadRound(data, training_round)
             self.metrics = df
 
     def _getFile(self, fname: str, verbose=False) -> dict:
@@ -131,8 +124,9 @@ class TrainingMetrics:
 
         return data
 
-    def _loadRound(self, data: dict, training_round: int = 1, worker: int = 0,
-                   verbose=False) -> pd.DataFrame:
+    def _loadRound(
+        self, data: dict, training_round: int = 1, worker: int = 0, verbose=False
+    ) -> pd.DataFrame:
 
         df = pd.DataFrame(data["metrics"])
         if worker == 0:
@@ -140,23 +134,17 @@ class TrainingMetrics:
 
         df["round"] = training_round
         df["iteration"] = (
-            ((df["episode"] - 1) / self.episodes_per_iteration)
-            .apply(np.floor)
-            .astype(int)
+            ((df["episode"] - 1) / self.episodes_per_iteration).apply(np.floor).astype(int)
         )
         if self.metrics is not None:
             prev_metrics = self.metrics[self.metrics["round"] < training_round]
             if prev_metrics.shape[0] > 0:
-                df["master_iteration"] = (
-                    max(prev_metrics["master_iteration"]) + 1 + df["iteration"]
-                )
+                df["master_iteration"] = max(prev_metrics["master_iteration"]) + 1 + df["iteration"]
             else:
                 df["master_iteration"] = df["iteration"]
         else:
             df["master_iteration"] = df["iteration"]
-        self.max_iteration_strlen = max(
-            len(str(max(df["iteration"]))), self.max_iteration_strlen
-        )
+        self.max_iteration_strlen = max(len(str(max(df["iteration"]))), self.max_iteration_strlen)
         df["r-i"] = (
             df["round"].astype(str).str.pad(width=self.max_round_strlen, side="left", fillchar="0")
             + "-"
@@ -175,13 +163,13 @@ class TrainingMetrics:
         df["worker"] = worker
         df["reward"] = df["reward_score"]
         df["completion"] = df["completion_percentage"]
-        df["complete"] = df["episode_status"].apply(
-            lambda x: 1 if x == "Lap complete" else 0
-        )
+        df["complete"] = df["episode_status"].apply(lambda x: 1 if x == "Lap complete" else 0)
         df["time"] = df["elapsed_time_in_milliseconds"] / 1000
         print(
-            ("Successfully loaded training round %i for worker %i: Iterations: %i, " +
-             "Training episodes: %i, Evaluation episodes: %i")
+            (
+                "Successfully loaded training round %i for worker %i: Iterations: %i, "
+                + "Training episodes: %i, Evaluation episodes: %i"
+            )
             % (
                 training_round,
                 worker,
@@ -209,8 +197,14 @@ class TrainingMetrics:
             ]
         ]
 
-    def addRound(self, model_name: str, fname: str = None, training_round: int = 2,
-                 workers: int = 1, worker: int = None):
+    def addRound(
+        self,
+        model_name: str,
+        fname: str = None,
+        training_round: int = 2,
+        workers: int = 1,
+        worker: int = None,
+    ):
         """Adds a round of training metrics to the data set
 
         Arguments:
@@ -224,13 +218,9 @@ class TrainingMetrics:
             data = self._getFile(fname, False)
 
             if worker is not None:
-                df = self._loadRound(
-                    data, training_round, worker
-                )
+                df = self._loadRound(data, training_round, worker)
             else:
-                df = self._loadRound(
-                    data, training_round
-                )
+                df = self._loadRound(data, training_round)
 
             if self.metrics is not None:
                 self.metrics = pd.concat([self.metrics, df], ignore_index=True)
@@ -245,17 +235,16 @@ class TrainingMetrics:
                     worker_suffix = ""
 
                 data = self._getS3File(self.bucket, self.pattern.format(model_name, worker_suffix))
-                df = self._loadRound(
-                    data, training_round, w
-                )
+                df = self._loadRound(data, training_round, w)
 
                 if self.metrics is not None:
                     self.metrics = pd.concat([self.metrics, df], ignore_index=True)
                 else:
                     self.metrics = df
 
-    def reloadRound(self, model_name: str, fname: str = None, training_round: int = 2,
-                    workers: int = 1):
+    def reloadRound(
+        self, model_name: str, fname: str = None, training_round: int = 2, workers: int = 1
+    ):
         """Adds a round of training metrics to the data set
 
         Arguments:
@@ -265,13 +254,11 @@ class TrainingMetrics:
         """
 
         print("Reloading round {}".format(training_round))
-        self.metrics = self.metrics[self.metrics['round'] != training_round]
+        self.metrics = self.metrics[self.metrics["round"] != training_round]
 
         if fname is not None:
             data = self._getFile(fname, False)
-            df = self._loadRound(
-                data, training_round
-            )
+            df = self._loadRound(data, training_round)
 
             if self.metrics is not None:
                 self.metrics = pd.concat([self.metrics, df], ignore_index=True)
@@ -285,9 +272,7 @@ class TrainingMetrics:
                     worker_suffix = ""
 
                 data = self._getS3File(self.bucket, self.pattern.format(model_name, worker_suffix))
-                df = self._loadRound(
-                    data, training_round, w
-                )
+                df = self._loadRound(data, training_round, w)
 
                 if self.metrics is not None:
                     self.metrics = pd.concat([self.metrics, df], ignore_index=True)
@@ -310,9 +295,14 @@ class TrainingMetrics:
         """
         return self.metrics[self.metrics["phase"] == "training"]
 
-    def getSummary(self, rounds: list = None, method: str = "mean",
-                   summary_index: list = ["r-i", "iteration"], workers: list = None,
-                   completedLapsOnly=False) -> pd.DataFrame:
+    def getSummary(
+        self,
+        rounds: list = None,
+        method: str = "mean",
+        summary_index: list = ["r-i", "iteration"],
+        workers: list = None,
+        completedLapsOnly=False,
+    ) -> pd.DataFrame:
         """Provides summary per iteration. Data for evaluation and training is separated.
 
         Arguments:
@@ -353,7 +343,7 @@ class TrainingMetrics:
         ]
 
         training_cnt = training_gb.count()
-        training_agg['train_episodes'] = training_cnt['complete']
+        training_agg["train_episodes"] = training_cnt["complete"]
 
         eval_gb = eval_input.groupby(summary_index)
         eval_agg = getattr(eval_gb, method)()
@@ -365,29 +355,29 @@ class TrainingMetrics:
         ]
 
         eval_cnt = eval_gb.count()
-        eval_agg['eval_episodes'] = eval_cnt['complete']
+        eval_agg["eval_episodes"] = eval_cnt["complete"]
 
         return pd.concat([training_agg, eval_agg], axis=1, sort=True)
 
-    ListStr = TypeVar('ListStr', list, str)
+    ListStr = TypeVar("ListStr", list, str)
 
     def plotProgress(
-            self,
-            method: ListStr = "mean",
-            rolling_average: int = 5,
-            rolling_average_method: str = "mean",
-            figsize: tuple = (12, 5),
-            rounds: list = None,
-            workers: list = None,
-            series: list = [
-                ("eval_completion", "Evaluation", "orange"),
-                ("train_completion", "Training", "blue"),
-            ],
-            title: str = "Completion per Iteration ({})",
-            xlabel: str = "Iteration",
-            ylabel: str = "Percent complete ({})",
-            completedLapsOnly: bool = False,
-            grid: bool = False,
+        self,
+        method: ListStr = "mean",
+        rolling_average: int = 5,
+        rolling_average_method: str = "mean",
+        figsize: tuple = (12, 5),
+        rounds: list = None,
+        workers: list = None,
+        series: list = [
+            ("eval_completion", "Evaluation", "orange"),
+            ("train_completion", "Training", "blue"),
+        ],
+        title: str = "Completion per Iteration ({})",
+        xlabel: str = "Iteration",
+        ylabel: str = "Percent complete ({})",
+        completedLapsOnly: bool = False,
+        grid: bool = False,
     ) -> Figure:
         """Plots training progress. Allows selection of multiple iterations.
 
@@ -430,9 +420,10 @@ class TrainingMetrics:
         else:
             axarr = axarr_raw
 
-        for (m, ax) in zip(plot_methods, axarr):
-            summary = self.getSummary(method=m, rounds=rounds, workers=workers,
-                                      completedLapsOnly=completedLapsOnly)
+        for m, ax in zip(plot_methods, axarr):
+            summary = self.getSummary(
+                method=m, rounds=rounds, workers=workers, completedLapsOnly=completedLapsOnly
+            )
             labels = max(math.floor(summary.shape[0] / (15 / len(plot_methods))), 1)
             x = []
             t = []
@@ -445,7 +436,10 @@ class TrainingMetrics:
                 ax.scatter(x, summary[s[0]], s=2, alpha=0.5, color=s[2])
                 ax.plot(
                     x,
-                    summary[s[0]].rolling(rolling_average, min_periods=1).agg(rolling_average_method).values,
+                    summary[s[0]]
+                    .rolling(rolling_average, min_periods=1)
+                    .agg(rolling_average_method)
+                    .values,
                     label=s[1],
                     color=s[2],
                 )
@@ -454,7 +448,7 @@ class TrainingMetrics:
             ax.set_ylabel(ylabel.format(m))
             ax.set_xticks(t)
 
-            ax.legend(loc='upper left')
+            ax.legend(loc="upper left")
 
             self.metrics["iteration"].unique()
             if rounds is not None:
@@ -464,8 +458,7 @@ class TrainingMetrics:
 
             for r in unique_rounds:
                 label = "{}-{}".format(
-                    str(r).zfill(self.max_round_strlen),
-                    "0".zfill(self.max_iteration_strlen)
+                    str(r).zfill(self.max_round_strlen), "0".zfill(self.max_iteration_strlen)
                 )
                 ax.axvline(x=label, dashes=[0.25, 0.75], linewidth=0.5, color="black")
 

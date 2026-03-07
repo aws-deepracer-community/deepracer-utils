@@ -37,7 +37,7 @@ class DeepRacerLog:
         "track_len",
         "tstamp",
         "episode_status",
-        "pause_duration"
+        "pause_duration",
     ]
     # Additional obstacle_crash_counter column is added to the CSV file.
     _COL_NAMES_NEW = [
@@ -58,7 +58,29 @@ class DeepRacerLog:
         "tstamp",
         "episode_status",
         "pause_duration",
-        "obstacle_crash_counter"
+        "obstacle_crash_counter",
+    ]
+    # Additional optional wall_clock column (wall-clock timestamp per step).
+    _COL_NAMES_FULL = [
+        "episode",
+        "steps",
+        "x",
+        "y",
+        "heading",
+        "steering_angle",
+        "speed",
+        "action",
+        "reward",
+        "done",
+        "all_wheels_on_track",
+        "progress",
+        "closest_waypoint",
+        "track_len",
+        "tstamp",
+        "episode_status",
+        "pause_duration",
+        "obstacle_crash_counter",
+        "wall_clock",
     ]
     _HYPERPARAM_KEYS = [
         "batch_size",
@@ -72,7 +94,7 @@ class DeepRacerLog:
         "num_epochs",
         "stack_size",
         "term_cond_avg_score",
-        "term_cond_max_episodes"
+        "term_cond_max_episodes",
     ]
 
     _MAX_JOBS = 5
@@ -82,8 +104,13 @@ class DeepRacerLog:
     _action_space: dict = None
     _agent_and_network: dict = None
 
-    def __init__(self, model_folder: str = None, filehandler: FileHandler = None,
-                 simtrace_path=None, robomaker_log_path=None):
+    def __init__(
+        self,
+        model_folder: str = None,
+        filehandler: FileHandler = None,
+        simtrace_path=None,
+        robomaker_log_path=None,
+    ):
         """Initializes an object by pointing the class instance to a folder.
 
          Folder can be on local file system using the model_folder attribute or
@@ -101,12 +128,16 @@ class DeepRacerLog:
         self.model_folder = model_folder
 
         if simtrace_path is not None:
-            raise Exception("Overriding simtrace_path is no longer supported. "
-                            "Override path using custom File Handler if required.")
+            raise Exception(
+                "Overriding simtrace_path is no longer supported. "
+                "Override path using custom File Handler if required."
+            )
 
         if robomaker_log_path is not None:
-            raise Exception("Overriding robomaker_log_path is no longer supported. "
-                            "Override path using custom File Handler if required.")
+            raise Exception(
+                "Overriding robomaker_log_path is no longer supported. "
+                "Override path using custom File Handler if required."
+            )
 
         if filehandler is not None:
             self.fh = filehandler
@@ -120,26 +151,38 @@ class DeepRacerLog:
     def _read_csv(self, path: str, splitRegex, type: LogType = LogType.TRAINING):
         try:
             csv_bytes = self.fh.get_file(path)
-            # Work also with a new column
-            df = pd.read_csv(BytesIO(csv_bytes), encoding='utf8',
-                             names=self._COL_NAMES_NEW, header=0)
+            # Try the fullest column list first (includes optional wall_clock)
+            df = pd.read_csv(
+                BytesIO(csv_bytes), encoding="utf8", names=self._COL_NAMES_FULL, header=0
+            )
             df = df.drop("obstacle_crash_counter", axis=1)
         except pd.errors.ParserError:
             try:
-                df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES, header=0)
+                # Without wall_clock
+                df = pd.read_csv(
+                    BytesIO(csv_bytes), encoding="utf8", names=self._COL_NAMES_NEW, header=0
+                )
+                df = df.drop("obstacle_crash_counter", axis=1)
             except pd.errors.ParserError:
-                # Older logs don't have pause_duration, so we're handling this
-                df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES[:-1], header=0)
+                try:
+                    df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES, header=0)
+                except pd.errors.ParserError:
+                    # Older logs don't have pause_duration, so we're handling this
+                    df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES[:-1], header=0)
+
+        # Always ensure wall_clock column is present (NaN for traces that predate it)
+        if "wall_clock" not in df.columns:
+            df["wall_clock"] = float("nan")
 
         path_split = splitRegex.search(path)
         df["iteration"] = int(path_split.groups()[1])
 
-        if (self.fh.type == LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS and type == LogType.TRAINING):
+        if self.fh.type == LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS and type == LogType.TRAINING:
             df["worker"] = int(path_split.groups()[0])
         else:
             df["worker"] = 0
 
-        if (type == LogType.EVALUATION):
+        if type == LogType.EVALUATION:
             df["stream"] = path_split.groups()[0]
 
         if df.dtypes["action"].name == "object":
@@ -148,24 +191,24 @@ class DeepRacerLog:
         return df
 
     def load(self, force=False, ignore_metadata=None):
-        """ Method that loads DeepRacer training trace logs into a dataframe.
+        """Method that loads DeepRacer training trace logs into a dataframe.
 
         This method is trying to load logs based on folder type.
 
         """
         if self.fh.type == LogFolderType.CONSOLE_MODEL_WITH_LOGS:
             self.load_robomaker_logs(force=force)
+        elif self.fh.type == LogFolderType.DROA_SOLUTION_LOGS:
+            self.load_training_trace(force=force, ignore_metadata=ignore_metadata)
         elif self.fh.type == LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS:
             self.load_training_trace(force=force, ignore_metadata=ignore_metadata)
         elif self.fh.type == LogFolderType.DRFC_MODEL_SINGLE_WORKERS:
             self.load_training_trace(force=force, ignore_metadata=ignore_metadata)
         else:
-            raise Exception(
-                "Unable to load logs from folder.")            
-
+            raise Exception("Unable to load logs from folder.")
 
     def load_training_trace(self, force: bool = False, ignore_metadata: bool = False):
-        """ Method that loads DeepRacer training trace logs into a dataframe.
+        """Method that loads DeepRacer training trace logs into a dataframe.
 
         The method will load in all available workers and iterations from one training run.
 
@@ -181,14 +224,15 @@ class DeepRacerLog:
 
         if self.fh.training_simtrace_path is None:
             raise Exception(
-                "Path to training-simtrace not configured. Check FileHandler configuration.")
+                "Path to training-simtrace not configured. Check FileHandler configuration."
+            )
 
-        model_iterations = self.fh.list_files(check_exist=True,
-                                              filterexp=self.fh.training_simtrace_path)
+        model_iterations = self.fh.list_files(
+            check_exist=True, filterexp=self.fh.training_simtrace_path
+        )
 
         if len(model_iterations) == 0:
-            raise Exception(
-                "No training-simtrace files found.")
+            raise Exception("No training-simtrace files found.")
 
         splitRegex = re.compile(self.fh.training_simtrace_split)
 
@@ -197,21 +241,22 @@ class DeepRacerLog:
         )
 
         if len(dfs) == 0:
-            raise Exception(
-                "No training-simtrace files loaded.")
+            raise Exception("No training-simtrace files loaded.")
 
         # Merge into single large DataFrame
         df = pd.concat(dfs, ignore_index=True)
 
-        workers_count = df["worker"].astype('int32').max() + 1
+        workers_count = df["worker"].astype("int32").max() + 1
         episodes_per_worker = {}
         episodes_until_worker = {0: 0}
         episodes_per_iteration = 0
         for worker in range(workers_count):
-            episodes_per_worker[worker] = df[(df["iteration"] == 0) & (
-                df["worker"] == worker)]["episode"].max() + 1
-            episodes_until_worker[worker + 1] = episodes_per_worker[worker] + \
-                episodes_until_worker[worker]
+            episodes_per_worker[worker] = (
+                df[(df["iteration"] == 0) & (df["worker"] == worker)]["episode"].max() + 1
+            )
+            episodes_until_worker[worker + 1] = (
+                episodes_per_worker[worker] + episodes_until_worker[worker]
+            )
             episodes_per_iteration += episodes_per_worker[worker]
 
         logging.debug("workers_count: {}".format(workers_count))
@@ -219,16 +264,17 @@ class DeepRacerLog:
         logging.debug("episodes_until_worker: {}".format(episodes_until_worker))
         logging.debug("episodes_per_iteration: {}".format(episodes_per_iteration))
 
-        df["unique_episode"] = df["episode"] % np.array([episodes_per_worker[worker]
-                                                         for worker in df["worker"]]) + \
-            np.array([episodes_until_worker[worker] for worker in df["worker"]]) + \
-            df["iteration"] * episodes_per_iteration
+        df["unique_episode"] = (
+            df["episode"] % np.array([episodes_per_worker[worker] for worker in df["worker"]])
+            + np.array([episodes_until_worker[worker] for worker in df["worker"]])
+            + df["iteration"] * episodes_per_iteration
+        )
 
-        self.df = df.sort_values(['unique_episode', 'steps']).reset_index(drop=True)
+        self.df = df.sort_values(["unique_episode", "steps"]).reset_index(drop=True)
         self.active = LogType.TRAINING
 
     def load_evaluation_trace(self, force: bool = False, ignore_metadata: bool = False):
-        """ Method that loads DeepRacer evaluation trace logs into a dataframe.
+        """Method that loads DeepRacer evaluation trace logs into a dataframe.
 
         The method will load in all available evaluations found in a model folder.
 
@@ -244,14 +290,15 @@ class DeepRacerLog:
 
         if self.fh.evaluation_simtrace_path is None:
             raise Exception(
-                "Path to evaluation-simtrace not configured. Check FileHandler configuration.")
+                "Path to evaluation-simtrace not configured. Check FileHandler configuration."
+            )
 
-        model_iterations = self.fh.list_files(check_exist=True,
-                                              filterexp=self.fh.evaluation_simtrace_path)
+        model_iterations = self.fh.list_files(
+            check_exist=True, filterexp=self.fh.evaluation_simtrace_path
+        )
 
         if len(model_iterations) == 0:
-            raise Exception(
-                "No evaluation-simtrace files found.")
+            raise Exception("No evaluation-simtrace files found.")
 
         splitRegex = re.compile(self.fh.evaluation_simtrace_split)
 
@@ -261,17 +308,16 @@ class DeepRacerLog:
         )
 
         if len(dfs) == 0:
-            raise Exception(
-                "No evaluation-simtrace files loaded.")
+            raise Exception("No evaluation-simtrace files loaded.")
 
         # Merge into single large DataFrame
         df = pd.concat(dfs, ignore_index=True)
 
-        self.df = df.sort_values(['stream', 'episode', 'steps']).reset_index(drop=True)
+        self.df = df.sort_values(["stream", "episode", "steps"]).reset_index(drop=True)
         self.active = LogType.EVALUATION
 
     def load_robomaker_logs(self, type: LogType = LogType.TRAINING, force: bool = False):
-        """ Method that loads DeepRacer robomaker log into a dataframe.
+        """Method that loads DeepRacer robomaker log into a dataframe.
 
         The method will load in all available workers and iterations from one training run.
 
@@ -290,15 +336,15 @@ class DeepRacerLog:
             raise Exception("Only supported with LogFolderType.CONSOLE_MODEL_WITH_LOGS")
 
         if type == LogType.TRAINING:
-
             raw_data = self.fh.get_file(self.fh.training_robomaker_log_path)
 
             self._parse_robomaker_metadata(raw_data)
 
             episodes_per_iteration = self._hyperparameters["num_episodes_between_training"]
 
-            data: list[str] = SimulationLogsIO.load_buffer(TextIOWrapper(
-                BytesIO(raw_data), encoding='utf-8'))
+            data: list[str] = SimulationLogsIO.load_buffer(
+                TextIOWrapper(BytesIO(raw_data), encoding="utf-8")
+            )
             self.df = SimulationLogsIO.convert_to_pandas(data, episodes_per_iteration)
             self.active = LogType.TRAINING
 
@@ -306,13 +352,15 @@ class DeepRacerLog:
             dfs = []
 
             if type == LogType.EVALUATION:
-                submissions = self.fh.list_files(check_exist=True,
-                                                 filterexp=self.fh.evaluation_robomaker_log_path)
+                submissions = self.fh.list_files(
+                    check_exist=True, filterexp=self.fh.evaluation_robomaker_log_path
+                )
                 splitRegex = re.compile(self.fh.evaluation_robomaker_split)
 
             elif type == LogType.LEADERBOARD:
-                submissions = self.fh.list_files(check_exist=True,
-                                                 filterexp=self.fh.leaderboard_robomaker_log_path)
+                submissions = self.fh.list_files(
+                    check_exist=True, filterexp=self.fh.leaderboard_robomaker_log_path
+                )
                 splitRegex = re.compile(self.fh.leaderboard_robomaker_log_split)
 
             for i, log in enumerate(submissions):
@@ -322,8 +370,9 @@ class DeepRacerLog:
                 if i == 0:
                     self._parse_robomaker_metadata(raw_data)
 
-                data = SimulationLogsIO.load_buffer(TextIOWrapper(
-                    BytesIO(raw_data), encoding='utf-8'))
+                data = SimulationLogsIO.load_buffer(
+                    TextIOWrapper(BytesIO(raw_data), encoding="utf-8")
+                )
                 dfs.append(SimulationLogsIO.convert_to_pandas(data, stream=path_split.groups()[0]))
 
             self.df = pd.concat(dfs, ignore_index=True)
@@ -334,7 +383,7 @@ class DeepRacerLog:
         outside_hyperparams = True
         hyperparameters_string = ""
 
-        data_wrapper = TextIOWrapper(BytesIO(raw_data), encoding='utf-8')
+        data_wrapper = TextIOWrapper(BytesIO(raw_data), encoding="utf-8")
 
         for line in data_wrapper.readlines():
             if outside_hyperparams:
@@ -357,7 +406,7 @@ class DeepRacerLog:
 
         data_wrapper.seek(0)
 
-        regex = r'Sensor list (\[[\'a-zA-Z, _-]+\]), network ([a-zA-Z_]+), simapp_version ([\d.]+)'
+        regex = r"Sensor list (\[[\'a-zA-Z, _-]+\]), network ([a-zA-Z_]+), simapp_version ([\d.]+)"
         agent_and_network = {}
         for line in data_wrapper.readlines():
             if " * /WORLD_NAME: " in line:
@@ -376,16 +425,14 @@ class DeepRacerLog:
 
     def _parse_trace_metadata(self):
 
-        _ = self.fh.list_files(check_exist=True,
-                               filterexp=self.fh.model_metadata_path)
+        _ = self.fh.list_files(check_exist=True, filterexp=self.fh.model_metadata_path)
 
-        _ = self.fh.list_files(check_exist=True,
-                               filterexp=self.fh.hyperparameters_path)
+        _ = self.fh.list_files(check_exist=True, filterexp=self.fh.hyperparameters_path)
 
         model_metadata: dict = None
-        model_metadata = json.load(TextIOWrapper(
-            BytesIO(self.fh.get_file(self.fh.model_metadata_path)),
-            encoding='utf-8'))
+        model_metadata = json.load(
+            TextIOWrapper(BytesIO(self.fh.get_file(self.fh.model_metadata_path)), encoding="utf-8")
+        )
         self._action_space = model_metadata["action_space"]
 
         self._agent_and_network = {}
@@ -393,21 +440,19 @@ class DeepRacerLog:
         self._agent_and_network["network"] = model_metadata["neural_network"]
         self._agent_and_network["simapp_version"] = model_metadata["version"]
 
-        self._hyperparameters = json.load(TextIOWrapper(
-            BytesIO(self.fh.get_file(self.fh.hyperparameters_path)),
-            encoding='utf-8'))
+        self._hyperparameters = json.load(
+            TextIOWrapper(BytesIO(self.fh.get_file(self.fh.hyperparameters_path)), encoding="utf-8")
+        )
 
     def dataframe(self):
-        """Method that provides the dataframe for analysis of this log.
-        """
+        """Method that provides the dataframe for analysis of this log."""
         if self.df is None:
             raise Exception("Model not loaded, call load() before requesting a dataframe.")
 
         return self.df
 
     def hyperparameters(self) -> dict:
-        """Method that provides the hyperparameters for this log.
-        """
+        """Method that provides the hyperparameters for this log."""
 
         if self._hyperparameters is not None:
             return self._hyperparameters
@@ -415,8 +460,7 @@ class DeepRacerLog:
             raise Exception("Hyperparameters not yet loaded")
 
     def action_space(self) -> dict:
-        """Method that provides the action space for this log.
-        """
+        """Method that provides the action space for this log."""
         if self._action_space is not None:
             return self._action_space
         else:
@@ -437,4 +481,5 @@ class DeepRacerLog:
         if self.df is not None and not force:
             raise Exception(
                 "The dataframe has already been loaded, add force=True"
-                + " to your load method to load again")
+                + " to your load method to load again"
+            )

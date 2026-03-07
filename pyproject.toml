@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepracer-utils"
+dynamic = ["version"]
+description = "A set of tools for working with DeepRacer training"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = "MIT-0"
+requires-python = ">=3.9"
+authors = [{ name = "AWS DeepRacer Community" }]
+keywords = ["aws", "deepracer", "awsdeepracer"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: Log Analysis",
+]
+dependencies = [
+    "boto3>=1.26.0",
+    "python-dateutil>=2.1,<3.0.0",
+    "numpy>=1.21.0",
+    "shapely>=2.0.0",
+    "matplotlib>=3.5.0",
+    "pandas>=1.3.0",
+    "scikit-learn>=1.0.0",
+    "joblib>=1.0.0",
+]
+
+[project.optional-dependencies]
+visualization = [
+    "tensorflow>=2.10.0",
+    "opencv-python",
+    "Pillow",
+]
+dev = [
+    "check-manifest",
+    "black",
+    "setuptools-scm>=8",
+]
+test = [
+    "tensorflow>=2.10.0",
+    "coverage",
+    "opencv-python",
+    "Pillow",
+    "pytest>=7.0.0",
+]
+
+[project.urls]
+"Bug Reports" = "https://github.com/aws-deepracer-community/deepracer-utils/issues"
+"Source" = "https://github.com/aws-deepracer-community/deepracer-utils/"
+
+[tool.setuptools.packages.find]
+include = ["deepracer", "deepracer.*"]
+
+[tool.setuptools_scm]
+tag_regex = "^deepracer-utils-(?P<version>[vV]?[\\d]+(?:\\.[\\d]+)*(?:[._-]?[\\w]+)*)$"
+
+[tool.pytest.ini_options]
+filterwarnings = ["ignore::DeprecationWarning:tensorflow.*"]
+
+[tool.black]
+target-version = ["py310", "py312"]
+line-length = 100
+
+[tool.pylint.main]
+ignore-paths = ["tests"]

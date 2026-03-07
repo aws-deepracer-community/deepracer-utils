@@ -1,3 +1,0 @@
-include versioneer.py
-include deepracer/_version.py
-recursive-include deepracer/boto3_enhancer *.json

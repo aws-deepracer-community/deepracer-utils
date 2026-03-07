@@ -24,8 +24,7 @@ import math
 import numpy as np
 
 # Shapely Library
-from shapely.geometry import Polygon
-from shapely.geometry.polygon import LineString
+from shapely.geometry import LineString, Polygon
 
 
 class TrackIO:
@@ -50,10 +49,9 @@ class TrackIO:
         self.base_path = base_path
 
     def get_tracks(self):
-        """Yields tracks in the base_path
-        """
+        """Yields tracks in the base_path"""
         for f in sorted(listdir(self.base_path)):
-            if isfile(join(self.base_path, f)) and f.endswith('.npy'):
+            if isfile(join(self.base_path, f)) and f.endswith(".npy"):
                 yield f
 
     def get_track_waypoints(self, track_name):
@@ -70,7 +68,7 @@ class TrackIO:
         A list of elements where each element is a numpy array of six float values
         representing coordinates of track points in meters
         """
-        if track_name.endswith('.npy'):
+        if track_name.endswith(".npy"):
             track_name = track_name[:-4]
         return np.load("%s/%s.npy" % (self.base_path, track_name))
 
@@ -87,7 +85,7 @@ class TrackIO:
         Returns:
         A Track instance representing the track
         """
-        if track_name.endswith('.npy'):
+        if track_name.endswith(".npy"):
             track_name = track_name[:-4]
 
         waypoints = self.get_track_waypoints(track_name)
@@ -102,8 +100,9 @@ class TrackBreakdown:
     Not essential, but can help find interesting sections to pay attention to.
     """
 
-    def __init__(self, vert_lines, track_segments, segment_x, segment_y,
-                 segment_xerr, segment_yerr):
+    def __init__(
+        self, vert_lines, track_segments, segment_x, segment_y, segment_xerr, segment_yerr
+    ):
         # vert_lines are indices of waypoints put on the track in squares to mark a section
         self.vert_lines = vert_lines
         # track segments determine location of descriptions on the right graph, formed of tuple
@@ -123,70 +122,70 @@ class TrackBreakdown:
 
 reinvent2018 = TrackBreakdown(
     vert_lines=[10, 25, 32, 33, 40, 45, 50, 53, 61, 67],
-    track_segments=[(15, 100, 'hairpin'),
-                    (32, 100, 'right'),
-                    (42, 100, 'left'),
-                    (51, 100, 'left'),
-                    (63, 100, 'left')],
-
+    track_segments=[
+        (15, 100, "hairpin"),
+        (32, 100, "right"),
+        (42, 100, "left"),
+        (51, 100, "left"),
+        (63, 100, "left"),
+    ],
     segment_x=np.array([15, 32, 42, 51, 63]),
     segment_y=np.array([0, 0, 0, 0, 0]),
-
     segment_xerr=np.array([[5, 1, 2, 1, 2], [10, 1, 3, 2, 4]]),
-    segment_yerr=np.array([[0, 0, 0, 0, 0], [150, 150, 150, 150, 150]]))
+    segment_yerr=np.array([[0, 0, 0, 0, 0], [150, 150, 150, 150, 150]]),
+)
 
 london_loop = TrackBreakdown(
     vert_lines=[0, 15, 17, 30, 33, 45, 75, 105, 120, 132, 150, 180, 190, 210],
-    track_segments=[(0, 100, 'long sharp left'),
-                    (17, 90, 'mild right'),
-                    (33, 80, 'tight left'),
-                    (75, 100, 'mild chicane'),
-                    (120, 100, 'short sharp left'),
-                    (150, 90, 'left'),
-                    (190, 100, 'right')],
-
+    track_segments=[
+        (0, 100, "long sharp left"),
+        (17, 90, "mild right"),
+        (33, 80, "tight left"),
+        (75, 100, "mild chicane"),
+        (120, 100, "short sharp left"),
+        (150, 90, "left"),
+        (190, 100, "right"),
+    ],
     segment_x=np.array([0, 17, 33, 75, 120, 150, 190]),
     segment_y=np.array([0, 0, 0, 0, 0, 0, 0]),
+    segment_xerr=np.array([[0, 0, 0, 0, 0, 0, 0], [15, 13, 12, 30, 12, 30, 20]]),
+    segment_yerr=np.array([[0, 0, 0, 0, 0, 0, 0], [150, 150, 150, 150, 150, 150, 150]]),
+)
 
-    segment_xerr=np.array(
-        [[0, 0, 0, 0, 0, 0, 0], [15, 13, 12, 30, 12, 30, 20]]),
-    segment_yerr=np.array(
-        [[0, 0, 0, 0, 0, 0, 0], [150, 150, 150, 150, 150, 150, 150]]))
-
-track_breakdown = {'reinvent2018': reinvent2018, 'london_loop': london_loop}
+track_breakdown = {"reinvent2018": reinvent2018, "london_loop": london_loop}
 
 
 track_meta = {}
-track_meta['Austin'] = 'American Hills Speedway'
-track_meta['Singapore'] = 'Asia Pacific Bay Loop'
-track_meta['Monaco'] = 'European Seaside Circuit'
-track_meta['Aragon'] = 'Stratus Loop'
-track_meta['Belille'] = 'Cumulo Turnpike'
-track_meta['Albert'] = 'Yun Speedway'
-track_meta['July_2020'] = 'Roger Raceway'
-track_meta['FS_June2020'] = 'Fumiaki Loop'
-track_meta['Spain_track'] = 'Circuit de Barcelona-Catalunya'
-track_meta['reInvent2019_track'] = 'The 2019 DeepRacer Championship Cup'
-track_meta['reinvent_base'] = 're:Invent 2018'
-track_meta['AmericasGeneratedInclStart'] = 'Badaal Track'
-track_meta['LGSWide'] = 'SOLA Speedway'
-track_meta['Vegas_track'] = 'AWS Summit Raceway'
-track_meta['Canada_Training'] = 'Toronto Turnpike Training'
-track_meta['Canada_Eval'] = 'Toronto Turnpike Eval'
-track_meta['Mexico_track'] = 'Cumulo Carrera Training'
-track_meta['Mexico_track_eval'] = 'Cumulo Carrera Eval'
-track_meta['China_track'] = 'Shanghai Sudu Training'
-track_meta['China_eval_track'] = 'Shanghai Sudu Eval'
-track_meta['New_York_Track'] = 'Empire City Training'
-track_meta['New_York_Eval_Track'] = 'Empire City Eval'
-track_meta['Tokyo_Training_track'] = 'Kumo Torakku Training'
-track_meta['Virtual_May19_Train_track'] = 'London Loop Training'
-track_meta['Bowtie_track'] = 'Bowtie Track'
-track_meta['Oval_track'] = 'Oval Track'
-track_meta['reInvent2019_wide'] = 're:Invent 2018 Wide'
-track_meta['reInvent2019_wide_mirrored'] = 're:Invent 2018 Wide Mirrored'
-track_meta['H_track'] = 'H track'
-track_meta['Straight_track'] = 'Straight track'
+track_meta["Austin"] = "American Hills Speedway"
+track_meta["Singapore"] = "Asia Pacific Bay Loop"
+track_meta["Monaco"] = "European Seaside Circuit"
+track_meta["Aragon"] = "Stratus Loop"
+track_meta["Belille"] = "Cumulo Turnpike"
+track_meta["Albert"] = "Yun Speedway"
+track_meta["July_2020"] = "Roger Raceway"
+track_meta["FS_June2020"] = "Fumiaki Loop"
+track_meta["Spain_track"] = "Circuit de Barcelona-Catalunya"
+track_meta["reInvent2019_track"] = "The 2019 DeepRacer Championship Cup"
+track_meta["reinvent_base"] = "re:Invent 2018"
+track_meta["AmericasGeneratedInclStart"] = "Badaal Track"
+track_meta["LGSWide"] = "SOLA Speedway"
+track_meta["Vegas_track"] = "AWS Summit Raceway"
+track_meta["Canada_Training"] = "Toronto Turnpike Training"
+track_meta["Canada_Eval"] = "Toronto Turnpike Eval"
+track_meta["Mexico_track"] = "Cumulo Carrera Training"
+track_meta["Mexico_track_eval"] = "Cumulo Carrera Eval"
+track_meta["China_track"] = "Shanghai Sudu Training"
+track_meta["China_eval_track"] = "Shanghai Sudu Eval"
+track_meta["New_York_Track"] = "Empire City Training"
+track_meta["New_York_Eval_Track"] = "Empire City Eval"
+track_meta["Tokyo_Training_track"] = "Kumo Torakku Training"
+track_meta["Virtual_May19_Train_track"] = "London Loop Training"
+track_meta["Bowtie_track"] = "Bowtie Track"
+track_meta["Oval_track"] = "Oval Track"
+track_meta["reInvent2019_wide"] = "re:Invent 2018 Wide"
+track_meta["reInvent2019_wide_mirrored"] = "re:Invent 2018 Wide Mirrored"
+track_meta["H_track"] = "H track"
+track_meta["Straight_track"] = "Straight track"
 
 
 class Track:
@@ -219,19 +218,18 @@ class Track:
         l_inner_border = LineString(waypoints[:, 2:4])
         l_outer_border = LineString(waypoints[:, 4:6])
         self.road_poly = Polygon(
-            np.vstack((l_outer_border.coords, np.flipud(l_inner_border.coords))))
+            np.vstack((l_outer_border.coords, np.flipud(l_inner_border.coords)))
+        )
 
     def size(self):
-        """Track bounding box size tuple
-        """
+        """Track bounding box size tuple"""
         return (
             np.max(self.outer_border[:, 0]) - np.min(self.outer_border[:, 0]),
-            np.max(self.outer_border[:, 1]) - np.min(self.outer_border[:, 1])
+            np.max(self.outer_border[:, 1]) - np.min(self.outer_border[:, 1]),
         )
 
     def ratio(self):
-        """Track size ratio
-        """
+        """Track size ratio"""
         s = self.size()
         return s[1] / s[0]
 
@@ -314,7 +312,7 @@ class GeometryUtils:
         A vector perpendicular to input vector
         """
 
-        return np.cross(v, [0, 0, -1])[:2]
+        return np.cross(np.append(v, 0), [0, 0, -1])[:2]
 
     @staticmethod
     def crossing_point_for_two_lines(l1_p1, l1_p2, l2_p1, l2_p2):
@@ -335,14 +333,14 @@ class GeometryUtils:
         Numpy array with coordinates of a point where the two lines cross
         """
 
-        s = np.vstack([l1_p1, l1_p2, l2_p1, l2_p2])        # s for stacked
+        s = np.vstack([l1_p1, l1_p2, l2_p1, l2_p2])  # s for stacked
         h = np.hstack((s, np.ones((4, 1))))  # h for homogeneous
-        l1 = np.cross(h[0], h[1])           # get first line
-        l2 = np.cross(h[2], h[3])           # get second line
-        x, y, z = np.cross(l1, l2)          # point of intersection
-        if z == 0:                          # lines are parallel
-            return [float('inf'), float('inf')]
-        return [np.round(x/z, 3), np.round(y/z, 3)]
+        l1 = np.cross(h[0], h[1])  # get first line
+        l2 = np.cross(h[2], h[3])  # get second line
+        x, y, z = np.cross(l1, l2)  # point of intersection
+        if z == 0:  # lines are parallel
+            return [float("inf"), float("inf")]
+        return [np.round(x / z, 3), np.round(y / z, 3)]
 
     @staticmethod
     def get_a_and_b_for_function(p1, p2):
@@ -377,8 +375,7 @@ class GeometryUtils:
         """
         vector = GeometryUtils.perpendicular_vector(GeometryUtils.vector(l1_p1, l1_p2))
         p2 = p + vector
-        crossing_point = GeometryUtils.crossing_point_for_two_lines(
-            l1_p1, l1_p2, p, p2)
+        crossing_point = GeometryUtils.crossing_point_for_two_lines(l1_p1, l1_p2, p, p2)
         return crossing_point
 
     @staticmethod
@@ -405,21 +402,15 @@ class GeometryUtils:
         p - point to test
         tolerated_angle - how big of an angle can we tolerate? Default is 5 degrees
         """
-        a1 = GeometryUtils.get_angle(
-            GeometryUtils.vector(lp1, lp2),
-            GeometryUtils.vector(lp1, p)
-        )
+        a1 = GeometryUtils.get_angle(GeometryUtils.vector(lp1, lp2), GeometryUtils.vector(lp1, p))
 
-        a2 = GeometryUtils.get_angle(
-            GeometryUtils.vector(lp2, p),
-            GeometryUtils.vector(lp2, p)
-        )
+        a2 = GeometryUtils.get_angle(GeometryUtils.vector(lp2, p), GeometryUtils.vector(lp2, p))
         return a1 < 5 and a2 < 5
 
 
 class TrackPlotter:
-    """Utility to help when trying to plot a track
-    """
+    """Utility to help when trying to plot a track"""
+
     @staticmethod
     def plot_track(to_plot, show=True):
         """Plot waypoints for the track
