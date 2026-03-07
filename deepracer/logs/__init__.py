@@ -1,6 +1,16 @@
-from .handler import FileHandler, FSFileHandler, S3FileHandler
-from .log import DeepRacerLog
-from .log_utils import (ActionBreakdownUtils, AnalysisUtils, EvaluationUtils,
-                        NewRewardUtils, PlottingUtils, SimulationLogsIO)
-from .metrics import TrainingMetrics
-from .misc import LogFolderType, LogType
+from .handler import (
+    FileHandler as FileHandler,
+    FSFileHandler as FSFileHandler,
+    S3FileHandler as S3FileHandler,
+)
+from .log import DeepRacerLog as DeepRacerLog
+from .log_utils import (
+    ActionBreakdownUtils as ActionBreakdownUtils,
+    AnalysisUtils as AnalysisUtils,
+    EvaluationUtils as EvaluationUtils,
+    NewRewardUtils as NewRewardUtils,
+    PlottingUtils as PlottingUtils,
+    SimulationLogsIO as SimulationLogsIO,
+)
+from .metrics import TrainingMetrics as TrainingMetrics
+from .misc import LogFolderType as LogFolderType, LogType as LogType

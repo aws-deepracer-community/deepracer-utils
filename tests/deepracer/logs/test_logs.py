@@ -2,52 +2,128 @@ import os
 import warnings
 
 import numpy as np
-import pandas as pd
 import pytest
 from boto3.exceptions import PythonDeprecationWarning
 
-from deepracer.logs import (AnalysisUtils, DeepRacerLog, LogFolderType,
-                            LogType, S3FileHandler, SimulationLogsIO)
+from deepracer.logs import (
+    AnalysisUtils,
+    DeepRacerLog,
+    LogFolderType,
+    LogType,
+    S3FileHandler,
+    SimulationLogsIO,
+)
 
 
 class Constants:
+    RAW_COLUMNS = [
+        "episode",
+        "steps",
+        "x",
+        "y",
+        "heading",
+        "steering_angle",
+        "speed",
+        "action",
+        "reward",
+        "done",
+        "all_wheels_on_track",
+        "progress",
+        "closest_waypoint",
+        "track_len",
+        "tstamp",
+        "episode_status",
+        "pause_duration",
+        "wall_clock",
+        "iteration",
+        "worker",
+        "unique_episode",
+    ]
 
-    RAW_COLUMNS = ['episode', 'steps', 'x', 'y', 'heading', 'steering_angle', 'speed', 'action',
-                   'reward', 'done', 'all_wheels_on_track', 'progress', 'closest_waypoint',
-                   'track_len', 'tstamp', 'episode_status', 'pause_duration', 'wall_clock',
-                   'iteration', 'worker', 'unique_episode']
+    TRAIN_COLUMNS = [
+        "iteration",
+        "episode",
+        "steps",
+        "start_at",
+        "progress",
+        "time",
+        "dist",
+        "new_reward",
+        "speed",
+        "reward",
+        "time_if_complete",
+        "reward_if_complete",
+        "quintile",
+        "complete",
+    ]
 
-    TRAIN_COLUMNS = ['iteration', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist',
-                     'new_reward', 'speed', 'reward', 'time_if_complete',
-                     'reward_if_complete', 'quintile', 'complete']
+    TRAIN_COLUMNS_UNIQUE = [
+        "iteration",
+        "unique_episode",
+        "steps",
+        "start_at",
+        "progress",
+        "time",
+        "dist",
+        "new_reward",
+        "speed",
+        "reward",
+        "time_if_complete",
+        "reward_if_complete",
+        "quintile",
+        "complete",
+    ]
 
-    TRAIN_COLUMNS_UNIQUE = ['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
-                            'dist', 'new_reward', 'speed', 'reward', 'time_if_complete',
-                            'reward_if_complete', 'quintile', 'complete']
+    TRAIN_COLUMNS_UNIQUE_PERF = [
+        "iteration",
+        "unique_episode",
+        "steps",
+        "start_at",
+        "progress",
+        "time",
+        "dist",
+        "new_reward",
+        "speed",
+        "reward",
+        "time_if_complete",
+        "reward_if_complete",
+        "quintile",
+        "complete",
+        "step_time_mean",
+        "step_time_max",
+        "step_time_std",
+    ]
 
-    TRAIN_COLUMNS_UNIQUE_PERF = ['iteration', 'unique_episode', 'steps', 'start_at', 'progress', 'time',
-                            'dist', 'new_reward', 'speed', 'reward', 'time_if_complete',
-                            'reward_if_complete', 'quintile', 'complete', 'step_time_mean', 'step_time_max', 'step_time_std']
-
-    EVAL_COLUMNS = ['stream', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist', 'speed',
-                    'crashed', 'off_track', 'time_if_complete', 'complete']
+    EVAL_COLUMNS = [
+        "stream",
+        "episode",
+        "steps",
+        "start_at",
+        "progress",
+        "time",
+        "dist",
+        "speed",
+        "crashed",
+        "off_track",
+        "time_if_complete",
+        "complete",
+    ]
 
 
 class TestTrainingLogs:
-
     @pytest.fixture(autouse=True)
     def run_before_and_after_tests(self, tmpdir):
         warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
         yield
 
     def test_load_model_path(self):
-        drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog("./deepracer/logs/sample-console-logs")
         drl.load_training_trace(ignore_metadata=True)
 
         assert LogFolderType.CONSOLE_MODEL_WITH_LOGS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
 
     def test_dataframe(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
         drl.load_training_trace(ignore_metadata=True)
         df = drl.dataframe()
 
@@ -55,20 +131,20 @@ class TestTrainingLogs:
         assert np.all(Constants.RAW_COLUMNS == df.columns)
 
     def test_dataframe_load(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
         drl.load(ignore_metadata=True)
         df = drl.dataframe()
 
         assert (44842, len(Constants.RAW_COLUMNS[:-2])) == df.shape
 
     def test_episode_analysis(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
         drl.load_training_trace(ignore_metadata=True)
         df = drl.dataframe()
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert (560, len(Constants.TRAIN_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.TRAIN_COLUMNS == simulation_agg.columns)
@@ -77,35 +153,36 @@ class TestTrainingLogs:
         assert 14.128 == pytest.approx(fastest.iloc[0, 5])
 
     def test_episode_analysis_drfc3_local(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-3-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-drfc-3-logs")
         drl.load_training_trace()
         df = drl.dataframe()
 
-        simulation_agg = AnalysisUtils.simulation_agg(df, secondgroup='unique_episode', add_perf=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(
+            df, secondgroup="unique_episode", add_perf=True
+        )
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
         print(fastest)
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert (690, len(Constants.TRAIN_COLUMNS_UNIQUE_PERF)) == simulation_agg.shape
         assert np.all(Constants.TRAIN_COLUMNS_UNIQUE_PERF == simulation_agg.columns)
-        assert 402 == fastest['unique_episode'].iloc[0]
-        assert 189.0 == fastest['steps'].iloc[0]
-        assert 17.12718 == pytest.approx(fastest['dist'].iloc[0], rel=1e-3)
-        assert 0.06639 == pytest.approx(fastest['step_time_mean'].iloc[0], rel=1e-3)
-        assert 12.548 == pytest.approx(fastest['time'].iloc[0])
+        assert 402 == fastest["unique_episode"].iloc[0]
+        assert 189.0 == fastest["steps"].iloc[0]
+        assert 17.12718 == pytest.approx(fastest["dist"].iloc[0], rel=1e-3)
+        assert 0.06639 == pytest.approx(fastest["step_time_mean"].iloc[0], rel=1e-3)
+        assert 12.548 == pytest.approx(fastest["time"].iloc[0])
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_episode_analysis_drfc3_s3(self):
-        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
-                           prefix="Analysis-Demo-DRFC-3")
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"), prefix="Analysis-Demo-DRFC-3")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_training_trace()
         df = drl.dataframe()
 
-        simulation_agg = AnalysisUtils.simulation_agg(df, secondgroup='unique_episode')
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, secondgroup="unique_episode")
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert (690, len(Constants.TRAIN_COLUMNS_UNIQUE)) == simulation_agg.shape
@@ -115,7 +192,7 @@ class TestTrainingLogs:
         assert 12.548 == pytest.approx(fastest.iloc[0, 5])
 
     def test_episode_analysis_drfc1_local(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-1-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-drfc-1-logs")
         drl.load()
         df = drl.dataframe()
 
@@ -124,8 +201,8 @@ class TestTrainingLogs:
         drl.agent_and_network()
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         print(simulation_agg.columns)
@@ -137,8 +214,7 @@ class TestTrainingLogs:
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_episode_analysis_drfc1_s3(self):
-        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
-                           prefix="Analysis-Demo-DRFC-1")
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"), prefix="Analysis-Demo-DRFC-1")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_training_trace()
         df = drl.dataframe()
@@ -148,8 +224,8 @@ class TestTrainingLogs:
         drl.agent_and_network()
 
         simulation_agg = AnalysisUtils.simulation_agg(df)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert (540, len(Constants.TRAIN_COLUMNS)) == simulation_agg.shape
@@ -159,7 +235,7 @@ class TestTrainingLogs:
         assert 12.212 == pytest.approx(fastest.iloc[0, 5])
 
     def test_load_robomaker_logs(self):
-        drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog("./deepracer/logs/sample-console-logs")
 
         with pytest.raises(Exception):
             assert drl.hyperparameters()
@@ -175,8 +251,8 @@ class TestTrainingLogs:
         df = drl.dataframe()
         print(df)
         simulation_agg = AnalysisUtils.simulation_agg(df)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert 4 == len(drl.agent_and_network())
         assert 13 == len(drl.hyperparameters())
@@ -196,30 +272,68 @@ class TestEvaluationLogs:
         yield
 
     def test_load_evaluation_logs(self):
-        logs = [['deepracer/logs/sample-console-logs/logs/evaluation/'
-                 'evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log', 'log-1'],
-                ['deepracer/logs/sample-console-logs/logs/evaluation/'
-                 'evaluation-20220612083839-PMfF__s5QJSQT_-E0rEYwg-robomaker.log', 'log-2']]
+        logs = [
+            [
+                "deepracer/logs/sample-console-logs/logs/evaluation/"
+                "evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log",
+                "log-1",
+            ],
+            [
+                "deepracer/logs/sample-console-logs/logs/evaluation/"
+                "evaluation-20220612083839-PMfF__s5QJSQT_-E0rEYwg-robomaker.log",
+                "log-2",
+            ],
+        ]
 
         bulk = SimulationLogsIO.load_a_list_of_logs(logs)
 
         assert (1479, 21) == bulk.shape
-        assert np.all(['index', 'iteration', 'episode', 'steps', 'x', 'y', 'yaw',
-                       'steering_angle', 'speed', 'action', 'reward', 'done', 'on_track',
-                       'progress', 'closest_waypoint', 'track_len', 'tstamp', 'episode_status',
-                       'pause_duration', 'wall_clock', 'stream'] == bulk.columns)
+        assert np.all(
+            [
+                "index",
+                "iteration",
+                "episode",
+                "steps",
+                "x",
+                "y",
+                "yaw",
+                "steering_angle",
+                "speed",
+                "action",
+                "reward",
+                "done",
+                "on_track",
+                "progress",
+                "closest_waypoint",
+                "track_len",
+                "tstamp",
+                "episode_status",
+                "pause_duration",
+                "wall_clock",
+                "stream",
+            ]
+            == bulk.columns
+        )
 
     def test_summarize_evaluation_logs(self):
-        logs = [['deepracer/logs/sample-console-logs/logs/evaluation/'
-                 'evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log', 'log-1'],
-                ['deepracer/logs/sample-console-logs/logs/evaluation/'
-                 'evaluation-20220612083839-PMfF__s5QJSQT_-E0rEYwg-robomaker.log', 'log-2']]
+        logs = [
+            [
+                "deepracer/logs/sample-console-logs/logs/evaluation/"
+                "evaluation-20220612082853-IBZwYd0MRMqgwKlAe7bb0A-robomaker.log",
+                "log-1",
+            ],
+            [
+                "deepracer/logs/sample-console-logs/logs/evaluation/"
+                "evaluation-20220612083839-PMfF__s5QJSQT_-E0rEYwg-robomaker.log",
+                "log-2",
+            ],
+        ]
 
         bulk = SimulationLogsIO.load_a_list_of_logs(logs)
 
-        simulation_agg = AnalysisUtils.simulation_agg(bulk, 'stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(bulk, "stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
@@ -228,40 +342,40 @@ class TestEvaluationLogs:
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
         drl.load_evaluation_trace(ignore_metadata=True)
         df = drl.dataframe()
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_laptime_single_laps(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
         drl.load_evaluation_trace(ignore_metadata=True)
         df = drl.dataframe()
-        df = df[df['stream'] == '20220612082523']
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+        df = df[df["stream"] == "20220612082523"]
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
 
-        total_time = simulation_agg.groupby('stream').agg({'time': ['sum']}).iloc[0,0]
-        start_to_finish_time = df['tstamp'].max() - df['tstamp'].min()
+        total_time = simulation_agg.groupby("stream").agg({"time": ["sum"]}).iloc[0, 0]
+        start_to_finish_time = df["tstamp"].max() - df["tstamp"].min()
 
         assert (3, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
         assert start_to_finish_time > total_time
 
     def test_evaluation_laptime_cont_laps(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-1-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-drfc-1-logs")
         drl.load_evaluation_trace(ignore_metadata=True)
         df = drl.dataframe()
-        df = df[df['stream'] == '20220709200242']
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+        df = df[df["stream"] == "20220709200242"]
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
 
-        total_time = simulation_agg.groupby('stream').agg({'time': ['sum']}).iloc[0,0]
-        start_to_finish_time = df['tstamp'].max() - df['tstamp'].min()
+        total_time = simulation_agg.groupby("stream").agg({"time": ["sum"]}).iloc[0, 0]
+        start_to_finish_time = df["tstamp"].max() - df["tstamp"].min()
 
         assert (3, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
         assert np.all(Constants.EVAL_COLUMNS == simulation_agg.columns)
@@ -269,14 +383,13 @@ class TestEvaluationLogs:
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_s3(self):
-        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
-                           prefix="Analysis-Demo")
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"), prefix="Analysis-Demo")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_evaluation_trace()
         df = drl.dataframe()
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert 3 == len(drl.agent_and_network())
         assert 13 == len(drl.hyperparameters())
@@ -287,12 +400,12 @@ class TestEvaluationLogs:
         assert 15.932 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_drfc1_local(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-1-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-drfc-1-logs")
         drl.load_evaluation_trace()
         df = drl.dataframe()
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert 3 == len(drl.agent_and_network())
         assert 13 == len(drl.hyperparameters())
@@ -306,14 +419,13 @@ class TestEvaluationLogs:
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc1_s3(self):
-        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
-                           prefix="Analysis-Demo-DRFC-1")
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"), prefix="Analysis-Demo-DRFC-1")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_evaluation_trace()
         df = drl.dataframe()
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert LogFolderType.DRFC_MODEL_SINGLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
@@ -322,12 +434,12 @@ class TestEvaluationLogs:
         assert 13.405 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_drfc3_local(self):
-        drl = DeepRacerLog(model_folder='./deepracer/logs/sample-drfc-3-logs')
+        drl = DeepRacerLog(model_folder="./deepracer/logs/sample-drfc-3-logs")
         drl.load_evaluation_trace()
         df = drl.dataframe()
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
@@ -337,14 +449,13 @@ class TestEvaluationLogs:
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc3_s3(self):
-        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
-                           prefix="Analysis-Demo-DRFC-3")
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"), prefix="Analysis-Demo-DRFC-3")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_evaluation_trace()
         df = drl.dataframe()
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS == drl.fh.type  # CONSOLE_MODEL_WITH_LOGS
         assert LogType.EVALUATION == drl.active
@@ -353,13 +464,13 @@ class TestEvaluationLogs:
         assert 14.730 == pytest.approx(fastest.iloc[0, 5])
 
     def test_evaluation_analysis_robomaker_local(self):
-        drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog("./deepracer/logs/sample-console-logs")
         drl.load_robomaker_logs(type=LogType.EVALUATION)
         df = drl.dataframe()
 
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert 4 == len(drl.agent_and_network())
         assert 13 == len(drl.hyperparameters())
@@ -374,15 +485,14 @@ class TestEvaluationLogs:
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_robomaker_s3(self):
-        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
-                           prefix="Analysis-Demo")
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"), prefix="Analysis-Demo")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_robomaker_logs(type=LogType.EVALUATION)
         df = drl.dataframe()
 
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         assert 4 == len(drl.agent_and_network())
         assert 13 == len(drl.hyperparameters())
@@ -403,13 +513,13 @@ class TestLeadershipLogs:
         yield
 
     def test_load_robomaker_logs(self):
-        drl = DeepRacerLog('./deepracer/logs/sample-console-logs')
+        drl = DeepRacerLog("./deepracer/logs/sample-console-logs")
         drl.load_robomaker_logs(type=LogType.LEADERBOARD)
         df = drl.dataframe()
 
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         # four more episodes in the log
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape
@@ -420,15 +530,14 @@ class TestLeadershipLogs:
 
     @pytest.mark.skipif(os.environ.get("TOX_S3_BUCKET", None) is None, reason="Requires AWS access")
     def test_evaluation_analysis_drfc3_s3(self):
-        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"),
-                           prefix="Analysis-Demo")
+        fh = S3FileHandler(bucket=os.environ.get("TOX_S3_BUCKET"), prefix="Analysis-Demo")
         drl = DeepRacerLog(filehandler=fh)
         drl.load_robomaker_logs(type=LogType.LEADERBOARD)
         df = drl.dataframe()
 
-        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
-        complete_ones = simulation_agg[simulation_agg['progress'] == 100]
-        fastest = complete_ones.nsmallest(5, 'time')
+        simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+        complete_ones = simulation_agg[simulation_agg["progress"] == 100]
+        fastest = complete_ones.nsmallest(5, "time")
 
         # four more episodes in the log
         assert (6, len(Constants.EVAL_COLUMNS)) == simulation_agg.shape

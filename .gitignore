@@ -26,6 +26,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+deepracer_utils-*/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -126,6 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ruff
+.ruff_cache/
 
 # vscode
 .vscode/launch.json
