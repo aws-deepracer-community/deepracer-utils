@@ -33,7 +33,7 @@ dependencies = [
 [project.optional-dependencies]
 visualization = [
     "tensorflow>=2.10.0",
-    "opencv-python",
+    "opencv-python-headless",
     "Pillow",
 ]
 dev = [
