@@ -12,6 +12,7 @@ from deepracer.logs import (
     LogType,
     S3FileHandler,
     SimulationLogsIO,
+    TarFileHandler,
 )
 
 
@@ -545,3 +546,111 @@ class TestLeadershipLogs:
         assert 2 == fastest.iloc[0, 1]
         assert 234.0 == fastest.iloc[0, 2]
         assert 15.598 == pytest.approx(fastest.iloc[0, 5])
+
+
+class TestDroaSolutionLogs:
+    """Tests for the new console log format (DROA_SOLUTION_LOGS).
+
+    Sample data under ``sample-droa-solution-logs/`` contains 2 training iteration files
+    and 1 evaluation iteration file.
+    """
+
+    # sample-droa-solution-logs holds training iterations 0 and 1 → 846 data rows
+    _SAMPLE_DIR = "./deepracer/logs/sample-droa-solution-logs"
+    _SAMPLE_TAR = "./deepracer/logs/sample-droa-solution-logs.tar.gz"
+    _EXPECTED_ROWS = 846
+
+    # evaluation simtrace: 3 episodes, 1302 data rows
+    _EVAL_ONLY_DIR = "./deepracer/logs/sample-droa-eval-only"
+    _EVAL_ONLY_TAR = "./deepracer/logs/sample-droa-eval-only.tar.gz"
+    _EXPECTED_EVAL_ROWS = 1302
+
+    @pytest.fixture(autouse=True)
+    def suppress_warnings(self):
+        warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
+        yield
+
+    def test_fs_detect_v2_format(self):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        assert LogFolderType.DROA_SOLUTION_LOGS == drl.fh.type
+
+    def test_fs_load_training_trace(self):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert (self._EXPECTED_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+        assert np.all(Constants.RAW_COLUMNS == df.columns)
+
+    def test_fs_load_shortcut(self):
+        """load() on a v2 folder should call load_training_trace automatically."""
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert LogType.TRAINING == drl.active
+        assert self._EXPECTED_ROWS == len(df)
+
+    def test_tar_detect_v2_format(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        fh.determine_root_folder_type()
+        assert LogFolderType.DROA_SOLUTION_LOGS == fh.type
+
+    def test_tar_list_files(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        csvs = fh.list_files(
+            filterexp=r"sim-trace/training/[^/]+/training-simtrace/[^/]+-iteration\.csv"
+        )
+        assert 2 == len(csvs)
+
+    def test_tar_load_training_trace(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert LogFolderType.DROA_SOLUTION_LOGS == drl.fh.type
+        assert (self._EXPECTED_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+        assert np.all(Constants.RAW_COLUMNS == df.columns)
+
+    def test_tar_episode_analysis(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        simulation_agg = AnalysisUtils.simulation_agg(df)
+        assert len(Constants.TRAIN_COLUMNS) == len(simulation_agg.columns)
+        assert np.all(Constants.TRAIN_COLUMNS == simulation_agg.columns)
+
+    def test_fs_load_evaluation_trace(self):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_evaluation_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert LogType.EVALUATION == drl.active
+        assert (self._EXPECTED_EVAL_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+
+    def test_tar_load_evaluation_trace(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_evaluation_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert LogType.EVALUATION == drl.active
+        assert (self._EXPECTED_EVAL_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+
+    def test_eval_only_tar_detect(self):
+        """Evaluation-only archive must be detected as DROA_SOLUTION_LOGS."""
+        fh = TarFileHandler(self._EVAL_ONLY_TAR)
+        fh.determine_root_folder_type()
+        assert LogFolderType.DROA_SOLUTION_LOGS == fh.type
+
+    def test_eval_only_tar_load(self):
+        fh = TarFileHandler(self._EVAL_ONLY_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_evaluation_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert LogType.EVALUATION == drl.active
+        assert (self._EXPECTED_EVAL_ROWS, len(Constants.RAW_COLUMNS)) == df.shape

@@ -2,6 +2,7 @@ from .handler import (
     FileHandler as FileHandler,
     FSFileHandler as FSFileHandler,
     S3FileHandler as S3FileHandler,
+    TarFileHandler as TarFileHandler,
 )
 from .log import DeepRacerLog as DeepRacerLog
 from .log_utils import (

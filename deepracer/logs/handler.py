@@ -1,6 +1,7 @@
 import glob
 import os
 import re
+import tarfile
 from abc import ABC, abstractmethod
 from io import BytesIO
 
@@ -108,61 +109,125 @@ class FSFileHandler(FileHandler):
     def determine_root_folder_type(self) -> LogFolderType:
 
         if os.path.isdir(os.path.join(self.model_folder, "sim-trace")):
-            self.type = LogFolderType.CONSOLE_MODEL_WITH_LOGS
-            if self.training_simtrace_path is None:
-                self.training_simtrace_path = os.path.join(
-                    self.model_folder,
-                    "sim-trace",
-                    "training",
-                    "training-simtrace",
-                    "*-iteration.csv",
-                )
-                self.training_simtrace_split = r"(.*)/training/training-simtrace/(.*)-iteration.csv"
-                self.evaluation_simtrace_path = os.path.join(
-                    self.model_folder,
-                    "sim-trace",
-                    "evaluation",
-                    "*",
-                    "evaluation-simtrace",
-                    "0-iteration.csv",
-                )
-                self.evaluation_simtrace_split = (
-                    r".*/evaluation/([0-9]{14})-.*/evaluation-simtrace/(.*)-iteration\.csv"
-                )
-            if self.training_robomaker_log_path is None:
-                self.training_robomaker_log_path = glob.glob(
-                    os.path.join(self.model_folder, "**", "training", "*-robomaker.log")
-                )[0]
+            if os.path.isdir(
+                os.path.join(self.model_folder, "sim-trace", "training", "training-simtrace")
+            ):
+                # Old console format: training-simtrace sits directly under sim-trace/training/
+                self.type = LogFolderType.CONSOLE_MODEL_WITH_LOGS
+                if self.training_simtrace_path is None:
+                    self.training_simtrace_path = os.path.join(
+                        self.model_folder,
+                        "sim-trace",
+                        "training",
+                        "training-simtrace",
+                        "*-iteration.csv",
+                    )
+                    self.training_simtrace_split = (
+                        r"(.*)/training/training-simtrace/(.*)-iteration.csv"
+                    )
+                    self.evaluation_simtrace_path = os.path.join(
+                        self.model_folder,
+                        "sim-trace",
+                        "evaluation",
+                        "*",
+                        "evaluation-simtrace",
+                        "0-iteration.csv",
+                    )
+                    self.evaluation_simtrace_split = (
+                        r".*/evaluation/([0-9]{14})-.*/evaluation-simtrace/(.*)-iteration\.csv"
+                    )
+                if self.training_robomaker_log_path is None:
+                    self.training_robomaker_log_path = glob.glob(
+                        os.path.join(self.model_folder, "**", "training", "*-robomaker.log")
+                    )[0]
 
-            if self.evaluation_robomaker_log_path is None:
-                self.evaluation_robomaker_log_path = os.path.join(
-                    self.model_folder, "**", "evaluation", "*-robomaker.log"
-                )
+                if self.evaluation_robomaker_log_path is None:
+                    self.evaluation_robomaker_log_path = os.path.join(
+                        self.model_folder, "**", "evaluation", "*-robomaker.log"
+                    )
 
-            if self.evaluation_robomaker_split is None:
-                self.evaluation_robomaker_split = (
-                    r".*/evaluation/evaluation-([0-9]{14})-(.*)-robomaker.log"
-                )
+                if self.evaluation_robomaker_split is None:
+                    self.evaluation_robomaker_split = (
+                        r".*/evaluation/evaluation-([0-9]{14})-(.*)-robomaker.log"
+                    )
 
-            if self.leaderboard_robomaker_log_path is None:
-                self.leaderboard_robomaker_log_path = os.path.join(
-                    self.model_folder, "**", "leaderboard", "*-robomaker.log"
-                )
+                if self.leaderboard_robomaker_log_path is None:
+                    self.leaderboard_robomaker_log_path = os.path.join(
+                        self.model_folder, "**", "leaderboard", "*-robomaker.log"
+                    )
 
-            if self.leaderboard_robomaker_log_split is None:
-                self.leaderboard_robomaker_log_split = (
-                    r".*/leaderboard/leaderboard-([0-9]{14})-(.*)-robomaker.log"
-                )
+                if self.leaderboard_robomaker_log_split is None:
+                    self.leaderboard_robomaker_log_split = (
+                        r".*/leaderboard/leaderboard-([0-9]{14})-(.*)-robomaker.log"
+                    )
 
-            if self.model_metadata_path is None:
-                self.model_metadata_path = os.path.join(
-                    self.model_folder, "model", "model_metadata.json"
-                )
+                if self.model_metadata_path is None:
+                    self.model_metadata_path = os.path.join(
+                        self.model_folder, "model", "model_metadata.json"
+                    )
 
-            if self.hyperparameters_path is None:
-                self.hyperparameters_path = os.path.join(
-                    self.model_folder, "ip", "hyperparameters.json"
-                )
+                if self.hyperparameters_path is None:
+                    self.hyperparameters_path = os.path.join(
+                        self.model_folder, "ip", "hyperparameters.json"
+                    )
+            else:
+                # New console format (v2): extra ISO-8601 timestamp subdirectory under
+                # sim-trace/training/ before training-simtrace/
+                self.type = LogFolderType.DROA_SOLUTION_LOGS
+                if self.training_simtrace_path is None:
+                    self.training_simtrace_path = os.path.join(
+                        self.model_folder,
+                        "sim-trace",
+                        "training",
+                        "*",
+                        "training-simtrace",
+                        "*-iteration.csv",
+                    )
+                    self.training_simtrace_split = (
+                        r"(.*)/training/[^/]+/training-simtrace/(.*)-iteration\.csv"
+                    )
+                    self.evaluation_simtrace_path = os.path.join(
+                        self.model_folder,
+                        "sim-trace",
+                        "evaluation",
+                        "*",
+                        "evaluation-simtrace",
+                        "*-iteration.csv",
+                    )
+                    self.evaluation_simtrace_split = (
+                        r".*/evaluation/([^/]+)/evaluation-simtrace/(.*)-iteration\.csv"
+                    )
+                if self.training_robomaker_log_path is None:
+                    candidates = glob.glob(
+                        os.path.join(self.model_folder, "logs", "training", "*-simulation.log")
+                    )
+                    self.training_robomaker_log_path = candidates[0] if candidates else None
+
+                if self.evaluation_robomaker_log_path is None:
+                    self.evaluation_robomaker_log_path = os.path.join(
+                        self.model_folder, "logs", "evaluation", "*-simulation.log"
+                    )
+
+                if self.evaluation_robomaker_split is None:
+                    self.evaluation_robomaker_split = r".*/evaluation/([^/]+)-simulation\.log"
+
+                if self.leaderboard_robomaker_log_path is None:
+                    self.leaderboard_robomaker_log_path = os.path.join(
+                        self.model_folder, "logs", "leaderboard", "*-simulation.log"
+                    )
+
+                if self.leaderboard_robomaker_log_split is None:
+                    self.leaderboard_robomaker_log_split = r".*/leaderboard/([^/]+)-simulation\.log"
+
+                if self.model_metadata_path is None:
+                    self.model_metadata_path = os.path.join(
+                        self.model_folder, "model", "model_metadata.json"
+                    )
+
+                if self.hyperparameters_path is None:
+                    self.hyperparameters_path = os.path.join(
+                        self.model_folder, "ip", "hyperparameters.json"
+                    )
 
         elif os.path.isdir(os.path.join(self.model_folder, "training-simtrace")):
             self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
@@ -342,7 +407,11 @@ class S3FileHandler(FileHandler):
 
     def determine_root_folder_type(self) -> LogFolderType:
 
-        if len(self.list_files(filterexp=(self.prefix + r"sim-trace/(.*)"))) > 0:
+        if (
+            len(self.list_files(filterexp=(self.prefix + r"sim-trace/training/training-simtrace/")))
+            > 0
+        ):
+            # Old console format: training-simtrace sits directly under sim-trace/training/
             self.type = LogFolderType.CONSOLE_MODEL_WITH_LOGS
             self.training_simtrace_path = (
                 self.prefix + r"sim-trace/training/training-simtrace/(.*)-iteration\.csv"
@@ -369,6 +438,56 @@ class S3FileHandler(FileHandler):
             self.leaderboard_robomaker_log_split = (
                 r".*/leaderboard/leaderboard-([0-9]{14})-(.*)-robomaker.log"
             )
+            self.model_metadata_path = self.prefix + r"model/model_metadata.json"
+            self.hyperparameters_path = self.prefix + r"ip/hyperparameters.json"
+
+        elif len(self.list_files(filterexp=(self.prefix + r"sim-trace/training/"))) > 0:
+            # New console format (v2): extra ISO-8601 timestamp subdirectory under
+            # sim-trace/training/ before training-simtrace/
+            self.type = LogFolderType.DROA_SOLUTION_LOGS
+            self.training_simtrace_path = (
+                self.prefix + r"sim-trace/training/[^/]+/training-simtrace/(.*)-iteration\.csv"
+            )
+            self.training_simtrace_split = (
+                r"(.*)/sim-trace/training/[^/]+/training-simtrace/(.*)-iteration\.csv"
+            )
+            self.evaluation_simtrace_path = (
+                self.prefix + r"sim-trace/evaluation/[^/]+/evaluation-simtrace/(.*)-iteration\.csv"
+            )
+            self.evaluation_simtrace_split = (
+                r".*/sim-trace/evaluation/([^/]+)/evaluation-simtrace/(.*)-iteration\.csv"
+            )
+            self.training_robomaker_log_path = self.prefix + r"logs/training/(.*)-simulation\.log"
+            self.evaluation_robomaker_log_path = (
+                self.prefix + r"logs/evaluation/(.*)-simulation\.log"
+            )
+            self.evaluation_robomaker_split = r".*/evaluation/([^/]+)-simulation\.log"
+            self.leaderboard_robomaker_log_path = (
+                self.prefix + r"logs/leaderboard/(.*)-simulation\.log"
+            )
+            self.leaderboard_robomaker_log_split = r".*/leaderboard/([^/]+)-simulation\.log"
+            self.model_metadata_path = self.prefix + r"model/model_metadata.json"
+            self.hyperparameters_path = self.prefix + r"ip/hyperparameters.json"
+
+        elif len(self.list_files(filterexp=(self.prefix + r"sim-trace/evaluation/"))) > 0:
+            # New console format (v2): evaluation-only archive
+            self.type = LogFolderType.DROA_SOLUTION_LOGS
+            self.training_simtrace_path = None
+            self.training_simtrace_split = None
+            self.evaluation_simtrace_path = (
+                self.prefix + r"sim-trace/evaluation/[^/]+/evaluation-simtrace/(.*)-iteration\.csv"
+            )
+            self.evaluation_simtrace_split = (
+                r".*/sim-trace/evaluation/([^/]+)/evaluation-simtrace/(.*)-iteration\.csv"
+            )
+            self.evaluation_robomaker_log_path = (
+                self.prefix + r"logs/evaluation/(.*)-simulation\.log"
+            )
+            self.evaluation_robomaker_split = r".*/evaluation/([^/]+)-simulation\.log"
+            self.leaderboard_robomaker_log_path = (
+                self.prefix + r"logs/leaderboard/(.*)-simulation\.log"
+            )
+            self.leaderboard_robomaker_log_split = r".*/leaderboard/([^/]+)-simulation\.log"
             self.model_metadata_path = self.prefix + r"model/model_metadata.json"
             self.hyperparameters_path = self.prefix + r"ip/hyperparameters.json"
 
@@ -410,5 +529,179 @@ class S3FileHandler(FileHandler):
             )
             self.model_metadata_path = self.prefix + r"model/model_metadata.json"
             self.hyperparameters_path = self.prefix + r"ip/hyperparameters.json"
+
+        return self.type
+
+
+class TarFileHandler(FileHandler):
+    """An implementation of the FileHandler interface that reads directly from a .tar.gz archive.
+
+    Allows users to point at a downloaded console log archive without extracting it first::
+
+        log = DeepRacerLog(TarFileHandler("deepracerindy-training-ACGVRmRuFNU9NkQ-logs.tar.gz"))
+
+    The archive member paths are exposed to callers with the top-level wrapper directory
+    stripped, so they are relative to the model root (e.g. ``sim-trace/training/…``).
+    """
+
+    def __init__(self, archive_path: str):
+        """Opens the .tar.gz archive and determines the top-level prefix to strip.
+
+        Args:
+            archive_path:
+                Path to the .tar.gz file on the local filesystem.
+        """
+        self.archive_path = archive_path
+        self._tar = tarfile.open(archive_path, "r:gz")
+
+        # Detect a single top-level wrapper directory (e.g. "ACGVRmRuFNU9NkQ/")
+        # and record it so we can strip it from all member paths.
+        top_dirs = {m.name.split("/")[0] for m in self._tar.getmembers() if "/" in m.name}
+        self._prefix = (top_dirs.pop() + "/") if len(top_dirs) == 1 else ""
+
+    def __del__(self):
+        if hasattr(self, "_tar") and self._tar:
+            self._tar.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        if self._tar:
+            self._tar.close()
+
+    def list_files(self, filterexp: str = None, check_exist: bool = False) -> list:
+        """Lists files in the archive with the top-level prefix stripped.
+
+        Args:
+            filterexp:
+                Optional regex pattern matched against the stripped member paths.
+            check_exist:
+                If ``True`` raise an exception when no files match.
+
+        Returns:
+            A list of stripped member paths (relative to the model root).
+        """
+        if check_exist and filterexp is None:
+            raise Exception("File path is not defined.")
+
+        all_files = [
+            m.name[len(self._prefix) :]
+            for m in self._tar.getmembers()
+            if m.isfile() and m.name.startswith(self._prefix)
+        ]
+
+        if filterexp is not None:
+            return_files = [p for p in all_files if re.search(filterexp, p)]
+        else:
+            return_files = all_files
+
+        if return_files:
+            return return_files
+        if check_exist:
+            raise Exception(
+                "No files found in {} using filter {}".format(self.archive_path, filterexp)
+            )
+        return []
+
+    def get_file(self, key: str) -> bytes:
+        """Reads a single archive member into bytes.
+
+        Args:
+            key:
+                Stripped member path as returned by :meth:`list_files`.
+
+        Returns:
+            A bytes object containing the file contents.
+        """
+        full_key = self._prefix + key
+        f = self._tar.extractfile(self._tar.getmember(full_key))
+        return f.read()
+
+    def determine_root_folder_type(self) -> LogFolderType:
+
+        if self.list_files(
+            filterexp=r"sim-trace/training/[^/]+/training-simtrace/.*-iteration\.csv"
+        ):
+            # New console format (v2): extra ISO-8601 timestamp subdirectory under
+            # sim-trace/training/ before training-simtrace/
+            self.type = LogFolderType.DROA_SOLUTION_LOGS
+            self.training_simtrace_path = (
+                r"sim-trace/training/[^/]+/training-simtrace/[^/]+-iteration\.csv"
+            )
+            self.training_simtrace_split = (
+                r"(.*)/training/[^/]+/training-simtrace/(.*)-iteration\.csv"
+            )
+            self.evaluation_simtrace_path = (
+                r"sim-trace/evaluation/[^/]+/evaluation-simtrace/[^/]+-iteration\.csv"
+            )
+            self.evaluation_simtrace_split = (
+                r".*/evaluation/([^/]+)/evaluation-simtrace/(.*)-iteration\.csv"
+            )
+            self.training_robomaker_log_path = r"logs/training/[^/]+-simulation\.log"
+            self.evaluation_robomaker_log_path = r"logs/evaluation/[^/]+-simulation\.log"
+            self.evaluation_robomaker_split = r"logs/evaluation/([^/]+)-simulation\.log"
+            self.leaderboard_robomaker_log_path = r"logs/leaderboard/[^/]+-simulation\.log"
+            self.leaderboard_robomaker_log_split = r"logs/leaderboard/([^/]+)-simulation\.log"
+            self.model_metadata_path = None
+            self.hyperparameters_path = None
+
+        elif self.list_files(
+            filterexp=r"sim-trace/evaluation/[^/]+/evaluation-simtrace/.*-iteration\.csv"
+        ):
+            # New console format (v2): evaluation-only archive
+            self.type = LogFolderType.DROA_SOLUTION_LOGS
+            self.training_simtrace_path = None
+            self.training_simtrace_split = None
+            self.evaluation_simtrace_path = (
+                r"sim-trace/evaluation/[^/]+/evaluation-simtrace/[^/]+-iteration\.csv"
+            )
+            self.evaluation_simtrace_split = (
+                r".*/evaluation/([^/]+)/evaluation-simtrace/(.*)-iteration\.csv"
+            )
+            self.evaluation_robomaker_log_path = r"logs/evaluation/[^/]+-simulation\.log"
+            self.evaluation_robomaker_split = r"logs/evaluation/([^/]+)-simulation\.log"
+            self.leaderboard_robomaker_log_path = r"logs/leaderboard/[^/]+-simulation\.log"
+            self.leaderboard_robomaker_log_split = r"logs/leaderboard/([^/]+)-simulation\.log"
+            self.model_metadata_path = None
+            self.hyperparameters_path = None
+
+        elif self.list_files(filterexp=r"sim-trace/training/training-simtrace/.*-iteration\.csv"):
+            # Old console format: training-simtrace sits directly under sim-trace/training/
+            self.type = LogFolderType.CONSOLE_MODEL_WITH_LOGS
+            self.training_simtrace_path = (
+                r"sim-trace/training/training-simtrace/[^/]+-iteration\.csv"
+            )
+            self.training_simtrace_split = r"(.*)/training/training-simtrace/(.*)-iteration\.csv"
+            self.evaluation_simtrace_path = (
+                r"sim-trace/evaluation/[^/]+/evaluation-simtrace/[^/]+-iteration\.csv"
+            )
+            self.evaluation_simtrace_split = (
+                r".*/evaluation/([0-9]{14})-.*/evaluation-simtrace/(.*)-iteration\.csv"
+            )
+            self.training_robomaker_log_path = r"logs/training/[^/]+-robomaker\.log"
+            self.evaluation_robomaker_log_path = r"logs/evaluation/[^/]+-robomaker\.log"
+            self.evaluation_robomaker_split = (
+                r".*/evaluation/evaluation-([0-9]{14})-(.*)-robomaker\.log"
+            )
+            self.leaderboard_robomaker_log_path = r"logs/leaderboard/[^/]+-robomaker\.log"
+            self.leaderboard_robomaker_log_split = (
+                r".*/leaderboard/leaderboard-([0-9]{14})-(.*)-robomaker\.log"
+            )
+            self.model_metadata_path = None
+            self.hyperparameters_path = None
+
+        elif self.list_files(filterexp=r"training-simtrace/.*-iteration\.csv"):
+            self.type = LogFolderType.DRFC_MODEL_SINGLE_WORKERS
+            self.training_simtrace_path = r"training-simtrace/[^/]+-iteration\.csv"
+            self.training_simtrace_split = r"(.*)/training-simtrace/(.*)-iteration\.csv"
+            self.evaluation_simtrace_path = (
+                r"evaluation-[0-9]{14}/evaluation-simtrace/[^/]+-iteration\.csv"
+            )
+            self.evaluation_simtrace_split = (
+                r".*/evaluation-([0-9]{14})/evaluation-simtrace/(.*)-iteration\.csv"
+            )
+            self.model_metadata_path = r"model/model_metadata.json"
+            self.hyperparameters_path = r"ip/hyperparameters.json"
 
         return self.type
