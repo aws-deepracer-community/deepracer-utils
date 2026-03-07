@@ -18,7 +18,7 @@ conda activate deepracer-utils
 pip install -e ".[dev,test]"
 ```
 
-The `dev` extra installs `ruff` (linter/formatter) and `setuptools-scm`.  
+The `dev` extra installs `black` (formatter) and `setuptools-scm`.  
 The `test` extra installs `pytest`, `coverage`, and optional visualization dependencies.
 
 ## Install deepracer-utils for development
@@ -49,16 +49,14 @@ pytest tests/
 
 ## Verifying the style guide
 
-Run:
+Check formatting:
 ```
-ruff check .
-ruff format --check .
+black --check .
 ```
 
-To auto-fix issues:
+To auto-fix formatting:
 ```
-ruff check --fix .
-ruff format .
+black .
 ```
 
 ## Releasing, Packaging, distribution

@@ -38,7 +38,7 @@ visualization = [
 ]
 dev = [
     "check-manifest",
-    "ruff",
+    "black",
     "setuptools-scm>=8",
 ]
 test = [
@@ -59,9 +59,12 @@ include = ["deepracer", "deepracer.*"]
 [tool.setuptools_scm]
 tag_regex = "^deepracer-utils-(?P<version>[vV]?[\\d]+(?:\\.[\\d]+)*(?:[._-]?[\\w]+)*)$"
 
-[tool.ruff]
-line-length = 100
-exclude = [".git", "env", "venv", ".tox", ".vscode", ".pytest_cache", ".eggs"]
-
 [tool.pytest.ini_options]
 filterwarnings = ["ignore::DeprecationWarning:tensorflow.*"]
+
+[tool.black]
+target-version = ["py310", "py312"]
+line-length = 100
+
+[tool.pylint.main]
+ignore-paths = ["tests"]

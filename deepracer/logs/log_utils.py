@@ -812,9 +812,11 @@ class PlottingUtils:
             episode_df.plot.scatter("x", "y", ax=ax, s=3, c=graphed_value, cmap=cmap)
 
             subtitle = "%s%s\n%s\n%s" % (
-                ("Stream: %s, " % episode_df["stream"].iloc[0])
-                if "stream" in episode_df.columns
-                else "",
+                (
+                    ("Stream: %s, " % episode_df["stream"].iloc[0])
+                    if "stream" in episode_df.columns
+                    else ""
+                ),
                 datetime.fromtimestamp(episode_df["tstamp"].iloc[0]),
                 distance_lap_time,
                 speed_velocity,
