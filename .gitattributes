@@ -1,1 +1,5 @@
-deepracer/_version.py export-subst
+# Normalize line endings for all text files on commit
+* text=auto
+
+# NumPy track waypoint files are binary
+*.npy binary

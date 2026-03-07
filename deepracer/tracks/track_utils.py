@@ -24,8 +24,7 @@ import math
 import numpy as np
 
 # Shapely Library
-from shapely.geometry import Polygon
-from shapely.geometry.polygon import LineString
+from shapely.geometry import LineString, Polygon
 
 
 class TrackIO:
@@ -314,7 +313,7 @@ class GeometryUtils:
         A vector perpendicular to input vector
         """
 
-        return np.cross(v, [0, 0, -1])[:2]
+        return np.cross(np.append(v, 0), [0, 0, -1])[:2]
 
     @staticmethod
     def crossing_point_for_two_lines(l1_p1, l1_p2, l2_p1, l2_p2):

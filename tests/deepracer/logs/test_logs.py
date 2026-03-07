@@ -14,8 +14,8 @@ class Constants:
 
     RAW_COLUMNS = ['episode', 'steps', 'x', 'y', 'heading', 'steering_angle', 'speed', 'action',
                    'reward', 'done', 'all_wheels_on_track', 'progress', 'closest_waypoint',
-                   'track_len', 'tstamp', 'episode_status', 'pause_duration', 'iteration',
-                   'worker', 'unique_episode']
+                   'track_len', 'tstamp', 'episode_status', 'pause_duration', 'wall_clock',
+                   'iteration', 'worker', 'unique_episode']
 
     TRAIN_COLUMNS = ['iteration', 'episode', 'steps', 'start_at', 'progress', 'time', 'dist',
                      'new_reward', 'speed', 'reward', 'time_if_complete',
@@ -203,11 +203,11 @@ class TestEvaluationLogs:
 
         bulk = SimulationLogsIO.load_a_list_of_logs(logs)
 
-        assert (1479, 20) == bulk.shape
+        assert (1479, 21) == bulk.shape
         assert np.all(['index', 'iteration', 'episode', 'steps', 'x', 'y', 'yaw',
                        'steering_angle', 'speed', 'action', 'reward', 'done', 'on_track',
                        'progress', 'closest_waypoint', 'track_len', 'tstamp', 'episode_status',
-                       'pause_duration', 'stream'] == bulk.columns)
+                       'pause_duration', 'wall_clock', 'stream'] == bulk.columns)
 
     def test_summarize_evaluation_logs(self):
         logs = [['deepracer/logs/sample-console-logs/logs/evaluation/'

@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
-from shapely.geometry.polygon import LineString
+from shapely.geometry import LineString
 
 from ..tracks.track_utils import Track
 
@@ -162,19 +162,26 @@ class SimulationLogsIO:
             track_len = float(parts[13])
             tstamp = Decimal(parts[14])
             episode_status = parts[15]
-            if len(parts) > 16:
+            if len(parts) > 17:
                 pause_duration = float(parts[16])
+                wall_clock = float(parts[17])
+            elif len(parts) > 16:
+                pause_duration = float(parts[16])
+                wall_clock = None
             else:
                 pause_duration = 0.0
+                wall_clock = None
 
             iteration = int(episode / episodes_per_iteration) + 1
             df_list.append((iteration, episode, steps, x, y, yaw, steering_angle, speed,
                             action, reward, done, all_wheels_on_track, progress,
-                            closest_waypoint, track_len, tstamp, episode_status, pause_duration))
+                            closest_waypoint, track_len, tstamp, episode_status,
+                            pause_duration, wall_clock))
 
         header = ['iteration', 'episode', 'steps', 'x', 'y', 'yaw', 'steering_angle',
                   'speed', 'action', 'reward', 'done', 'on_track', 'progress',
-                  'closest_waypoint', 'track_len', 'tstamp', 'episode_status', 'pause_duration']
+                  'closest_waypoint', 'track_len', 'tstamp', 'episode_status',
+                  'pause_duration', 'wall_clock']
 
         df = pd.DataFrame(df_list, columns=header)
 
@@ -290,28 +297,28 @@ class AnalysisUtils:
                 logging.warning('Multiple workers found, consider using'
                                 'secondgroup="unique_episode"')
                 
-        with pd.option_context("mode.copy_on_write", True):
-            df['delta_time'] = df['tstamp'].astype(float).diff()
-            df.loc[df['episode_status'] == 'prepare', 'delta_time'] = 0.0
+        # Copy-on-Write is always enforced in pandas >= 3.0; direct assignment is safe.
+        df['delta_time'] = df['tstamp'].astype(float).diff()
+        df.loc[df['episode_status'] == 'prepare', 'delta_time'] = 0.0
 
-            df['delta_dist'] = (df['x'].diff() ** 2 + df['y'].diff() ** 2) ** 0.5
-            df.loc[df['episode_status'] == 'prepare', 'delta_dist'] = 0.0
-        
+        df['delta_dist'] = (df['x'].diff() ** 2 + df['y'].diff() ** 2) ** 0.5
+        df.loc[df['episode_status'] == 'prepare', 'delta_dist'] = 0.0
+
         grouped = df.groupby([firstgroup, secondgroup])
 
-        by_steps = grouped['steps'].agg(np.ptp).reset_index()
+        by_steps = grouped['steps'].agg(lambda x: x.max() - x.min()).reset_index()
         by_dist = grouped['delta_dist'].agg('sum').reset_index() \
             .rename(columns={'delta_dist': 'dist'})
 
         by_start = grouped.first()['closest_waypoint'].reset_index() \
-            .rename(index=str, columns={"closest_waypoint": "start_at"})
+            .rename(columns={"closest_waypoint": "start_at"})
         
         by_progress = grouped['progress'].agg('max').reset_index()
         
         by_speed = grouped['speed'].agg('mean').reset_index()
         
         by_time = grouped['delta_time'].agg('sum').reset_index() \
-            .rename(index=str, columns={"delta_time": "time"})
+            .rename(columns={"delta_time": "time"})
         by_time['time'] = by_time['time'].astype(float)
         
         by_reset = grouped['episode_status'] \
@@ -646,7 +653,8 @@ class PlottingUtils:
             episode_df['y'].shift(1) - episode_df['y']) ** 2) ** 0.5
 
         distance = np.nansum(episode_df['distance_diff'])
-        lap_time = np.ptp(episode_df['tstamp'].astype(float))
+        tstamp_float = episode_df['tstamp'].astype(float)
+        lap_time = float(tstamp_float.max() - tstamp_float.min())
         velocity = distance / lap_time
         average_speed = np.nanmean(episode_df['speed'])
         progress = np.nanmax(episode_df['progress'])

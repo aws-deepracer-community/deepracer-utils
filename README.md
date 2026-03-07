@@ -1,33 +1,26 @@
 # Deepracer Utilities - Analyzing Your DeepRacer Model
 This is a set of utilities that will take your DeepRacer experience to the next level by allowing you to analyze your model, step by step, episode by episode. Only through analyzing what your model does will you be able to write the right reward function, choose the right action space and to tune the hyperparameters!
 
+## Requirements
+
+* Python 3.10 or later (Ubuntu 22.04+)
+* See `pyproject.toml` for the full dependency list.
+
 ## Installation
 
-You can install the latest version of deepracer-utils via pip through
+Install the latest release from PyPI:
 ```
 pip install deepracer-utils
 ```
-Otherwise you can build your own version with 
+
+For the optional model visualization features (requires TensorFlow and OpenCV):
 ```
-python3 setup.py build
-python3 setup.py install
+pip install "deepracer-utils[visualization]"
 ```
 
-### AWS CLI and boto3 extension
-This package contains an extension to the AWS CLI and Boto3 that allows you to interact
-with the Deepracer Console through commands starting with `aws deepracer`. For details run
+To set up a development environment from a local clone:
 ```
-aws deepracer help
-```
-
-Then run this to install:
-```
-python -m deepracer install-cli
-```
-
-To remove deepracer support from aws-cli and boto3, run:
-```
-python -m deepracer remove-cli
+pip install -e ".[dev,test]"
 ```
 
 ## About the Utilities
@@ -37,13 +30,13 @@ The best reference on how to use the utilities can be found in the [deepracer-an
 An overview of the different modules provided, and the key classes involved:
 | Module | Class | Description |
 |--------|-------|-------------|
-|`deepracer.logs` | DeepRacerLog | Class that is pointed to a Deepracer Model folder, locally or in an S3 bucket, and that reads in and processes trace files from simtrace or robomaker log files.|
-|`deepracer.logs` | AnalysisUtils | Class that processes the raw log input and summarizes by episode.|
-|`deepracer.logs` | PlottingUtils | Class that visualises the track and plots each step in an episode.|
-|`deepracer.logs` | TrainingMetrics | Class that reads in Metrics data and provides data similar to the training graph in the Console.|
-|`deepracer.console` | ConsoleHelper | Class that reads out logfiles directly from the console, and together with e.g. TrainingMetrics can be used to visualize training progress in real time.|
-|`deepracer.tracks` | TrackIO | Class that processes track routes (.npy files) and displays waypoints graphically.|
-|`deepracer.model` | n/a | Methods to run inference on individual images and to perform visual analysis.|
+|`deepracer.logs` | `DeepRacerLog` | Points to a DeepRacer model folder (local or S3) and reads simulation trace and robomaker log files.|
+|`deepracer.logs` | `AnalysisUtils` | Processes raw log input and summarizes by episode.|
+|`deepracer.logs` | `PlottingUtils` | Visualises the track and plots each step in an episode.|
+|`deepracer.logs` | `TrainingMetrics` | Reads Metrics data and provides data similar to the training graph in the Console.|
+|`deepracer.tracks` | `TrackIO` | Processes track routes (.npy files) and displays waypoints graphically.|
+|`deepracer.model` | n/a | Methods to run inference on individual images and to perform visual analysis (requires `visualization` extra).|
+
 ## Other information
 
 * Refer to [development.md](docs/development.md) for instructions on coding standards, unit tests etc.

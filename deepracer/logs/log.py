@@ -60,6 +60,28 @@ class DeepRacerLog:
         "pause_duration",
         "obstacle_crash_counter"
     ]
+    # Additional optional wall_clock column (wall-clock timestamp per step).
+    _COL_NAMES_FULL = [
+        "episode",
+        "steps",
+        "x",
+        "y",
+        "heading",
+        "steering_angle",
+        "speed",
+        "action",
+        "reward",
+        "done",
+        "all_wheels_on_track",
+        "progress",
+        "closest_waypoint",
+        "track_len",
+        "tstamp",
+        "episode_status",
+        "pause_duration",
+        "obstacle_crash_counter",
+        "wall_clock"
+    ]
     _HYPERPARAM_KEYS = [
         "batch_size",
         "beta_entropy",
@@ -120,16 +142,26 @@ class DeepRacerLog:
     def _read_csv(self, path: str, splitRegex, type: LogType = LogType.TRAINING):
         try:
             csv_bytes = self.fh.get_file(path)
-            # Work also with a new column
+            # Try the fullest column list first (includes optional wall_clock)
             df = pd.read_csv(BytesIO(csv_bytes), encoding='utf8',
-                             names=self._COL_NAMES_NEW, header=0)
+                             names=self._COL_NAMES_FULL, header=0)
             df = df.drop("obstacle_crash_counter", axis=1)
         except pd.errors.ParserError:
             try:
-                df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES, header=0)
+                # Without wall_clock
+                df = pd.read_csv(BytesIO(csv_bytes), encoding='utf8',
+                                 names=self._COL_NAMES_NEW, header=0)
+                df = df.drop("obstacle_crash_counter", axis=1)
             except pd.errors.ParserError:
-                # Older logs don't have pause_duration, so we're handling this
-                df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES[:-1], header=0)
+                try:
+                    df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES, header=0)
+                except pd.errors.ParserError:
+                    # Older logs don't have pause_duration, so we're handling this
+                    df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES[:-1], header=0)
+
+        # Always ensure wall_clock column is present (NaN for traces that predate it)
+        if "wall_clock" not in df.columns:
+            df["wall_clock"] = float("nan")
 
         path_split = splitRegex.search(path)
         df["iteration"] = int(path_split.groups()[1])

@@ -1,5 +1,10 @@
-from . import logs, tracks, boto3_enhancer, console
+from . import logs, tracks
 
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    try:
+        __version__ = version("deepracer-utils")
+    except PackageNotFoundError:
+        __version__ = "unknown"
+except ImportError:
+    __version__ = "unknown"

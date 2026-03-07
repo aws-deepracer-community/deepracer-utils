@@ -18,12 +18,29 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import cv2
 import numpy as np
-import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 
-from tensorflow.compat.v1.io.gfile import GFile
+# TensorFlow is an optional dependency (install with the 'visualization' extra).
+# The functions in this module use the TF1 compatibility layer to load frozen
+# .pb graph files produced by the DeepRacer console (pre-2023 model format).
+# Models stored in TF2 SavedModel or ONNX format are not yet supported here.
+try:
+    import tensorflow.compat.v1 as tf
+    tf.disable_v2_behavior()
+    from tensorflow.compat.v1.io.gfile import GFile
+    _TF_AVAILABLE = True
+except ImportError:
+    _TF_AVAILABLE = False
+
+
+def _require_tf():
+    if not _TF_AVAILABLE:
+        raise ImportError(
+            "TensorFlow is required for model visualization. "
+            "Install it with:  pip install 'deepracer-utils[visualization]'"
+        )
 
 def load_session(pb_path, sensor='FRONT_FACING_CAMERA', log_device_placement=True):
+    _require_tf()
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
                                             log_device_placement=log_device_placement))
     print("load graph:", pb_path)
@@ -58,6 +75,7 @@ def visualize_gradcam_discrete_ppo(
 ):
     '''
     @inp: model session, RGB Image - np array, action_index, total number of actions
+    Requires TensorFlow (install with the 'visualization' extra).
     @return: overlayed heatmap
     '''
 

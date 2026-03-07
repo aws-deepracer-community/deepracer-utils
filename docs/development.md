@@ -1,52 +1,74 @@
 # Development
 
 ## Prepare the environment
+
+Requires Python 3.10 or newer (Ubuntu 22.04+).
+
 For pip/venv:
 ```
 python3 -m venv env
 source env/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev,test]"
 ```
-_(For newer systems python3 may be referred to as python)_
 
 For Anaconda:
 ```
-conda create --name env pip
-conda activate pip
-pip install -r requirements.txt
+conda create --name deepracer-utils python=3.10
+conda activate deepracer-utils
+pip install -e ".[dev,test]"
 ```
 
+The `dev` extra installs `ruff` (linter/formatter) and `setuptools-scm`.  
+The `test` extra installs `pytest`, `coverage`, and optional visualization dependencies.
+
 ## Install deepracer-utils for development
+
+After activating your virtual environment, run:
 ```
-python setup.py develop
+pip install -e .
 ```
-Once finished working, run:
+
+For the optional visualization features (TensorFlow, OpenCV, Pillow):
 ```
-python setup.py develop --uninstall
+pip install -e ".[visualization]"
 ```
 
 See [Python Packaging User Guide](https://packaging.python.org/guides/distributing-packages-using-setuptools/#id70) for more info.
 
 ## Testing
 
-Run:
+Run the full test suite via tox (tests on Python 3.10 and 3.12):
 ```
 tox
 ```
-This will package the project, install and run tests.
+
+Or run pytest directly in your active environment:
+```
+pytest tests/
+```
 
 ## Verifying the style guide
 
 Run:
 ```
-pycodestyle
+ruff check .
+ruff format --check .
+```
+
+To auto-fix issues:
+```
+ruff check --fix .
+ruff format .
 ```
 
 ## Releasing, Packaging, distribution
 
-Checking the current version:
+The package version is derived automatically from git tags using `setuptools-scm`.
+There is no separate version file to maintain.
+
+Checking the current version (requires a git tag to be present):
 ```
-python setup.py version
+python -m setuptools_scm
 ```
 
 Marking new release:
@@ -58,11 +80,12 @@ git push origin deepracer-utils-<version>
 The version number should conform with [PEP 440](https://peps.python.org/pep-0440).
 
 Example: `<version>` can be `0.25` for a release version or `0.25b1` for the first beta of 0.25.
- 
-Building the package:
+
+Building the package (requires `build`):
 ```
-rm dist/*
-python setup.py sdist bdist_wheel
+pip install build
+rm -rf dist/
+python -m build
 ```
 
 Uploading to test.pypi.org:

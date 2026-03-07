@@ -7,6 +7,7 @@ import glob
 import cv2
 import numpy as np
 
+tensorflow = pytest.importorskip("tensorflow", reason="TensorFlow not installed")
 import tensorflow.compat.v1 as tf
 tf.disable_v2_behavior()
 from tensorflow.compat.v1.io.gfile import GFile
@@ -46,7 +47,12 @@ class TestTrainingLogs:
             models_file_path.append("{}/model_{}.pb".format(model_path,n))        
 
         for model_file in models_file_path:
-            model, obs, model_out = load_session(model_file, my_sensor, False)
+            try:
+                model, obs, model_out = load_session(model_file, my_sensor, False)
+            except (RuntimeError, Exception) as e:
+                if "CUDA" in str(e) or "GPU" in str(e):
+                    pytest.skip("CUDA/GPU libraries not available in test environment")
+                raise
             arr = []
             for f in picture_files[:]:
                 img = cv2.imread(f)
