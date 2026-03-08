@@ -63,7 +63,8 @@ def parse_simtrace_bytes(data: bytes) -> tuple:
 
     Args:
         data:
-            Raw bytes of a simtrace iteration CSV (may include a header row).
+            Raw bytes of a simtrace iteration CSV with a header row containing
+            at least the columns ``episode``, ``tstamp``, and ``episode_status``.
 
     Returns:
         A 2-tuple ``(per_episode_deltas, real_time_factor)`` where
