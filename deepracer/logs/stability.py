@@ -3,6 +3,7 @@
 import csv
 import os
 import re
+import warnings
 from io import StringIO
 
 import numpy as np
@@ -179,10 +180,11 @@ class SimtraceStabilityAnalyzer:
         """
         if log_type == LogType.TRAINING:
             path_attr = self._fh.training_simtrace_path
-            split_attr = self._fh.training_simtrace_split
+            split_re = None
         elif log_type == LogType.EVALUATION:
             path_attr = self._fh.evaluation_simtrace_path
             split_attr = self._fh.evaluation_simtrace_split
+            split_re = re.compile(split_attr) if split_attr else None
         else:
             raise ValueError(f"Unsupported log_type: {log_type}")
 
@@ -193,14 +195,14 @@ class SimtraceStabilityAnalyzer:
         if not files:
             return pd.DataFrame()
 
-        split_re = re.compile(split_attr) if split_attr else None
         rows = []
 
         for file in files:
             try:
                 data = self._fh.get_file(file)
                 per_episode_deltas, rtf = parse_simtrace_bytes(data)
-            except Exception:
+            except (ValueError, KeyError, csv.Error, OSError) as exc:
+                warnings.warn(f"Skipping {file}: {exc}", stacklevel=2)
                 continue
 
             flat = _flatten(per_episode_deltas)
@@ -274,17 +276,21 @@ class SimtraceStabilityAnalyzer:
 
         print("-" * len(header))
         total_steps = int(df["count"].sum())
-        # weighted average for avg/std; true max; mean of p95
+        # weighted average for avg/std; true max; mean of per-file p95 values
         weights = df["count"].values
         wavg = float(np.average(df["avg_ms"].values, weights=weights))
         wstd = float(np.average(df["std_ms"].values, weights=weights))
         overall_max = float(df["max_ms"].max())
-        overall_p95 = float(df["p95_ms"].mean())
+        overall_mean_p95 = float(df["p95_ms"].mean())
         rtf_vals = df["rtf"].dropna()
         overall_rtf = f"{rtf_vals.mean():.3f}" if not rtf_vals.empty else "n/a"
         print(
-            f"{'OVERALL':>12} {total_steps:>8d} {wavg:>8.1f}"
-            f" {overall_max:>8.1f} {overall_p95:>8.1f} {wstd:>8.1f} {overall_rtf:>7}"
+            f"{'OVERALL*':>12} {total_steps:>8d} {wavg:>8.1f}"
+            f" {overall_max:>8.1f} {overall_mean_p95:>8.1f} {wstd:>8.1f} {overall_rtf:>7}"
+        )
+        print(
+            "* Note: OVERALL p95_ms is the mean of per-file p95_ms values, not the"
+            " global 95th percentile across all step deltas."
         )
 
     def analyze_episodes(self, file_key: str) -> pd.DataFrame:

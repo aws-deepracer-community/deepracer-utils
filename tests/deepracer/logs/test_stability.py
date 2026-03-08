@@ -1,6 +1,7 @@
 """Unit tests for deepracer.logs.stability."""
 
 import io
+import os
 import textwrap
 
 import numpy as np
@@ -228,7 +229,7 @@ class TestHelpers:
 # Integration tests: SimtraceStabilityAnalyzer with FSFileHandler
 # ---------------------------------------------------------------------------
 
-BASE = "./deepracer/logs"  # tests run from repo root
+BASE = os.path.dirname(__file__)  # absolute path to this file's directory
 
 
 class TestAnalyzeDrfc1Training:
