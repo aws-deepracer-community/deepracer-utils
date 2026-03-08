@@ -1,8 +1,6 @@
 """Unit tests for deepracer.logs.stability."""
 
-import io
 import os
-import textwrap
 
 import numpy as np
 import pandas as pd

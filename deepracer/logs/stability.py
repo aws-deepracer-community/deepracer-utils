@@ -1,5 +1,7 @@
 """Simtrace timing stability analysis."""
 
+from __future__ import annotations
+
 import csv
 import os
 import re
@@ -36,7 +38,7 @@ def _flatten(per_episode: dict) -> np.ndarray:
     return np.concatenate(chunks) if chunks else np.array([], dtype=np.float64)
 
 
-def _summarize(values: np.ndarray) -> dict:
+def _summarize(values: np.ndarray) -> dict | None:
     if values.size == 0:
         return None
     return {
@@ -188,12 +190,17 @@ class SimtraceStabilityAnalyzer:
         else:
             raise ValueError(f"Unsupported log_type: {log_type}")
 
+        base_cols = ["iteration", "file", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"]
+        empty_cols = (
+            ["iteration", "stream"] + base_cols[1:] if log_type == LogType.EVALUATION else base_cols
+        )
+
         if path_attr is None:
-            return pd.DataFrame()
+            return pd.DataFrame(columns=empty_cols)
 
         files = self._fh.list_files(filterexp=path_attr)
         if not files:
-            return pd.DataFrame()
+            return pd.DataFrame(columns=empty_cols)
 
         rows = []
 
@@ -232,7 +239,7 @@ class SimtraceStabilityAnalyzer:
             rows.append(row)
 
         if not rows:
-            return pd.DataFrame()
+            return pd.DataFrame(columns=empty_cols)
 
         df = pd.DataFrame(rows)
         df["iteration"] = pd.array(df["iteration"], dtype=pd.Int64Dtype())
@@ -259,15 +266,17 @@ class SimtraceStabilityAnalyzer:
             print("No simtrace files found.")
             return
 
-        label_col = (
-            "stream" if log_type == LogType.EVALUATION and "stream" in df.columns else "iteration"
-        )
         header = f"{'label':>12} {'steps':>8} {'avg_ms':>8} {'max_ms':>8} {'p95_ms':>8} {'std_ms':>8} {'rtf':>7}"
         print(header)
         print("-" * len(header))
 
         for _, row in df.iterrows():
-            label = str(row[label_col]) if pd.notna(row[label_col]) else "n/a"
+            if log_type == LogType.EVALUATION and "stream" in df.columns:
+                stream_val = str(row["stream"]) if pd.notna(row.get("stream")) else "n/a"
+                iter_val = str(row["iteration"]) if pd.notna(row.get("iteration")) else "n/a"
+                label = f"{stream_val}/{iter_val}"
+            else:
+                label = str(row["iteration"]) if pd.notna(row["iteration"]) else "n/a"
             rtf = f"{row['rtf']:.3f}" if pd.notna(row.get("rtf")) else "n/a"
             print(
                 f"{label:>12} {int(row['count']):>8d} {row['avg_ms']:>8.1f}"
