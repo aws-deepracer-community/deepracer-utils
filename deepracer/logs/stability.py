@@ -306,12 +306,8 @@ class SimtraceStabilityAnalyzer:
         rtf_vals = df["rtf"].dropna()
         overall_rtf = f"{rtf_vals.mean():.3f}" if not rtf_vals.empty else "n/a"
         print(
-            f"{'OVERALL*':>12} {total_steps:>8d} {wavg:>8.1f}"
+            f"{'OVERALL':>12} {total_steps:>8d} {wavg:>8.1f}"
             f" {overall_max:>8.1f} {overall_mean_p95:>8.1f} {wstd:>8.1f} {overall_rtf:>7}"
-        )
-        print(
-            "* Note: OVERALL p95_ms is the mean of per-file p95_ms values, not the"
-            " global 95th percentile across all step deltas."
         )
 
     def analyze_episodes(self, file_key: str) -> pd.DataFrame:
