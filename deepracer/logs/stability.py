@@ -285,10 +285,21 @@ class SimtraceStabilityAnalyzer:
 
         print("-" * len(header))
         total_steps = int(df["count"].sum())
-        # weighted average for avg/std; true max; mean of per-file p95 values
+        # weighted average for avg; true global std via law of total variance;
+        # true max; mean of per-file p95 values
         weights = df["count"].values
         wavg = float(np.average(df["avg_ms"].values, weights=weights))
-        wstd = float(np.average(df["std_ms"].values, weights=weights))
+        # Combine per-file variances/stds into a true global standard deviation.
+        # Let μ_i = avg_ms, σ_i = std_ms, n_i = count. Then:
+        #   μ = Σ n_i μ_i / N
+        #   Var = [Σ n_i (σ_i² + μ_i²) / N] - μ²
+        #   std = sqrt(Var)
+        mean_of_squares = np.average(
+            (df["std_ms"].values ** 2 + df["avg_ms"].values ** 2),
+            weights=weights,
+        )
+        variance = float(mean_of_squares - wavg**2)
+        wstd = float(np.sqrt(variance)) if variance > 0.0 else 0.0
         overall_max = float(df["max_ms"].max())
         overall_mean_p95 = float(df["p95_ms"].mean())
         rtf_vals = df["rtf"].dropna()
