@@ -10,6 +10,7 @@ from joblib import Parallel, delayed
 from .handler import FileHandler, FSFileHandler
 from .log_utils import SimulationLogsIO
 from .misc import LogFolderType, LogType
+from .stability import SimtraceStabilityAnalyzer
 
 
 class DeepRacerLog:
@@ -476,6 +477,17 @@ class DeepRacerLog:
             return self._agent_and_network
         else:
             raise Exception("Agent and Network not yet loaded")
+
+    @property
+    def stability(self) -> SimtraceStabilityAnalyzer:
+        """A :class:`~deepracer.logs.SimtraceStabilityAnalyzer` bound to this log's file handler.
+
+        Example::
+
+            df = log.stability.analyze()
+            df_eval = log.stability.analyze(LogType.EVALUATION)
+        """
+        return SimtraceStabilityAnalyzer(self.fh)
 
     def _block_duplicate_load(self, force: bool = False):
         if self.df is not None and not force:
