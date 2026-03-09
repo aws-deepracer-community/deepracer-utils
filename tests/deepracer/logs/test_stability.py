@@ -11,7 +11,6 @@ from deepracer.logs.stability import (
     SimtraceStabilityAnalyzer,
     _extract_iteration,
     _flatten,
-    _parse_wall_clock_range,
     _summarize,
     episode_stats,
     parse_simtrace_bytes,
@@ -75,7 +74,7 @@ class TestParseSimtraceBytes:
                 {"episode": 0, "tstamp": 10.3, "episode_status": "in_progress"},
             ]
         )
-        deltas, rtf = parse_simtrace_bytes(data)
+        deltas, rtf, _ = parse_simtrace_bytes(data)
         assert 0 in deltas
         np.testing.assert_allclose(deltas[0], [0.1, 0.2], atol=1e-9)
         assert rtf is None
@@ -100,7 +99,7 @@ class TestParseSimtraceBytes:
                 },  # delta FROM prepare kept
             ]
         )
-        deltas, _ = parse_simtrace_bytes(data)
+        deltas, _, _ = parse_simtrace_bytes(data)
         # Episode 0: all three rows kept → deltas [1.0, 1.0]
         assert 0 in deltas
         np.testing.assert_allclose(deltas[0], [1.0, 1.0], atol=1e-9)
@@ -117,7 +116,7 @@ class TestParseSimtraceBytes:
                 {"episode": 0, "tstamp": 11.0, "episode_status": "in_progress"},
             ]
         )
-        deltas, _ = parse_simtrace_bytes(data)
+        deltas, _, _ = parse_simtrace_bytes(data)
         assert all(d >= 0 for d in deltas.get(0, np.array([])))
 
     def test_real_time_factor_computed(self):
@@ -145,7 +144,7 @@ class TestParseSimtraceBytes:
             ],
             include_wall_clock=True,
         )
-        _, rtf = parse_simtrace_bytes(data)
+        _, rtf, _ = parse_simtrace_bytes(data)
         assert rtf is not None
         assert pytest.approx(1.0, rel=1e-3) == rtf
 
@@ -157,7 +156,7 @@ class TestParseSimtraceBytes:
                 {"episode": 0, "tstamp": 1.0, "episode_status": "in_progress"},
             ]
         )
-        _, rtf = parse_simtrace_bytes(data)
+        _, rtf, _ = parse_simtrace_bytes(data)
         assert rtf is None
 
     def test_missing_required_columns_raises(self):
@@ -172,7 +171,7 @@ class TestParseSimtraceBytes:
                 {"episode": 0, "tstamp": 5.0, "episode_status": "in_progress"},
             ]
         )
-        deltas, _ = parse_simtrace_bytes(data)
+        deltas, _, _ = parse_simtrace_bytes(data)
         assert 0 not in deltas
 
     def test_multiple_episodes(self):
@@ -185,7 +184,7 @@ class TestParseSimtraceBytes:
                 {"episode": 1, "tstamp": 5.5, "episode_status": "in_progress"},
             ]
         )
-        deltas, _ = parse_simtrace_bytes(data)
+        deltas, _, _ = parse_simtrace_bytes(data)
         assert set(deltas.keys()) == {0, 1}
         assert deltas[0].size == 1
         assert deltas[1].size == 2
@@ -702,11 +701,11 @@ class TestPrintSummary:
 
 
 # ---------------------------------------------------------------------------
-# Tests for _parse_wall_clock_range
+# Tests for wall_clock_range returned by parse_simtrace_bytes
 # ---------------------------------------------------------------------------
 
 
-class TestParseWallClockRange:
+class TestParseSimtraceBytesWallClockRange:
     def test_returns_none_without_wall_clock_column(self):
         data = _make_csv(
             [
@@ -714,7 +713,7 @@ class TestParseWallClockRange:
                 {"episode": 0, "tstamp": 10.1, "episode_status": "in_progress"},
             ]
         )
-        first, last = _parse_wall_clock_range(data)
+        _, _, (first, last) = parse_simtrace_bytes(data)
         assert first is None
         assert last is None
 
@@ -727,7 +726,7 @@ class TestParseWallClockRange:
             ],
             include_wall_clock=True,
         )
-        first, last = _parse_wall_clock_range(data)
+        _, _, (first, last) = parse_simtrace_bytes(data)
         assert pytest.approx(1000.0) == first
         assert pytest.approx(1003.0) == last
 
@@ -736,7 +735,7 @@ class TestParseWallClockRange:
             [{"episode": 0, "tstamp": 5.0, "episode_status": "in_progress", "wall_clock": 500.0}],
             include_wall_clock=True,
         )
-        first, last = _parse_wall_clock_range(data)
+        _, _, (first, last) = parse_simtrace_bytes(data)
         assert pytest.approx(500.0) == first
         assert pytest.approx(500.0) == last
 
@@ -748,7 +747,7 @@ class TestParseWallClockRange:
             "rb",
         ) as f:
             data = f.read()
-        first, last = _parse_wall_clock_range(data)
+        _, _, (first, last) = parse_simtrace_bytes(data)
         assert first is not None
         assert last is not None
         assert last > first

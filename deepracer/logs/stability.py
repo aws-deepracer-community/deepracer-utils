@@ -50,41 +50,6 @@ def _summarize(values: np.ndarray) -> dict | None:
     }
 
 
-def _parse_wall_clock_range(data: bytes) -> tuple:
-    """Return the first and last wall-clock timestamps in a simtrace CSV.
-
-    Args:
-        data: Raw bytes of a simtrace iteration CSV.
-
-    Returns:
-        A 2-tuple ``(first_wall_clock, last_wall_clock)`` as ``float`` values,
-        or ``(None, None)`` when no ``wall_clock`` column is present or no
-        valid values are found.
-    """
-    text = data.decode("utf-8", errors="replace")
-    reader = csv.DictReader(StringIO(text))
-    fieldnames = reader.fieldnames or []
-    lower_map = {n.lower(): n for n in fieldnames}
-    wall_field = next((lower_map[c] for c in _WALL_CLOCK_CANDIDATES if c in lower_map), None)
-    if not wall_field:
-        return None, None
-
-    first_wc: float | None = None
-    last_wc: float | None = None
-    for row in reader:
-        raw = (row.get(wall_field) or "").strip()
-        if not raw:
-            continue
-        try:
-            wc = float(raw)
-        except ValueError:
-            continue
-        if first_wc is None:
-            first_wc = wc
-        last_wc = wc
-    return first_wc, last_wc
-
-
 def parse_simtrace_bytes(data: bytes) -> tuple:
     """Parse a simtrace CSV byte payload into per-episode step deltas.
 
@@ -94,7 +59,8 @@ def parse_simtrace_bytes(data: bytes) -> tuple:
     The delta *from* a ``prepare`` row to the next row is kept.
 
     If the CSV contains a ``wall_clock`` column the real-time factor (RTF)
-    is also computed as simulated-seconds / wall-clock-seconds.
+    is also computed as simulated-seconds / wall-clock-seconds, and the
+    first and last wall-clock timestamps are returned.
 
     Args:
         data:
@@ -102,10 +68,12 @@ def parse_simtrace_bytes(data: bytes) -> tuple:
             at least the columns ``episode``, ``tstamp``, and ``episode_status``.
 
     Returns:
-        A 2-tuple ``(per_episode_deltas, real_time_factor)`` where
-        ``per_episode_deltas`` is a ``dict[int, np.ndarray]`` of non-negative
-        step deltas **in seconds** and ``real_time_factor`` is a ``float`` or
-        ``None`` when wall-clock data is unavailable.
+        A 3-tuple ``(per_episode_deltas, real_time_factor, wall_clock_range)``
+        where ``per_episode_deltas`` is a ``dict[int, np.ndarray]`` of
+        non-negative step deltas **in seconds**, ``real_time_factor`` is a
+        ``float`` or ``None`` when wall-clock data is unavailable, and
+        ``wall_clock_range`` is a ``(first_wc, last_wc)`` pair of ``float``
+        values (or ``(None, None)`` when no wall-clock data is present).
 
     Raises:
         ValueError: If the CSV is missing required columns (``episode``,
@@ -160,7 +128,10 @@ def parse_simtrace_bytes(data: bytes) -> tuple:
             wall_sum += dw
     rtf = (sim_sum / wall_sum) if wall_sum > 0 else None
 
-    return per_episode_deltas, rtf
+    first_wc = sim_wall_points[0][1] if sim_wall_points else None
+    last_wc = sim_wall_points[-1][1] if sim_wall_points else None
+
+    return per_episode_deltas, rtf, (first_wc, last_wc)
 
 
 class SimtraceStabilityAnalyzer:
@@ -243,7 +214,7 @@ class SimtraceStabilityAnalyzer:
         for file in files:
             try:
                 data = self._fh.get_file(file)
-                per_episode_deltas, rtf = parse_simtrace_bytes(data)
+                per_episode_deltas, rtf, _ = parse_simtrace_bytes(data)
             except (ValueError, KeyError, csv.Error, OSError) as exc:
                 warnings.warn(f"Skipping {file}: {exc}", stacklevel=2)
                 continue
@@ -401,7 +372,7 @@ class SimtraceStabilityAnalyzer:
         for file in files:
             try:
                 data = self._fh.get_file(file)
-                first_wc, last_wc = _parse_wall_clock_range(data)
+                _, _, (first_wc, last_wc) = parse_simtrace_bytes(data)
             except (ValueError, KeyError, csv.Error, OSError) as exc:
                 warnings.warn(f"Skipping {file}: {exc}", stacklevel=2)
                 continue
@@ -525,7 +496,7 @@ def episode_stats(data: bytes) -> pd.DataFrame:
         ValueError: If required columns are missing (see
             :func:`parse_simtrace_bytes`).
     """
-    per_episode_deltas, _ = parse_simtrace_bytes(data)
+    per_episode_deltas, _, _ = parse_simtrace_bytes(data)
     rows = []
     for ep in sorted(per_episode_deltas):
         deltas = per_episode_deltas[ep]
