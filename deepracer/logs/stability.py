@@ -230,11 +230,29 @@ class SimtraceStabilityAnalyzer:
 
         if has_stream:
             group_cols = ["stream", "iteration"]
-            base_cols = ["stream", "iteration", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"]
+            base_cols = [
+                "stream",
+                "iteration",
+                "count",
+                "avg_ms",
+                "max_ms",
+                "p95_ms",
+                "std_ms",
+                "rtf",
+            ]
             sort_cols = ["stream", "iteration"]
         else:
             group_cols = ["worker", "iteration"]
-            base_cols = ["worker", "iteration", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"]
+            base_cols = [
+                "worker",
+                "iteration",
+                "count",
+                "avg_ms",
+                "max_ms",
+                "p95_ms",
+                "std_ms",
+                "rtf",
+            ]
             sort_cols = ["iteration", "worker"]
 
         if df.empty:
@@ -276,10 +294,9 @@ class SimtraceStabilityAnalyzer:
         result["iteration"] = pd.array(result["iteration"], dtype=pd.Int64Dtype())
         if not has_stream:
             result["worker"] = pd.array(result["worker"], dtype=pd.Int64Dtype())
-        return (
-            result.sort_values(sort_cols, kind="stable", na_position="last")
-            .reset_index(drop=True)[base_cols]
-        )
+        return result.sort_values(sort_cols, kind="stable", na_position="last").reset_index(
+            drop=True
+        )[base_cols]
 
     def print_summary(self) -> None:
         """Print a human-readable per-iteration stability summary.
@@ -403,9 +420,9 @@ class SimtraceStabilityAnalyzer:
 
         result = pd.DataFrame(rows)
         result["iteration"] = pd.array(result["iteration"], dtype=pd.Int64Dtype())
-        result = result.sort_values(
-            "iteration", kind="stable", na_position="last"
-        ).reset_index(drop=True)
+        result = result.sort_values("iteration", kind="stable", na_position="last").reset_index(
+            drop=True
+        )
 
         result["train_time_s"] = result["_last_wc"] - result["_first_wc"]
 
@@ -463,9 +480,7 @@ class SimtraceStabilityAnalyzer:
         avg_policy_s = (
             f"{avg_policy:.1f}" if avg_policy is not None and pd.notna(avg_policy) else "n/a"
         )
-        avg_ratio_s = (
-            f"{avg_ratio:.2f}" if avg_ratio is not None and pd.notna(avg_ratio) else "n/a"
-        )
+        avg_ratio_s = f"{avg_ratio:.2f}" if avg_ratio is not None and pd.notna(avg_ratio) else "n/a"
         print(f"{'AVG':>6} {avg_train_s:>10} {avg_policy_s:>10} {avg_ratio_s:>8}")
 
     def analyze_episodes(self, iteration: int, worker: int = 0) -> pd.DataFrame:
@@ -494,9 +509,7 @@ class SimtraceStabilityAnalyzer:
                 "Load the trace via DeepRacerLog.load_training_trace() or "
                 "load_evaluation_trace() before creating the analyzer."
             )
-        it_df = self._df[
-            (self._df["iteration"] == iteration) & (self._df["worker"] == worker)
-        ]
+        it_df = self._df[(self._df["iteration"] == iteration) & (self._df["worker"] == worker)]
         if it_df.empty:
             return pd.DataFrame(columns=columns)
 
