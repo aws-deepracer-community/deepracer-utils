@@ -378,12 +378,12 @@ class TestAnalyzeDroaTraining:
 
 
 class TestAnalyzeEvalOnly:
-    """Evaluation-only folders have no training simtrace: loading training raises."""
+    """Evaluation-only folders have no training simtrace."""
 
-    def test_training_raises_for_eval_only(self):
+    def test_stability_raises_when_not_loaded(self):
         log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-eval-only")
-        with pytest.raises(Exception, match="training-simtrace"):
-            _ = log.stability  # triggers load_training_trace which raises
+        with pytest.raises(RuntimeError, match="No trace loaded"):
+            _ = log.stability
 
     def test_evaluation_non_empty(self):
         log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-eval-only")
@@ -407,12 +407,19 @@ class TestAnalyzeEvalOnly:
 
 
 class TestDeepRacerLogStabilityProperty:
+    def test_stability_requires_loaded_trace(self):
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        with pytest.raises(RuntimeError, match="No trace loaded"):
+            _ = log.stability
+
     def test_stability_property_returns_analyzer(self):
         log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        log.load_training_trace(ignore_metadata=True)
         assert isinstance(log.stability, SimtraceStabilityAnalyzer)
 
     def test_stability_analyze_via_log(self):
         log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        log.load_training_trace(ignore_metadata=True)
         df = log.stability.analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
@@ -420,7 +427,7 @@ class TestDeepRacerLogStabilityProperty:
     def test_stability_evaluate_via_log(self):
         log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
         log.load_evaluation_trace(ignore_metadata=True)
-        df = SimtraceStabilityAnalyzer(log.df).analyze()
+        df = log.stability.analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 
@@ -533,12 +540,12 @@ class TestAnalyzeTarEvaluation:
 
 
 class TestAnalyzeTarEvalOnly:
-    """Evaluation-only tar archive: training raises, evaluation non-empty."""
+    """Evaluation-only tar archive: stability raises until trace is loaded."""
 
-    def test_training_raises_for_eval_only_tar(self):
+    def test_stability_raises_when_not_loaded(self):
         log = DeepRacerLog(filehandler=TarFileHandler(EVAL_ONLY_TAR))
-        with pytest.raises(Exception, match="training-simtrace"):
-            _ = log.stability  # triggers load_training_trace which raises
+        with pytest.raises(RuntimeError, match="No trace loaded"):
+            _ = log.stability
 
     def test_evaluation_non_empty(self):
         log = DeepRacerLog(filehandler=TarFileHandler(EVAL_ONLY_TAR))
@@ -551,6 +558,7 @@ class TestAnalyzeTarEvalOnly:
 class TestDeepRacerLogStabilityPropertyTar:
     def test_stability_analyze_via_log_tar(self):
         log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
+        log.load_training_trace(ignore_metadata=True)
         df = log.stability.analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
@@ -558,7 +566,7 @@ class TestDeepRacerLogStabilityPropertyTar:
     def test_stability_evaluate_via_log_tar(self):
         log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
         log.load_evaluation_trace(ignore_metadata=True)
-        df = SimtraceStabilityAnalyzer(log.df).analyze()
+        df = log.stability.analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 

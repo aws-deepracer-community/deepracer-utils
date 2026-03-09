@@ -480,28 +480,27 @@ class DeepRacerLog:
 
     @property
     def stability(self) -> SimtraceStabilityAnalyzer:
-        """A :class:`~deepracer.logs.SimtraceStabilityAnalyzer` for the training trace.
+        """A :class:`~deepracer.logs.SimtraceStabilityAnalyzer` bound to the loaded trace.
 
-        Automatically calls :meth:`load_training_trace` (with
-        ``ignore_metadata=True``) if no training trace has been loaded yet.
-
-        Example::
+        The trace must be loaded before accessing this property.  Use whichever
+        load method matches the available log format::
 
             log = DeepRacerLog("./my-model")
+            log.load_training_trace()
             df = log.stability.analyze()
 
-        For evaluation stability, load the evaluation trace explicitly::
+        For evaluation stability::
 
-            log.load_evaluation_trace(ignore_metadata=True)
-            eval_analyzer = SimtraceStabilityAnalyzer(log.df)
-            df_eval = eval_analyzer.analyze()
+            log.load_evaluation_trace()
+            df_eval = log.stability.analyze()
+
+        Raises:
+            Exception: If no trace has been loaded yet.
         """
         if self.df is None:
-            self.load_training_trace(ignore_metadata=True)
-        elif self.active != LogType.TRAINING:
             raise RuntimeError(
-                "A non-training trace is currently loaded. "
-                "Call load_training_trace() before accessing stability."
+                "No trace loaded. Call load(), load_training_trace(), "
+                "load_evaluation_trace(), or load_robomaker_logs() first."
             )
         return SimtraceStabilityAnalyzer(self.df)
 
