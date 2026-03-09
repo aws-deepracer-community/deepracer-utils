@@ -11,6 +11,7 @@ from deepracer.logs.stability import (
     SimtraceStabilityAnalyzer,
     _extract_iteration,
     _flatten,
+    _parse_wall_clock_range,
     _summarize,
     episode_stats,
     parse_simtrace_bytes,
@@ -698,3 +699,183 @@ class TestPrintSummary:
         SimtraceStabilityAnalyzer(fh).print_summary(LogType.TRAINING)
         out = capsys.readouterr().out
         assert "No simtrace files found" in out
+
+
+# ---------------------------------------------------------------------------
+# Tests for _parse_wall_clock_range
+# ---------------------------------------------------------------------------
+
+
+class TestParseWallClockRange:
+    def test_returns_none_without_wall_clock_column(self):
+        data = _make_csv(
+            [
+                {"episode": 0, "tstamp": 10.0, "episode_status": "in_progress"},
+                {"episode": 0, "tstamp": 10.1, "episode_status": "in_progress"},
+            ]
+        )
+        first, last = _parse_wall_clock_range(data)
+        assert first is None
+        assert last is None
+
+    def test_returns_first_and_last(self):
+        data = _make_csv(
+            [
+                {"episode": 0, "tstamp": 10.0, "episode_status": "in_progress", "wall_clock": 1000.0},
+                {"episode": 0, "tstamp": 10.1, "episode_status": "in_progress", "wall_clock": 1001.5},
+                {"episode": 0, "tstamp": 10.2, "episode_status": "in_progress", "wall_clock": 1003.0},
+            ],
+            include_wall_clock=True,
+        )
+        first, last = _parse_wall_clock_range(data)
+        assert pytest.approx(1000.0) == first
+        assert pytest.approx(1003.0) == last
+
+    def test_single_row_returns_same_for_first_and_last(self):
+        data = _make_csv(
+            [{"episode": 0, "tstamp": 5.0, "episode_status": "in_progress", "wall_clock": 500.0}],
+            include_wall_clock=True,
+        )
+        first, last = _parse_wall_clock_range(data)
+        assert pytest.approx(500.0) == first
+        assert pytest.approx(500.0) == last
+
+    def test_integration_real_file(self):
+        with open(
+            f"{BASE}/sample-droa-solution-logs/sim-trace/training/"
+            "2026-03-06T18:33:59.511Z-deepracerindy-training-ACGVRmRuFNU9NkQ/"
+            "training-simtrace/0-iteration.csv",
+            "rb",
+        ) as f:
+            data = f.read()
+        first, last = _parse_wall_clock_range(data)
+        assert first is not None
+        assert last is not None
+        assert last > first
+        assert pytest.approx(1772822267.7927284, rel=1e-6) == first
+        assert pytest.approx(1772822309.2516327, rel=1e-6) == last
+
+
+# ---------------------------------------------------------------------------
+# Tests for SimtraceStabilityAnalyzer.analyze_timing
+# ---------------------------------------------------------------------------
+
+
+class TestAnalyzeTiming:
+    @pytest.fixture
+    def droa_analyzer(self):
+        fh = FSFileHandler(f"{BASE}/sample-droa-solution-logs")
+        fh.determine_root_folder_type()
+        return SimtraceStabilityAnalyzer(fh)
+
+    @pytest.fixture
+    def drfc1_analyzer(self):
+        fh = FSFileHandler(f"{BASE}/sample-drfc-1-logs")
+        fh.determine_root_folder_type()
+        return SimtraceStabilityAnalyzer(fh)
+
+    def test_returns_dataframe(self, droa_analyzer):
+        df = droa_analyzer.analyze_timing()
+        assert isinstance(df, pd.DataFrame)
+
+    def test_expected_columns(self, droa_analyzer):
+        df = droa_analyzer.analyze_timing()
+        for col in ("iteration", "file", "train_time_s", "policy_time_s", "ratio"):
+            assert col in df.columns
+
+    def test_empty_when_no_wall_clock(self, drfc1_analyzer):
+        df = drfc1_analyzer.analyze_timing()
+        assert df.empty
+        for col in ("iteration", "file", "train_time_s", "policy_time_s", "ratio"):
+            assert col in df.columns
+
+    def test_raises_for_unsupported_log_type(self, droa_analyzer):
+        with pytest.raises(ValueError):
+            droa_analyzer.analyze_timing(LogType.LEADERBOARD)
+
+    def test_sorted_by_iteration(self, droa_analyzer):
+        df = droa_analyzer.analyze_timing()
+        assert list(df["iteration"]) == sorted(df["iteration"])
+
+    def test_train_time_positive(self, droa_analyzer):
+        df = droa_analyzer.analyze_timing()
+        assert (df["train_time_s"] > 0).all()
+
+    def test_policy_time_none_for_last_iteration(self, droa_analyzer):
+        df = droa_analyzer.analyze_timing()
+        assert pd.isna(df.iloc[-1]["policy_time_s"])
+
+    def test_ratio_none_for_last_iteration(self, droa_analyzer):
+        df = droa_analyzer.analyze_timing()
+        assert pd.isna(df.iloc[-1]["ratio"])
+
+    def test_snapshot_droa_training(self, droa_analyzer):
+        df = droa_analyzer.analyze_timing()
+        assert len(df) == 2
+        row0 = df.iloc[0]
+        assert row0["iteration"] == 0
+        assert pytest.approx(41.459, rel=1e-3) == row0["train_time_s"]
+        assert pytest.approx(13.340, rel=1e-3) == row0["policy_time_s"]
+        assert pytest.approx(3.108, rel=1e-3) == row0["ratio"]
+        row1 = df.iloc[1]
+        assert row1["iteration"] == 1
+        assert pytest.approx(51.294, rel=1e-3) == row1["train_time_s"]
+        assert pd.isna(row1["policy_time_s"])
+        assert pd.isna(row1["ratio"])
+
+    def test_eval_only_returns_empty_for_training(self):
+        fh = FSFileHandler(f"{BASE}/sample-droa-eval-only")
+        fh.determine_root_folder_type()
+        df = SimtraceStabilityAnalyzer(fh).analyze_timing(LogType.TRAINING)
+        assert df.empty
+
+
+# ---------------------------------------------------------------------------
+# Tests for SimtraceStabilityAnalyzer.print_timing_summary
+# ---------------------------------------------------------------------------
+
+
+class TestPrintTimingSummary:
+    @pytest.fixture
+    def droa_analyzer(self):
+        fh = FSFileHandler(f"{BASE}/sample-droa-solution-logs")
+        fh.determine_root_folder_type()
+        return SimtraceStabilityAnalyzer(fh)
+
+    @pytest.fixture
+    def drfc1_analyzer(self):
+        fh = FSFileHandler(f"{BASE}/sample-drfc-1-logs")
+        fh.determine_root_folder_type()
+        return SimtraceStabilityAnalyzer(fh)
+
+    def test_prints_without_error(self, droa_analyzer, capsys):
+        droa_analyzer.print_timing_summary()
+        out = capsys.readouterr().out
+        assert "AVG" in out
+        assert "train_s" in out
+
+    def test_includes_iter_and_ratio(self, droa_analyzer, capsys):
+        droa_analyzer.print_timing_summary()
+        out = capsys.readouterr().out
+        assert "iter" in out
+        assert "ratio" in out
+
+    def test_no_wall_clock_prints_message(self, drfc1_analyzer, capsys):
+        drfc1_analyzer.print_timing_summary()
+        out = capsys.readouterr().out
+        assert "No timing data available" in out
+
+    def test_print_summary_includes_timing_when_wall_clock_available(self, droa_analyzer, capsys):
+        droa_analyzer.print_summary()
+        out = capsys.readouterr().out
+        # Both stability section and timing section should be present
+        assert "OVERALL" in out
+        assert "AVG" in out
+        assert "train_s" in out
+
+    def test_print_summary_no_timing_when_no_wall_clock(self, drfc1_analyzer, capsys):
+        drfc1_analyzer.print_summary()
+        out = capsys.readouterr().out
+        assert "OVERALL" in out
+        # No timing section when wall_clock is absent
+        assert "train_s" not in out

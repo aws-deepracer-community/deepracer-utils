@@ -50,6 +50,41 @@ def _summarize(values: np.ndarray) -> dict | None:
     }
 
 
+def _parse_wall_clock_range(data: bytes) -> tuple:
+    """Return the first and last wall-clock timestamps in a simtrace CSV.
+
+    Args:
+        data: Raw bytes of a simtrace iteration CSV.
+
+    Returns:
+        A 2-tuple ``(first_wall_clock, last_wall_clock)`` as ``float`` values,
+        or ``(None, None)`` when no ``wall_clock`` column is present or no
+        valid values are found.
+    """
+    text = data.decode("utf-8", errors="replace")
+    reader = csv.DictReader(StringIO(text))
+    fieldnames = reader.fieldnames or []
+    lower_map = {n.lower(): n for n in fieldnames}
+    wall_field = next((lower_map[c] for c in _WALL_CLOCK_CANDIDATES if c in lower_map), None)
+    if not wall_field:
+        return None, None
+
+    first_wc: float | None = None
+    last_wc: float | None = None
+    for row in reader:
+        raw = (row.get(wall_field) or "").strip()
+        if not raw:
+            continue
+        try:
+            wc = float(raw)
+        except ValueError:
+            continue
+        if first_wc is None:
+            first_wc = wc
+        last_wc = wc
+    return first_wc, last_wc
+
+
 def parse_simtrace_bytes(data: bytes) -> tuple:
     """Parse a simtrace CSV byte payload into per-episode step deltas.
 
@@ -309,6 +344,148 @@ class SimtraceStabilityAnalyzer:
             f"{'OVERALL':>12} {total_steps:>8d} {wavg:>8.1f}"
             f" {overall_max:>8.1f} {overall_mean_p95:>8.1f} {wstd:>8.1f} {overall_rtf:>7}"
         )
+
+        timing_df = self.analyze_timing(log_type)
+        if not timing_df.empty:
+            print()
+            self.print_timing_summary(log_type)
+
+    def analyze_timing(self, log_type: LogType = LogType.TRAINING) -> pd.DataFrame:
+        """Per-iteration training time and policy update/evaluation time.
+
+        Requires a ``wall_clock`` column in the simtrace CSV files.
+
+        *Training Time* is the elapsed wall-clock time between the first and
+        last step of an iteration.  *Policy Update and Evaluation Time* is
+        the gap between the last step of iteration *n* and the first step of
+        iteration *n+1* — this covers the time spent updating the policy and
+        running evaluation.  The *ratio* is Training Time divided by Policy
+        Update and Evaluation Time.
+
+        Args:
+            log_type:
+                ``LogType.TRAINING`` (default) or ``LogType.EVALUATION``.
+
+        Returns:
+            A :class:`~pandas.DataFrame` with one row per simtrace file.
+            Returns an empty DataFrame when no files are found or no
+            ``wall_clock`` data is available.
+
+            Columns:
+
+            * **iteration** – Iteration index (``int``, nullable).
+            * **file** – Source file path / key.
+            * **train_time_s** – Training time in seconds (wall-clock).
+            * **policy_time_s** – Policy update and evaluation time in seconds;
+              ``None`` for the last iteration.
+            * **ratio** – ``train_time_s / policy_time_s``; ``None`` when
+              ``policy_time_s`` is unavailable or zero.
+        """
+        if log_type == LogType.TRAINING:
+            path_attr = self._fh.training_simtrace_path
+        elif log_type == LogType.EVALUATION:
+            path_attr = self._fh.evaluation_simtrace_path
+        else:
+            raise ValueError(f"Unsupported log_type: {log_type}")
+
+        base_cols = ["iteration", "file", "train_time_s", "policy_time_s", "ratio"]
+
+        if path_attr is None:
+            return pd.DataFrame(columns=base_cols)
+
+        files = self._fh.list_files(filterexp=path_attr)
+        if not files:
+            return pd.DataFrame(columns=base_cols)
+
+        rows = []
+        for file in files:
+            try:
+                data = self._fh.get_file(file)
+                first_wc, last_wc = _parse_wall_clock_range(data)
+            except (ValueError, KeyError, csv.Error, OSError) as exc:
+                warnings.warn(f"Skipping {file}: {exc}", stacklevel=2)
+                continue
+
+            if first_wc is None or last_wc is None:
+                continue
+
+            rows.append(
+                {
+                    "iteration": _extract_iteration(file),
+                    "file": file,
+                    "_first_wc": first_wc,
+                    "_last_wc": last_wc,
+                }
+            )
+
+        if not rows:
+            return pd.DataFrame(columns=base_cols)
+
+        df = pd.DataFrame(rows)
+        df["iteration"] = pd.array(df["iteration"], dtype=pd.Int64Dtype())
+        df = df.sort_values("iteration", kind="stable", na_position="last").reset_index(drop=True)
+
+        df["train_time_s"] = df["_last_wc"] - df["_first_wc"]
+
+        policy_times: list = [None] * len(df)
+        for i in range(len(df) - 1):
+            gap = df.iloc[i + 1]["_first_wc"] - df.iloc[i]["_last_wc"]
+            # A negative gap can occur due to clock skew or out-of-order files;
+            # treat it as unavailable rather than propagating a nonsensical value.
+            policy_times[i] = gap if gap >= 0 else None
+        df["policy_time_s"] = policy_times
+
+        df["ratio"] = df.apply(
+            lambda row: (
+                float(row["train_time_s"]) / float(row["policy_time_s"])
+                if pd.notna(row["policy_time_s"]) and row["policy_time_s"] != 0
+                else None
+            ),
+            axis=1,
+        )
+
+        return df[base_cols]
+
+    def print_timing_summary(self, log_type: LogType = LogType.TRAINING) -> None:
+        """Print a human-readable per-iteration timing summary.
+
+        Shows Training Time, Policy Update and Evaluation Time, and their
+        ratio for each iteration.  Requires ``wall_clock`` data in the
+        simtrace CSV files.
+
+        Args:
+            log_type:
+                ``LogType.TRAINING`` (default) or ``LogType.EVALUATION``.
+        """
+        df = self.analyze_timing(log_type)
+        if df.empty:
+            print("No timing data available (wall_clock column required).")
+            return
+
+        header = f"{'iter':>6} {'train_s':>10} {'policy_s':>10} {'ratio':>8}"
+        print(header)
+        print("-" * len(header))
+
+        for _, row in df.iterrows():
+            iter_val = str(row["iteration"]) if pd.notna(row.get("iteration")) else "n/a"
+            train_s = f"{row['train_time_s']:.1f}" if pd.notna(row.get("train_time_s")) else "n/a"
+            policy_s = (
+                f"{row['policy_time_s']:.1f}" if pd.notna(row.get("policy_time_s")) else "n/a"
+            )
+            ratio = f"{row['ratio']:.2f}" if pd.notna(row.get("ratio")) else "n/a"
+            print(f"{iter_val:>6} {train_s:>10} {policy_s:>10} {ratio:>8}")
+
+        print("-" * len(header))
+        avg_train = df["train_time_s"].mean()
+        valid_policy = df["policy_time_s"].dropna()
+        avg_policy = valid_policy.mean() if not valid_policy.empty else None
+        valid_ratio = df["ratio"].dropna()
+        avg_ratio = valid_ratio.mean() if not valid_ratio.empty else None
+
+        avg_train_s = f"{avg_train:.1f}" if pd.notna(avg_train) else "n/a"
+        avg_policy_s = f"{avg_policy:.1f}" if avg_policy is not None and pd.notna(avg_policy) else "n/a"
+        avg_ratio_s = f"{avg_ratio:.2f}" if avg_ratio is not None and pd.notna(avg_ratio) else "n/a"
+        print(f"{'AVG':>6} {avg_train_s:>10} {avg_policy_s:>10} {avg_ratio_s:>8}")
 
     def analyze_episodes(self, file_key: str) -> pd.DataFrame:
         """Per-episode step-delta statistics for a single simtrace file.
