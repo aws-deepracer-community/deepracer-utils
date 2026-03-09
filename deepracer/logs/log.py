@@ -425,25 +425,38 @@ class DeepRacerLog:
         data_wrapper.seek(0)
 
     def _parse_trace_metadata(self):
+        logger = logging.getLogger(__name__)
 
-        _ = self.fh.list_files(check_exist=True, filterexp=self.fh.model_metadata_path)
+        if self.fh.list_files(check_exist=False, filterexp=self.fh.model_metadata_path):
+            try:
+                model_metadata: dict = json.load(
+                    TextIOWrapper(
+                        BytesIO(self.fh.get_file(self.fh.model_metadata_path)), encoding="utf-8"
+                    )
+                )
+                self._action_space = model_metadata["action_space"]
+                self._agent_and_network = {}
+                self._agent_and_network["sensor_list"] = model_metadata["sensor"]
+                self._agent_and_network["network"] = model_metadata["neural_network"]
+                self._agent_and_network["simapp_version"] = model_metadata["version"]
+            except (json.JSONDecodeError, KeyError) as e:
+                logger.warning("Could not parse model_metadata.json: %s", e)
+        else:
+            logger.warning(
+                "model_metadata.json not found; action space and agent/network info unavailable."
+            )
 
-        _ = self.fh.list_files(check_exist=True, filterexp=self.fh.hyperparameters_path)
-
-        model_metadata: dict = None
-        model_metadata = json.load(
-            TextIOWrapper(BytesIO(self.fh.get_file(self.fh.model_metadata_path)), encoding="utf-8")
-        )
-        self._action_space = model_metadata["action_space"]
-
-        self._agent_and_network = {}
-        self._agent_and_network["sensor_list"] = model_metadata["sensor"]
-        self._agent_and_network["network"] = model_metadata["neural_network"]
-        self._agent_and_network["simapp_version"] = model_metadata["version"]
-
-        self._hyperparameters = json.load(
-            TextIOWrapper(BytesIO(self.fh.get_file(self.fh.hyperparameters_path)), encoding="utf-8")
-        )
+        if self.fh.list_files(check_exist=False, filterexp=self.fh.hyperparameters_path):
+            try:
+                self._hyperparameters = json.load(
+                    TextIOWrapper(
+                        BytesIO(self.fh.get_file(self.fh.hyperparameters_path)), encoding="utf-8"
+                    )
+                )
+            except json.JSONDecodeError as e:
+                logger.warning("Could not parse hyperparameters.json: %s", e)
+        else:
+            logger.warning("hyperparameters.json not found; hyperparameters unavailable.")
 
     def dataframe(self):
         """Method that provides the dataframe for analysis of this log."""
