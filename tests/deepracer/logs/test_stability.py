@@ -233,9 +233,9 @@ BASE = os.path.dirname(__file__)  # absolute path to this file's directory
 class TestAnalyzeDrfc1Training:
     @pytest.fixture
     def analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-drfc-1-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_returns_dataframe(self, analyzer):
         df = analyzer.analyze()
@@ -243,7 +243,7 @@ class TestAnalyzeDrfc1Training:
 
     def test_expected_columns(self, analyzer):
         df = analyzer.analyze()
-        for col in ("iteration", "file", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"):
+        for col in ("worker", "iteration", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"):
             assert col in df.columns, f"Missing column: {col}"
 
     def test_row_count_matches_iteration_files(self, analyzer):
@@ -276,6 +276,7 @@ class TestAnalyzeDrfc1Training:
 
     def test_snapshot_iteration_0(self, analyzer):
         row = analyzer.analyze().iloc[0]
+        assert row["worker"] == 0
         assert row["iteration"] == 0
         assert row["count"] == 509
         assert pytest.approx(66.633, rel=1e-3) == row["avg_ms"]
@@ -285,6 +286,7 @@ class TestAnalyzeDrfc1Training:
 
     def test_snapshot_iteration_1(self, analyzer):
         row = analyzer.analyze().iloc[1]
+        assert row["worker"] == 0
         assert row["iteration"] == 1
         assert row["count"] == 525
         assert pytest.approx(66.438, rel=1e-3) == row["avg_ms"]
@@ -293,6 +295,7 @@ class TestAnalyzeDrfc1Training:
 
     def test_snapshot_iteration_26(self, analyzer):
         row = analyzer.analyze().iloc[26]
+        assert row["worker"] == 0
         assert row["iteration"] == 26
         assert row["count"] == 2908
         assert pytest.approx(66.879, rel=1e-3) == row["avg_ms"]
@@ -304,24 +307,24 @@ class TestAnalyzeDrfc1Training:
 class TestAnalyzeDrfc1Evaluation:
     @pytest.fixture
     def analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-drfc-1-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        log.load_evaluation_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_evaluation_returns_dataframe(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+        df = analyzer.analyze()
         assert isinstance(df, pd.DataFrame)
 
     def test_evaluation_has_stream_column(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+        df = analyzer.analyze()
         assert "stream" in df.columns
 
     def test_evaluation_non_empty(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+        df = analyzer.analyze()
         assert len(df) > 0
 
     def test_snapshot_evaluation_streams(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+        df = analyzer.analyze()
         assert list(df["stream"]) == ["20220709200242", "20220709200509", "20220709200711"]
         assert list(df["count"]) == [647, 631, 624]
         np.testing.assert_allclose(
@@ -339,9 +342,9 @@ class TestAnalyzeDrfc1Evaluation:
 class TestAnalyzeDroaTraining:
     @pytest.fixture
     def analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-droa-solution-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-solution-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_returns_dataframe(self, analyzer):
         df = analyzer.analyze()
@@ -357,6 +360,7 @@ class TestAnalyzeDroaTraining:
         df = analyzer.analyze()
         assert len(df) == 2
         row0 = df.iloc[0]
+        assert row0["worker"] == 0
         assert row0["iteration"] == 0
         assert row0["count"] == 353
         assert pytest.approx(65.887, rel=1e-3) == row0["avg_ms"]
@@ -365,6 +369,7 @@ class TestAnalyzeDroaTraining:
         assert pytest.approx(8.320, rel=1e-3) == row0["std_ms"]
         assert pytest.approx(0.6439, rel=1e-3) == row0["rtf"]
         row1 = df.iloc[1]
+        assert row1["worker"] == 0
         assert row1["iteration"] == 1
         assert row1["count"] == 453
         assert pytest.approx(66.322, rel=1e-3) == row1["avg_ms"]
@@ -373,26 +378,24 @@ class TestAnalyzeDroaTraining:
 
 
 class TestAnalyzeEvalOnly:
-    """Evaluation-only folders have no training simtrace path."""
+    """Evaluation-only folders have no training simtrace: loading training raises."""
 
-    @pytest.fixture
-    def analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-droa-eval-only")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+    def test_training_raises_for_eval_only(self):
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-eval-only")
+        with pytest.raises(Exception, match="training-simtrace"):
+            _ = log.stability  # triggers load_training_trace which raises
 
-    def test_training_returns_empty_dataframe(self, analyzer):
-        df = analyzer.analyze(LogType.TRAINING)
-        assert isinstance(df, pd.DataFrame)
-        assert df.empty
-
-    def test_evaluation_non_empty(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+    def test_evaluation_non_empty(self):
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-eval-only")
+        log.load_evaluation_trace(ignore_metadata=True)
+        df = SimtraceStabilityAnalyzer(log.df).analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 
-    def test_snapshot_eval_only_evaluation(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+    def test_snapshot_eval_only_evaluation(self):
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-eval-only")
+        log.load_evaluation_trace(ignore_metadata=True)
+        df = SimtraceStabilityAnalyzer(log.df).analyze()
         assert len(df) == 1
         row = df.iloc[0]
         assert row["count"] == 1299
@@ -416,18 +419,10 @@ class TestDeepRacerLogStabilityProperty:
 
     def test_stability_evaluate_via_log(self):
         log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
-        df = log.stability.analyze(LogType.EVALUATION)
+        log.load_evaluation_trace(ignore_metadata=True)
+        df = SimtraceStabilityAnalyzer(log.df).analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
-
-
-class TestUnsupportedLogType:
-    def test_raises_for_leaderboard(self):
-        fh = FSFileHandler(f"{BASE}/sample-drfc-1-logs")
-        fh.determine_root_folder_type()
-        analyzer = SimtraceStabilityAnalyzer(fh)
-        with pytest.raises(ValueError):
-            analyzer.analyze(LogType.LEADERBOARD)
 
 
 # ---------------------------------------------------------------------------
@@ -441,9 +436,9 @@ EVAL_ONLY_TAR = f"{BASE}/sample-droa-eval-only.tar.gz"
 class TestAnalyzeTarTraining:
     @pytest.fixture
     def analyzer(self):
-        fh = TarFileHandler(SAMPLE_TAR)
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_returns_dataframe(self, analyzer):
         df = analyzer.analyze()
@@ -451,7 +446,7 @@ class TestAnalyzeTarTraining:
 
     def test_expected_columns(self, analyzer):
         df = analyzer.analyze()
-        for col in ("iteration", "file", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"):
+        for col in ("worker", "iteration", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"):
             assert col in df.columns, f"Missing column: {col}"
 
     def test_non_empty(self, analyzer):
@@ -476,6 +471,7 @@ class TestAnalyzeTarTraining:
     def test_snapshot_tar_training(self, analyzer):
         df = analyzer.analyze()
         row0 = df.iloc[0]
+        assert row0["worker"] == 0
         assert row0["iteration"] == 0
         assert row0["count"] == 353
         assert pytest.approx(65.887, rel=1e-3) == row0["avg_ms"]
@@ -486,13 +482,13 @@ class TestAnalyzeTarTraining:
 
     def test_results_match_fs_handler(self):
         """TarFileHandler and FSFileHandler must produce the same stats."""
-        fh_tar = TarFileHandler(SAMPLE_TAR)
-        fh_tar.determine_root_folder_type()
-        df_tar = SimtraceStabilityAnalyzer(fh_tar).analyze()
+        log_tar = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
+        log_tar.load_training_trace(ignore_metadata=True)
+        df_tar = SimtraceStabilityAnalyzer(log_tar.df).analyze()
 
-        fh_fs = FSFileHandler(f"{BASE}/sample-droa-solution-logs")
-        fh_fs.determine_root_folder_type()
-        df_fs = SimtraceStabilityAnalyzer(fh_fs).analyze()
+        log_fs = DeepRacerLog(model_folder=f"{BASE}/sample-droa-solution-logs")
+        log_fs.load_training_trace(ignore_metadata=True)
+        df_fs = SimtraceStabilityAnalyzer(log_fs.df).analyze()
 
         assert len(df_tar) == len(df_fs)
         for col in ("count", "avg_ms", "max_ms", "p95_ms", "std_ms"):
@@ -507,24 +503,24 @@ class TestAnalyzeTarTraining:
 class TestAnalyzeTarEvaluation:
     @pytest.fixture
     def analyzer(self):
-        fh = TarFileHandler(SAMPLE_TAR)
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
+        log.load_evaluation_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_evaluation_returns_dataframe(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+        df = analyzer.analyze()
         assert isinstance(df, pd.DataFrame)
 
     def test_evaluation_has_stream_column(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+        df = analyzer.analyze()
         assert "stream" in df.columns
 
     def test_evaluation_non_empty(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+        df = analyzer.analyze()
         assert len(df) > 0
 
     def test_snapshot_tar_evaluation(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+        df = analyzer.analyze()
         assert len(df) == 1
         row = df.iloc[0]
         assert "stream" in df.columns
@@ -537,37 +533,32 @@ class TestAnalyzeTarEvaluation:
 
 
 class TestAnalyzeTarEvalOnly:
-    """Evaluation-only tar archive: training returns empty, evaluation non-empty."""
+    """Evaluation-only tar archive: training raises, evaluation non-empty."""
 
-    @pytest.fixture
-    def analyzer(self):
-        fh = TarFileHandler(EVAL_ONLY_TAR)
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+    def test_training_raises_for_eval_only_tar(self):
+        log = DeepRacerLog(filehandler=TarFileHandler(EVAL_ONLY_TAR))
+        with pytest.raises(Exception, match="training-simtrace"):
+            _ = log.stability  # triggers load_training_trace which raises
 
-    def test_training_returns_empty_dataframe(self, analyzer):
-        df = analyzer.analyze(LogType.TRAINING)
-        assert isinstance(df, pd.DataFrame)
-        assert df.empty
-
-    def test_evaluation_non_empty(self, analyzer):
-        df = analyzer.analyze(LogType.EVALUATION)
+    def test_evaluation_non_empty(self):
+        log = DeepRacerLog(filehandler=TarFileHandler(EVAL_ONLY_TAR))
+        log.load_evaluation_trace(ignore_metadata=True)
+        df = SimtraceStabilityAnalyzer(log.df).analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 
 
 class TestDeepRacerLogStabilityPropertyTar:
     def test_stability_analyze_via_log_tar(self):
-        fh = TarFileHandler(SAMPLE_TAR)
-        log = DeepRacerLog(filehandler=fh)
+        log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
         df = log.stability.analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 
     def test_stability_evaluate_via_log_tar(self):
-        fh = TarFileHandler(SAMPLE_TAR)
-        log = DeepRacerLog(filehandler=fh)
-        df = log.stability.analyze(LogType.EVALUATION)
+        log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
+        log.load_evaluation_trace(ignore_metadata=True)
+        df = SimtraceStabilityAnalyzer(log.df).analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 
@@ -650,35 +641,37 @@ class TestEpisodeStats:
         assert (df["max_ms"] >= df["avg_ms"]).all()
 
 
+_DROA_ITER0_PATH = (
+    f"{BASE}/sample-droa-solution-logs/sim-trace/training/"
+    "2026-03-06T18:33:59.511Z-deepracerindy-training-ACGVRmRuFNU9NkQ/"
+    "training-simtrace/0-iteration.csv"
+)
+
+
 class TestAnalyzeEpisodes:
     @pytest.fixture
     def analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-droa-solution-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-solution-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_returns_dataframe(self, analyzer):
-        iter_df = analyzer.analyze()
-        file_key = iter_df.iloc[0]["file"]
-        df = analyzer.analyze_episodes(file_key)
+        df = analyzer.analyze_episodes(0)
         assert isinstance(df, pd.DataFrame)
 
     def test_matches_episode_stats_function(self, analyzer):
-        iter_df = analyzer.analyze()
-        file_key = iter_df.iloc[0]["file"]
-        df_method = analyzer.analyze_episodes(file_key)
-        fh = FSFileHandler(f"{BASE}/sample-droa-solution-logs")
-        fh.determine_root_folder_type()
-        df_func = episode_stats(fh.get_file(file_key))
+        df_method = analyzer.analyze_episodes(0)
+        with open(_DROA_ITER0_PATH, "rb") as f:
+            df_func = episode_stats(f.read())
         pd.testing.assert_frame_equal(df_method, df_func)
 
 
 class TestPrintSummary:
     @pytest.fixture
     def analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-drfc-1-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_training_prints_without_error(self, analyzer, capsys):
         analyzer.print_summary()
@@ -686,18 +679,18 @@ class TestPrintSummary:
         assert "OVERALL" in out
         assert "avg_ms" in out
 
-    def test_evaluation_prints_without_error(self, analyzer, capsys):
-        analyzer.print_summary(LogType.EVALUATION)
+    def test_evaluation_prints_without_error(self, capsys):
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        log.load_evaluation_trace(ignore_metadata=True)
+        SimtraceStabilityAnalyzer(log.df).print_summary()
         out = capsys.readouterr().out
         assert "OVERALL" in out
         assert "20220709200242" in out
 
-    def test_empty_prints_no_files_message(self, capsys):
-        fh = FSFileHandler(f"{BASE}/sample-droa-eval-only")
-        fh.determine_root_folder_type()
-        SimtraceStabilityAnalyzer(fh).print_summary(LogType.TRAINING)
+    def test_empty_prints_no_data_message(self, capsys):
+        SimtraceStabilityAnalyzer(pd.DataFrame()).print_summary()
         out = capsys.readouterr().out
-        assert "No simtrace files found" in out
+        assert "No simtrace data found" in out
 
 
 # ---------------------------------------------------------------------------
@@ -763,15 +756,15 @@ class TestParseSimtraceBytesWallClockRange:
 class TestAnalyzeTiming:
     @pytest.fixture
     def droa_analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-droa-solution-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-solution-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     @pytest.fixture
     def drfc1_analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-drfc-1-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_returns_dataframe(self, droa_analyzer):
         df = droa_analyzer.analyze_timing()
@@ -779,18 +772,14 @@ class TestAnalyzeTiming:
 
     def test_expected_columns(self, droa_analyzer):
         df = droa_analyzer.analyze_timing()
-        for col in ("iteration", "file", "train_time_s", "policy_time_s", "ratio"):
+        for col in ("iteration", "train_time_s", "policy_time_s", "ratio"):
             assert col in df.columns
 
     def test_empty_when_no_wall_clock(self, drfc1_analyzer):
         df = drfc1_analyzer.analyze_timing()
         assert df.empty
-        for col in ("iteration", "file", "train_time_s", "policy_time_s", "ratio"):
+        for col in ("iteration", "train_time_s", "policy_time_s", "ratio"):
             assert col in df.columns
-
-    def test_raises_for_unsupported_log_type(self, droa_analyzer):
-        with pytest.raises(ValueError):
-            droa_analyzer.analyze_timing(LogType.LEADERBOARD)
 
     def test_sorted_by_iteration(self, droa_analyzer):
         df = droa_analyzer.analyze_timing()
@@ -822,11 +811,11 @@ class TestAnalyzeTiming:
         assert pd.isna(row1["policy_time_s"])
         assert pd.isna(row1["ratio"])
 
-    def test_eval_only_returns_empty_for_training(self):
-        fh = FSFileHandler(f"{BASE}/sample-droa-eval-only")
-        fh.determine_root_folder_type()
-        df = SimtraceStabilityAnalyzer(fh).analyze_timing(LogType.TRAINING)
+    def test_empty_df_returns_empty_timing(self):
+        df = SimtraceStabilityAnalyzer(pd.DataFrame()).analyze_timing()
         assert df.empty
+        for col in ("iteration", "train_time_s", "policy_time_s", "ratio"):
+            assert col in df.columns
 
 
 # ---------------------------------------------------------------------------
@@ -837,15 +826,15 @@ class TestAnalyzeTiming:
 class TestPrintTimingSummary:
     @pytest.fixture
     def droa_analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-droa-solution-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-solution-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     @pytest.fixture
     def drfc1_analyzer(self):
-        fh = FSFileHandler(f"{BASE}/sample-drfc-1-logs")
-        fh.determine_root_folder_type()
-        return SimtraceStabilityAnalyzer(fh)
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
 
     def test_prints_without_error(self, droa_analyzer, capsys):
         droa_analyzer.print_timing_summary()
@@ -876,5 +865,4 @@ class TestPrintTimingSummary:
         drfc1_analyzer.print_summary()
         out = capsys.readouterr().out
         assert "OVERALL" in out
-        # No timing section when wall_clock is absent
         assert "train_s" not in out

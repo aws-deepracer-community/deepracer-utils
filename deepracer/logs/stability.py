@@ -5,14 +5,10 @@ from __future__ import annotations
 import csv
 import os
 import re
-import warnings
 from io import StringIO
 
 import numpy as np
 import pandas as pd
-
-from .handler import FileHandler
-from .misc import LogType
 
 _WALL_CLOCK_CANDIDATES = ("wall_clock", "wallclock", "wall_time")
 _MS_PER_SECOND = 1000.0
@@ -48,6 +44,46 @@ def _summarize(values: np.ndarray) -> dict | None:
         "max": float(np.max(values)),
         "p95": float(np.percentile(values, 95)),
     }
+
+
+def _episode_deltas(ep_group: pd.DataFrame) -> np.ndarray:
+    """Compute filtered tstamp step deltas for a single episode group.
+
+    Mirrors the filtering in :func:`parse_simtrace_bytes`: every delta is kept
+    except the one that *arrives at* a ``prepare`` row (the episode reset gap)
+    and any negative deltas (clock resets).
+    """
+    sorted_group = ep_group.sort_values("steps")
+    tstamps = sorted_group["tstamp"].to_numpy(dtype=np.float64)
+    statuses = sorted_group["episode_status"].str.lower().str.strip().to_numpy()
+    if len(tstamps) < 2:
+        return np.array([], dtype=np.float64)
+    deltas = np.diff(tstamps)
+    # Drop the delta arriving AT a 'prepare' row (episode reset gap).
+    keep = np.array([statuses[i + 1] != "prepare" for i in range(len(deltas))])
+    deltas = deltas[keep]
+    return deltas[deltas >= 0]
+
+
+def _rtf_from_iteration(it_group: pd.DataFrame) -> float | None:
+    """Compute real-time factor for a per-iteration DataFrame group.
+
+    Returns the ratio of simulated time to wall-clock time, or ``None`` when
+    no valid ``wall_clock`` data is present.
+    """
+    valid = it_group.dropna(subset=["wall_clock"]).sort_values("tstamp")
+    if len(valid) < 2:
+        return None
+    pairs = valid[["tstamp", "wall_clock"]].to_numpy()
+    sim_sum = wall_sum = 0.0
+    for i in range(1, len(pairs)):
+        ps, pw = pairs[i - 1]
+        cs, cw = pairs[i]
+        ds, dw = cs - ps, cw - pw
+        if ds >= 0 and dw > 0:
+            sim_sum += ds
+            wall_sum += dw
+    return (sim_sum / wall_sum) if wall_sum > 0 else None
 
 
 def parse_simtrace_bytes(data: bytes) -> tuple:
@@ -135,174 +171,162 @@ def parse_simtrace_bytes(data: bytes) -> tuple:
 
 
 class SimtraceStabilityAnalyzer:
-    """Analyses simtrace timing stability using a :class:`~deepracer.logs.FileHandler`.
+    """Analyses simtrace timing stability from a loaded trace DataFrame.
 
-    Computes per-iteration step-delta statistics from the ``tstamp`` column of
-    simtrace CSV files.  All row statuses are included except for the reset gap
+    Computes per-iteration, per-worker step-delta statistics from the
+    ``tstamp`` column.  All row statuses are included except for the reset gap
     that arrives *at* a ``prepare`` row.
+
+    The DataFrame is produced by
+    :meth:`~deepracer.logs.DeepRacerLog.load_training_trace` (training) or
+    :meth:`~deepracer.logs.DeepRacerLog.load_evaluation_trace` (evaluation).
 
     Example::
 
-        from deepracer.logs import DeepRacerLog, LogType
+        from deepracer.logs import DeepRacerLog
 
         log = DeepRacerLog("./my-model")
-        df = log.stability.analyze()                          # training
-        df_eval = log.stability.analyze(LogType.EVALUATION)  # evaluation
+        df = log.stability.analyze()   # training (auto-loaded)
 
-    Alternatively::
+    For evaluation::
 
-        from deepracer.logs import FSFileHandler, SimtraceStabilityAnalyzer
-
-        fh = FSFileHandler("./my-model")
-        fh.determine_root_folder_type()
-        analyzer = SimtraceStabilityAnalyzer(fh)
-        df = analyzer.analyze()
+        log.load_evaluation_trace(ignore_metadata=True)
+        eval_analyzer = SimtraceStabilityAnalyzer(log.df)
+        df_eval = eval_analyzer.analyze()
 
     """
 
-    def __init__(self, filehandler: FileHandler):
-        self._fh = filehandler
+    def __init__(self, df: pd.DataFrame):
+        self._df = df
 
-    def analyze(self, log_type: LogType = LogType.TRAINING) -> pd.DataFrame:
-        """Per-iteration simtrace timing statistics.
+    def analyze(self) -> pd.DataFrame:
+        """Per-iteration, per-worker simtrace timing statistics.
 
-        Args:
-            log_type:
-                ``LogType.TRAINING`` (default) or ``LogType.EVALUATION``.
+        For training data each worker is analysed independently, yielding one
+        row per ``(worker, iteration)`` pair.  For evaluation data (identified
+        by the presence of a ``stream`` column) each stream/iteration pair
+        produces one row.
 
         Returns:
-            A :class:`~pandas.DataFrame` with one row per simtrace file.
-            Returns an empty DataFrame when no files are found or none yield
-            valid step deltas.
+            A :class:`~pandas.DataFrame` sorted by ``(iteration, worker)`` for
+            training or ``(stream, iteration)`` for evaluation.  Returns an
+            empty DataFrame when no valid step deltas are found.
 
-            Columns:
+            Columns (training):
 
+            * **worker** – Worker index (``int``).
             * **iteration** – Iteration index (``int``, nullable).
-            * **stream** – Evaluation run identifier (evaluation only).
-            * **file** – Source file path / key.
             * **count** – Number of in-episode step deltas.
             * **avg_ms** – Mean step delta in milliseconds.
             * **max_ms** – Maximum step delta in milliseconds.
             * **p95_ms** – 95th-percentile step delta in milliseconds.
             * **std_ms** – Standard deviation of step deltas in milliseconds.
             * **rtf** – Real-time factor (``float`` or ``None``).
+
+            Columns (evaluation): ``stream`` replaces ``worker``.
         """
-        if log_type == LogType.TRAINING:
-            path_attr = self._fh.training_simtrace_path
-            split_re = None
-        elif log_type == LogType.EVALUATION:
-            path_attr = self._fh.evaluation_simtrace_path
-            split_attr = self._fh.evaluation_simtrace_split
-            split_re = re.compile(split_attr) if split_attr else None
+        df = self._df
+        has_stream = "stream" in df.columns
+
+        if has_stream:
+            group_cols = ["stream", "iteration"]
+            base_cols = ["stream", "iteration", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"]
+            sort_cols = ["stream", "iteration"]
         else:
-            raise ValueError(f"Unsupported log_type: {log_type}")
+            group_cols = ["worker", "iteration"]
+            base_cols = ["worker", "iteration", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"]
+            sort_cols = ["iteration", "worker"]
 
-        base_cols = ["iteration", "file", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"]
-        empty_cols = (
-            ["iteration", "stream"] + base_cols[1:] if log_type == LogType.EVALUATION else base_cols
-        )
-
-        if path_attr is None:
-            return pd.DataFrame(columns=empty_cols)
-
-        files = self._fh.list_files(filterexp=path_attr)
-        if not files:
-            return pd.DataFrame(columns=empty_cols)
+        if df.empty:
+            return pd.DataFrame(columns=base_cols)
 
         rows = []
-
-        for file in files:
-            try:
-                data = self._fh.get_file(file)
-                per_episode_deltas, rtf, _ = parse_simtrace_bytes(data)
-            except (ValueError, KeyError, csv.Error, OSError) as exc:
-                warnings.warn(f"Skipping {file}: {exc}", stacklevel=2)
+        for (key0, key1), it_group in df.groupby(group_cols, sort=False):
+            all_deltas = [
+                d
+                for _, ep_group in it_group.groupby("episode", sort=False)
+                for d in (_episode_deltas(ep_group),)
+                if d.size > 0
+            ]
+            if not all_deltas:
                 continue
 
-            flat = _flatten(per_episode_deltas)
-            if flat.size == 0:
-                continue
-
+            flat = np.concatenate(all_deltas)
             stats = _summarize(flat)
             row = {
-                "iteration": _extract_iteration(file),
-                "file": file,
                 "count": stats["count"],
                 "avg_ms": stats["avg"] * _MS_PER_SECOND,
                 "max_ms": stats["max"] * _MS_PER_SECOND,
                 "p95_ms": stats["p95"] * _MS_PER_SECOND,
                 "std_ms": stats["std"] * _MS_PER_SECOND,
-                "rtf": rtf,
+                "rtf": _rtf_from_iteration(it_group),
             }
-
-            if log_type == LogType.EVALUATION:
-                stream = None
-                if split_re:
-                    m = split_re.search(file)
-                    if m and m.lastindex >= 1:
-                        stream = m.group(1)
-                row["stream"] = stream
-
+            if has_stream:
+                row["stream"] = key0
+                row["iteration"] = key1
+            else:
+                row["worker"] = key0
+                row["iteration"] = key1
             rows.append(row)
 
         if not rows:
-            return pd.DataFrame(columns=empty_cols)
+            return pd.DataFrame(columns=base_cols)
 
-        df = pd.DataFrame(rows)
-        df["iteration"] = pd.array(df["iteration"], dtype=pd.Int64Dtype())
+        result = pd.DataFrame(rows)
+        result["iteration"] = pd.array(result["iteration"], dtype=pd.Int64Dtype())
+        if not has_stream:
+            result["worker"] = pd.array(result["worker"], dtype=pd.Int64Dtype())
+        return (
+            result.sort_values(sort_cols, kind="stable", na_position="last")
+            .reset_index(drop=True)[base_cols]
+        )
 
-        if log_type == LogType.EVALUATION and "stream" in df.columns:
-            sort_cols = ["stream", "iteration"]
-        else:
-            sort_cols = ["iteration"]
-
-        return df.sort_values(sort_cols, kind="stable", na_position="last").reset_index(drop=True)
-
-    def print_summary(self, log_type: LogType = LogType.TRAINING) -> None:
+    def print_summary(self) -> None:
         """Print a human-readable per-iteration stability summary.
 
-        Calls :meth:`analyze` and prints a fixed-width table with one row per
-        simtrace file, followed by an aggregate ``OVERALL`` row.
-
-        Args:
-            log_type:
-                ``LogType.TRAINING`` (default) or ``LogType.EVALUATION``.
+        Prints a fixed-width table with one row per worker/iteration (or
+        stream/iteration for evaluation), followed by an aggregate ``OVERALL``
+        row.  When wall-clock data is available a per-iteration timing table
+        is appended automatically.
         """
-        df = self.analyze(log_type)
+        df = self.analyze()
         if df.empty:
-            print("No simtrace files found.")
+            print("No simtrace data found.")
             return
 
-        header = f"{'label':>12} {'steps':>8} {'avg_ms':>8} {'max_ms':>8} {'p95_ms':>8} {'std_ms':>8} {'rtf':>7}"
+        has_stream = "stream" in df.columns
+        header = (
+            f"{'label':>20} {'steps':>8} {'avg_ms':>8} "
+            f"{'max_ms':>8} {'p95_ms':>8} {'std_ms':>8} {'rtf':>7}"
+        )
         print(header)
         print("-" * len(header))
 
         for _, row in df.iterrows():
-            if log_type == LogType.EVALUATION and "stream" in df.columns:
-                stream_val = str(row["stream"]) if pd.notna(row.get("stream")) else "n/a"
-                iter_val = str(row["iteration"]) if pd.notna(row.get("iteration")) else "n/a"
-                label = f"{stream_val}/{iter_val}"
+            if has_stream:
+                key0 = str(row["stream"]) if pd.notna(row.get("stream")) else "n/a"
             else:
-                label = str(row["iteration"]) if pd.notna(row["iteration"]) else "n/a"
+                key0 = str(int(row["worker"])) if pd.notna(row.get("worker")) else "n/a"
+            iter_val = str(row["iteration"]) if pd.notna(row.get("iteration")) else "n/a"
+            label = f"{key0}/{iter_val}"
             rtf = f"{row['rtf']:.3f}" if pd.notna(row.get("rtf")) else "n/a"
             print(
-                f"{label:>12} {int(row['count']):>8d} {row['avg_ms']:>8.1f}"
+                f"{label:>20} {int(row['count']):>8d} {row['avg_ms']:>8.1f}"
                 f" {row['max_ms']:>8.1f} {row['p95_ms']:>8.1f} {row['std_ms']:>8.1f} {rtf:>7}"
             )
 
         print("-" * len(header))
         total_steps = int(df["count"].sum())
         # weighted average for avg; true global std via law of total variance;
-        # true max; mean of per-file p95 values
+        # true max; mean of per-row p95 values
         weights = df["count"].values
         wavg = float(np.average(df["avg_ms"].values, weights=weights))
-        # Combine per-file variances/stds into a true global standard deviation.
+        # Combine per-iteration variances into a true global std.
         # Let μ_i = avg_ms, σ_i = std_ms, n_i = count. Then:
         #   μ = Σ n_i μ_i / N
         #   Var = [Σ n_i (σ_i² + μ_i²) / N] - μ²
-        #   std = sqrt(Var)
         mean_of_squares = np.average(
-            (df["std_ms"].values ** 2 + df["avg_ms"].values ** 2),
+            df["std_ms"].values ** 2 + df["avg_ms"].values ** 2,
             weights=weights,
         )
         variance = float(mean_of_squares - wavg**2)
@@ -312,19 +336,23 @@ class SimtraceStabilityAnalyzer:
         rtf_vals = df["rtf"].dropna()
         overall_rtf = f"{rtf_vals.mean():.3f}" if not rtf_vals.empty else "n/a"
         print(
-            f"{'OVERALL':>12} {total_steps:>8d} {wavg:>8.1f}"
+            f"{'OVERALL':>20} {total_steps:>8d} {wavg:>8.1f}"
             f" {overall_max:>8.1f} {overall_mean_p95:>8.1f} {wstd:>8.1f} {overall_rtf:>7}"
         )
 
-        timing_df = self.analyze_timing(log_type)
+        timing_df = self.analyze_timing()
         if not timing_df.empty:
             print()
-            self.print_timing_summary(log_type)
+            self.print_timing_summary()
 
-    def analyze_timing(self, log_type: LogType = LogType.TRAINING) -> pd.DataFrame:
+    def analyze_timing(self) -> pd.DataFrame:
         """Per-iteration training time and policy update/evaluation time.
 
-        Requires a ``wall_clock`` column in the simtrace CSV files.
+        Uses **worker 0** to derive wall-clock timestamps, which represents the
+        continuous wall-clock stream across iterations.  Requires a
+        ``wall_clock`` column in the trace (provided automatically by
+        :meth:`~deepracer.logs.DeepRacerLog.load_training_trace`; set to
+        ``NaN`` for older logs that predate it).
 
         *Training Time* is the elapsed wall-clock time between the first and
         last step of an iteration.  *Policy Update and Evaluation Time* is
@@ -333,80 +361,62 @@ class SimtraceStabilityAnalyzer:
         running evaluation.  The *ratio* is Training Time divided by Policy
         Update and Evaluation Time.
 
-        Args:
-            log_type:
-                ``LogType.TRAINING`` (default) or ``LogType.EVALUATION``.
-
         Returns:
-            A :class:`~pandas.DataFrame` with one row per simtrace file.
-            Returns an empty DataFrame when no files are found or no
-            ``wall_clock`` data is available.
+            A :class:`~pandas.DataFrame` with one row per iteration.
+            Returns an empty DataFrame when no ``wall_clock`` data is
+            available.
 
             Columns:
 
             * **iteration** – Iteration index (``int``, nullable).
-            * **file** – Source file path / key.
             * **train_time_s** – Training time in seconds (wall-clock).
-            * **policy_time_s** – Policy update and evaluation time in seconds;
-              ``None`` for the last iteration.
+            * **policy_time_s** – Policy update and evaluation time in
+              seconds; ``None`` for the last iteration.
             * **ratio** – ``train_time_s / policy_time_s``; ``None`` when
               ``policy_time_s`` is unavailable or zero.
         """
-        if log_type == LogType.TRAINING:
-            path_attr = self._fh.training_simtrace_path
-        elif log_type == LogType.EVALUATION:
-            path_attr = self._fh.evaluation_simtrace_path
-        else:
-            raise ValueError(f"Unsupported log_type: {log_type}")
+        df = self._df
+        base_cols = ["iteration", "train_time_s", "policy_time_s", "ratio"]
 
-        base_cols = ["iteration", "file", "train_time_s", "policy_time_s", "ratio"]
-
-        if path_attr is None:
+        if df.empty:
             return pd.DataFrame(columns=base_cols)
 
-        files = self._fh.list_files(filterexp=path_attr)
-        if not files:
-            return pd.DataFrame(columns=base_cols)
+        # Use worker 0 for the wall-clock timeline across iterations.
+        if "worker" in df.columns:
+            df = df[df["worker"] == 0]
 
         rows = []
-        for file in files:
-            try:
-                data = self._fh.get_file(file)
-                _, _, (first_wc, last_wc) = parse_simtrace_bytes(data)
-            except (ValueError, KeyError, csv.Error, OSError) as exc:
-                warnings.warn(f"Skipping {file}: {exc}", stacklevel=2)
+        for iteration, it_group in df.groupby("iteration", sort=False):
+            valid_wc = it_group.dropna(subset=["wall_clock"])
+            if valid_wc.empty:
                 continue
-
-            if first_wc is None or last_wc is None:
-                continue
-
             rows.append(
                 {
-                    "iteration": _extract_iteration(file),
-                    "file": file,
-                    "_first_wc": first_wc,
-                    "_last_wc": last_wc,
+                    "iteration": iteration,
+                    "_first_wc": float(valid_wc["wall_clock"].min()),
+                    "_last_wc": float(valid_wc["wall_clock"].max()),
                 }
             )
 
         if not rows:
             return pd.DataFrame(columns=base_cols)
 
-        df = pd.DataFrame(rows)
-        df["iteration"] = pd.array(df["iteration"], dtype=pd.Int64Dtype())
-        df = df.sort_values("iteration", kind="stable", na_position="last").reset_index(drop=True)
+        result = pd.DataFrame(rows)
+        result["iteration"] = pd.array(result["iteration"], dtype=pd.Int64Dtype())
+        result = result.sort_values(
+            "iteration", kind="stable", na_position="last"
+        ).reset_index(drop=True)
 
-        df["train_time_s"] = df["_last_wc"] - df["_first_wc"]
+        result["train_time_s"] = result["_last_wc"] - result["_first_wc"]
 
-        policy_times: list = [None] * len(df)
-        for i in range(len(df) - 1):
-            gap = df.iloc[i + 1]["_first_wc"] - df.iloc[i]["_last_wc"]
-            # A negative gap can occur due to clock skew or out-of-order files;
-            # treat it as unavailable rather than propagating a nonsensical value.
+        policy_times: list = [None] * len(result)
+        for i in range(len(result) - 1):
+            gap = result.iloc[i + 1]["_first_wc"] - result.iloc[i]["_last_wc"]
+            # A negative gap can occur due to clock skew; treat as unavailable.
             policy_times[i] = gap if gap >= 0 else None
-        df["policy_time_s"] = policy_times
+        result["policy_time_s"] = policy_times
 
-        df["ratio"] = df.apply(
+        result["ratio"] = result.apply(
             lambda row: (
                 float(row["train_time_s"]) / float(row["policy_time_s"])
                 if pd.notna(row["policy_time_s"]) and row["policy_time_s"] != 0
@@ -415,20 +425,16 @@ class SimtraceStabilityAnalyzer:
             axis=1,
         )
 
-        return df[base_cols]
+        return result[base_cols]
 
-    def print_timing_summary(self, log_type: LogType = LogType.TRAINING) -> None:
+    def print_timing_summary(self) -> None:
         """Print a human-readable per-iteration timing summary.
 
         Shows Training Time, Policy Update and Evaluation Time, and their
-        ratio for each iteration.  Requires ``wall_clock`` data in the
-        simtrace CSV files.
-
-        Args:
-            log_type:
-                ``LogType.TRAINING`` (default) or ``LogType.EVALUATION``.
+        ratio for each iteration.  Requires ``wall_clock`` data in the trace.
+        Uses worker 0 for the wall-clock timeline.
         """
-        df = self.analyze_timing(log_type)
+        df = self.analyze_timing()
         if df.empty:
             print("No timing data available (wall_clock column required).")
             return
@@ -454,28 +460,63 @@ class SimtraceStabilityAnalyzer:
         avg_ratio = valid_ratio.mean() if not valid_ratio.empty else None
 
         avg_train_s = f"{avg_train:.1f}" if pd.notna(avg_train) else "n/a"
-        avg_policy_s = f"{avg_policy:.1f}" if avg_policy is not None and pd.notna(avg_policy) else "n/a"
-        avg_ratio_s = f"{avg_ratio:.2f}" if avg_ratio is not None and pd.notna(avg_ratio) else "n/a"
+        avg_policy_s = (
+            f"{avg_policy:.1f}" if avg_policy is not None and pd.notna(avg_policy) else "n/a"
+        )
+        avg_ratio_s = (
+            f"{avg_ratio:.2f}" if avg_ratio is not None and pd.notna(avg_ratio) else "n/a"
+        )
         print(f"{'AVG':>6} {avg_train_s:>10} {avg_policy_s:>10} {avg_ratio_s:>8}")
 
-    def analyze_episodes(self, file_key: str) -> pd.DataFrame:
-        """Per-episode step-delta statistics for a single simtrace file.
+    def analyze_episodes(self, iteration: int, worker: int = 0) -> pd.DataFrame:
+        """Per-episode step-delta statistics for a single iteration and worker.
 
         Useful for examining how step timing evolves across episodes within one
-        iteration file — e.g. to detect drift or spikes episode-by-episode.
+        iteration — e.g. to detect drift or spikes episode-by-episode.
 
         Args:
-            file_key:
-                The file path / key as returned by :meth:`analyze` (``file``
-                column), or any key accepted by the underlying
-                :class:`~deepracer.logs.FileHandler`.
+            iteration:
+                The iteration number to analyse.
+            worker:
+                The worker index to analyse (default: ``0``).  Evaluation
+                DataFrames always carry ``worker=0`` so the default is correct
+                for both training and evaluation traces.
 
         Returns:
             A :class:`~pandas.DataFrame` with one row per episode.  Columns:
             **episode**, **count**, **avg_ms**, **max_ms**, **p95_ms**,
             **std_ms**.
         """
-        return episode_stats(self._fh.get_file(file_key))
+        columns = ["episode", "count", "avg_ms", "max_ms", "p95_ms", "std_ms"]
+        if "worker" not in self._df.columns:
+            raise ValueError(
+                "The trace DataFrame has no 'worker' column. "
+                "Load the trace via DeepRacerLog.load_training_trace() or "
+                "load_evaluation_trace() before creating the analyzer."
+            )
+        it_df = self._df[
+            (self._df["iteration"] == iteration) & (self._df["worker"] == worker)
+        ]
+        if it_df.empty:
+            return pd.DataFrame(columns=columns)
+
+        rows = []
+        for ep, ep_group in it_df.groupby("episode", sort=True):
+            deltas = _episode_deltas(ep_group)
+            if deltas.size == 0:
+                continue
+            s = _summarize(deltas)
+            rows.append(
+                {
+                    "episode": int(ep),
+                    "count": s["count"],
+                    "avg_ms": s["avg"] * _MS_PER_SECOND,
+                    "max_ms": s["max"] * _MS_PER_SECOND,
+                    "p95_ms": s["p95"] * _MS_PER_SECOND,
+                    "std_ms": s["std"] * _MS_PER_SECOND,
+                }
+            )
+        return pd.DataFrame(rows, columns=columns)
 
 
 def episode_stats(data: bytes) -> pd.DataFrame:

@@ -480,14 +480,30 @@ class DeepRacerLog:
 
     @property
     def stability(self) -> SimtraceStabilityAnalyzer:
-        """A :class:`~deepracer.logs.SimtraceStabilityAnalyzer` bound to this log's file handler.
+        """A :class:`~deepracer.logs.SimtraceStabilityAnalyzer` for the training trace.
+
+        Automatically calls :meth:`load_training_trace` (with
+        ``ignore_metadata=True``) if no training trace has been loaded yet.
 
         Example::
 
+            log = DeepRacerLog("./my-model")
             df = log.stability.analyze()
-            df_eval = log.stability.analyze(LogType.EVALUATION)
+
+        For evaluation stability, load the evaluation trace explicitly::
+
+            log.load_evaluation_trace(ignore_metadata=True)
+            eval_analyzer = SimtraceStabilityAnalyzer(log.df)
+            df_eval = eval_analyzer.analyze()
         """
-        return SimtraceStabilityAnalyzer(self.fh)
+        if self.df is None:
+            self.load_training_trace(ignore_metadata=True)
+        elif self.active != LogType.TRAINING:
+            raise RuntimeError(
+                "A non-training trace is currently loaded. "
+                "Call load_training_trace() before accessing stability."
+            )
+        return SimtraceStabilityAnalyzer(self.df)
 
     def _block_duplicate_load(self, force: bool = False):
         if self.df is not None and not force:
