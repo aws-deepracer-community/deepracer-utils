@@ -186,7 +186,8 @@ class SimtraceStabilityAnalyzer:
         from deepracer.logs import DeepRacerLog
 
         log = DeepRacerLog("./my-model")
-        df = log.stability.analyze()   # training (auto-loaded)
+        log.load_training_trace()
+        df = log.stability.analyze()   # training
 
     For evaluation::
 
@@ -395,7 +396,9 @@ class SimtraceStabilityAnalyzer:
         df = self._df
         base_cols = ["iteration", "train_time_s", "policy_time_s", "ratio"]
 
-        if df.empty:
+        # Timing analysis is only meaningful for training data; evaluation
+        # traces have a ``stream`` column and mix multiple streams per iteration.
+        if df.empty or "stream" in df.columns:
             return pd.DataFrame(columns=base_cols)
 
         # Use worker 0 for the wall-clock timeline across iterations.

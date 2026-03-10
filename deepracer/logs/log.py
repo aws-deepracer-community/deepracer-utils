@@ -427,7 +427,9 @@ class DeepRacerLog:
     def _parse_trace_metadata(self):
         logger = logging.getLogger(__name__)
 
-        if self.fh.list_files(check_exist=False, filterexp=self.fh.model_metadata_path):
+        if self.fh.model_metadata_path is None:
+            logger.debug("model_metadata_path not configured for this handler; skipping.")
+        elif self.fh.list_files(check_exist=False, filterexp=self.fh.model_metadata_path):
             try:
                 model_metadata: dict = json.load(
                     TextIOWrapper(
@@ -446,7 +448,9 @@ class DeepRacerLog:
                 "model_metadata.json not found; action space and agent/network info unavailable."
             )
 
-        if self.fh.list_files(check_exist=False, filterexp=self.fh.hyperparameters_path):
+        if self.fh.hyperparameters_path is None:
+            logger.debug("hyperparameters_path not configured for this handler; skipping.")
+        elif self.fh.list_files(check_exist=False, filterexp=self.fh.hyperparameters_path):
             try:
                 self._hyperparameters = json.load(
                     TextIOWrapper(
@@ -508,7 +512,7 @@ class DeepRacerLog:
             df_eval = log.stability.analyze()
 
         Raises:
-            Exception: If no trace has been loaded yet.
+            RuntimeError: If no trace has been loaded yet.
         """
         if self.df is None:
             raise RuntimeError(
