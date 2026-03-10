@@ -127,7 +127,7 @@ class DeepRacerLog:
         if type == LogType.EVALUATION:
             df["stream"] = path_split.groups()[0]
 
-        if not pd.api.types.is_numeric_dtype(df["action"]):
+        if "action" not in df.columns or not pd.api.types.is_numeric_dtype(df["action"]):
             df["action"] = -1
 
         return df
