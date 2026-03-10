@@ -146,7 +146,7 @@ class SimulationLogsIO:
             steps = int(parts[1])
             x = float(parts[2])
             y = float(parts[3])
-            heading = float(parts[4])
+            yaw = float(parts[4])
             steering_angle = float(parts[5])
             speed = float(parts[6])
             try:
@@ -179,7 +179,7 @@ class SimulationLogsIO:
                     steps,
                     x,
                     y,
-                    heading,
+                    yaw,
                     steering_angle,
                     speed,
                     action,
@@ -202,13 +202,13 @@ class SimulationLogsIO:
             "steps",
             "x",
             "y",
-            "heading",
+            "yaw",
             "steering_angle",
             "speed",
             "action",
             "reward",
             "done",
-            "all_wheels_on_track",
+            "on_track",
             "progress",
             "closest_waypoint",
             "track_len",
@@ -1013,7 +1013,7 @@ class NewRewardUtils:
             "speed": df_row["speed"],
             "steps": df_row["steps"],
             "progress": df_row["progress"],
-            "heading": df_row["heading"] * 180 / 3.14,
+            "heading": df_row["yaw"] * 180 / 3.14,
             "closest_waypoints": closest_waypoints,
             "steering_angle": df_row["steering_angle"] * 180 / 3.14,
             "waypoints": waypoints,

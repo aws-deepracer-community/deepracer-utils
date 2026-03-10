@@ -26,9 +26,9 @@ class DeepRacerLog:
     _CSV_TO_INTERNAL_COLUMNS = {
         "X": "x",
         "Y": "y",
-        "yaw": "heading",
         "steer": "steering_angle",
         "throttle": "speed",
+        "all_wheels_on_track": "on_track",
     }
 
     _HYPERPARAM_KEYS = [
