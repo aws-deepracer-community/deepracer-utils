@@ -175,6 +175,13 @@ class DeepRacerLog:
         if "wall_clock" not in df.columns:
             df["wall_clock"] = float("nan")
 
+        # Ensure critical numeric columns always have a numeric dtype.
+        # CSV column-count mismatches (e.g. an extra column added by a newer
+        # DeepRacer version) can cause pandas to silently shift column
+        # assignments, leaving numeric columns as object/string dtype.
+        for _col in ("tstamp", "wall_clock"):
+            df[_col] = pd.to_numeric(df[_col], errors="coerce")
+
         path_split = splitRegex.search(path)
         df["iteration"] = int(path_split.groups()[1])
 

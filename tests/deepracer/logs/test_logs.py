@@ -677,3 +677,23 @@ class TestDroaSolutionLogs:
 
         assert LogType.EVALUATION == drl.active
         assert (self._EXPECTED_EVAL_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+
+    def test_tstamp_and_wall_clock_always_numeric(self):
+        """_read_csv must always produce float64 for tstamp and wall_clock.
+
+        Regression: when a CSV has more columns than the column-names list,
+        pandas silently shifts column assignments from the point of the
+        mismatch, leaving downstream numeric columns (including tstamp and
+        wall_clock) as object/string dtype.  _read_csv must coerce them back
+        to float64 so that stability analysis never receives string values.
+        """
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert df["tstamp"].dtype == np.float64, (
+            f"tstamp must be float64, got {df['tstamp'].dtype}"
+        )
+        assert df["wall_clock"].dtype == np.float64, (
+            f"wall_clock must be float64, got {df['wall_clock'].dtype}"
+        )
