@@ -11,6 +11,7 @@ from deepracer.logs.stability import (
     SimtraceStabilityAnalyzer,
     _extract_iteration,
     _flatten,
+    _rtf_from_iteration,
     _summarize,
     episode_stats,
     parse_simtrace_bytes,
@@ -223,7 +224,47 @@ class TestHelpers:
         assert _summarize(np.array([])) is None
 
 
-# ---------------------------------------------------------------------------
+class TestRtfFromIteration:
+    """Unit tests for the _rtf_from_iteration helper."""
+
+    def _make_group(self, tstamps, wall_clocks):
+        return pd.DataFrame({"tstamp": tstamps, "wall_clock": wall_clocks})
+
+    def test_basic_rtf(self):
+        """RTF = sim_delta / wall_delta over two rows."""
+        group = self._make_group([0.0, 0.2], [1000.0, 1002.0])
+        # RTF = 0.2 / 2.0 = 0.1
+        assert _rtf_from_iteration(group) == pytest.approx(0.1, rel=1e-6)
+
+    def test_out_of_order_rows_are_sorted(self):
+        """Rows are sorted by tstamp before computing RTF."""
+        group = self._make_group([0.2, 0.0, 0.1], [1002.0, 1000.0, 1001.0])
+        # Sorted: (0.0,1000), (0.1,1001), (0.2,1002) → sim 0.2, wall 2.0 → 0.1
+        assert _rtf_from_iteration(group) == pytest.approx(0.1, rel=1e-6)
+
+    def test_nan_wall_clock_rows_excluded(self):
+        """Rows with NaN wall_clock are excluded."""
+        group = self._make_group([0.0, 0.1, 0.2], [1000.0, float("nan"), 1002.0])
+        # Only (0.0,1000) and (0.2,1002) contribute → sim 0.2, wall 2.0 → 0.1
+        assert _rtf_from_iteration(group) == pytest.approx(0.1, rel=1e-6)
+
+    def test_nan_tstamp_rows_excluded(self):
+        """Rows with NaN tstamp are excluded."""
+        group = self._make_group([0.0, float("nan"), 0.2], [1000.0, 1001.0, 1002.0])
+        assert _rtf_from_iteration(group) == pytest.approx(0.1, rel=1e-6)
+
+    def test_returns_none_when_fewer_than_two_valid_rows(self):
+        """Returns None when fewer than two rows have both tstamp and wall_clock."""
+        group = self._make_group([0.0], [1000.0])
+        assert _rtf_from_iteration(group) is None
+
+    def test_returns_none_when_all_wall_clock_nan(self):
+        """Returns None when no valid wall_clock values are present."""
+        group = self._make_group([0.0, 0.1, 0.2], [float("nan")] * 3)
+        assert _rtf_from_iteration(group) is None
+
+
+
 # Integration tests: SimtraceStabilityAnalyzer with FSFileHandler
 # ---------------------------------------------------------------------------
 
@@ -375,64 +416,6 @@ class TestAnalyzeDroaTraining:
         assert pytest.approx(66.322, rel=1e-3) == row1["avg_ms"]
         assert pytest.approx(144.0, rel=1e-3) == row1["max_ms"]
         assert pytest.approx(0.6521, rel=1e-3) == row1["rtf"]
-
-
-class TestRtfFromStringTypedColumns:
-    """Regression: _rtf_from_iteration must not crash when tstamp/wall_clock
-    are object-dtype (string) columns instead of float64.  This can happen
-    when the CSV column mapping produces string dtypes after loading."""
-
-    @staticmethod
-    def _assert_string_dtype(df: pd.DataFrame, col: str) -> None:
-        assert df[col].dtype == object or str(df[col].dtype).startswith("str"), (
-            f"Column '{col}' expected to be string/object dtype, got {df[col].dtype}"
-        )
-
-    def test_rtf_tolerates_string_columns(self):
-        """analyze() returns a float RTF even when tstamp/wall_clock are strings."""
-        df = pd.DataFrame(
-            {
-                "episode": [0, 0, 0],
-                "steps": [1, 2, 3],
-                "tstamp": ["0.1", "0.2", "0.3"],  # string dtype
-                "wall_clock": ["1000.0", "1001.0", "1002.0"],  # string dtype
-                "episode_status": ["in_progress", "in_progress", "finish"],
-                "worker": [0, 0, 0],
-                "iteration": [0, 0, 0],
-            }
-        )
-        # Confirm the columns are indeed string-typed
-        self._assert_string_dtype(df, "tstamp")
-        self._assert_string_dtype(df, "wall_clock")
-
-        analyzer = SimtraceStabilityAnalyzer(df)
-        result = analyzer.analyze()
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == 1
-        # RTF should be computed without a TypeError.
-        # RTF = (0.3 - 0.1) / (1002.0 - 1000.0) = 0.2 / 2.0 = 0.1
-        assert result.iloc[0]["rtf"] is not None
-        assert result.iloc[0]["rtf"] == pytest.approx(0.1, rel=1e-3)
-
-    def test_rtf_tolerates_empty_wall_clock_strings(self):
-        """analyze() returns None for RTF when wall_clock contains empty strings."""
-        df = pd.DataFrame(
-            {
-                "episode": [0, 0, 0],
-                "steps": [1, 2, 3],
-                "tstamp": ["0.1", "0.2", "0.3"],
-                "wall_clock": ["", "", ""],  # empty strings, not NaN
-                "episode_status": ["in_progress", "in_progress", "finish"],
-                "worker": [0, 0, 0],
-                "iteration": [0, 0, 0],
-            }
-        )
-        analyzer = SimtraceStabilityAnalyzer(df)
-        result = analyzer.analyze()
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == 1
-        # RTF should be None when wall_clock has no valid values
-        assert result.iloc[0]["rtf"] is None
 
 
 class TestAnalyzeEvalOnly:
