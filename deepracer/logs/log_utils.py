@@ -18,7 +18,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import logging
 from datetime import datetime
-from decimal import Decimal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -147,7 +146,7 @@ class SimulationLogsIO:
             steps = int(parts[1])
             x = float(parts[2])
             y = float(parts[3])
-            yaw = float(parts[4])
+            heading = float(parts[4])
             steering_angle = float(parts[5])
             speed = float(parts[6])
             try:
@@ -155,22 +154,22 @@ class SimulationLogsIO:
             except ValueError:
                 action = -1
             reward = float(parts[8])
-            done = 0 if "False" in parts[9] else 1
-            all_wheels_on_track = parts[10]
+            done = "False" not in parts[9]
+            all_wheels_on_track = "False" not in parts[10]
             progress = float(parts[11])
             closest_waypoint = int(parts[12])
             track_len = float(parts[13])
-            tstamp = Decimal(parts[14])
+            tstamp = float(parts[14])
             episode_status = parts[15]
             if len(parts) > 17:
                 pause_duration = float(parts[16])
                 wall_clock = float(parts[17])
             elif len(parts) > 16:
                 pause_duration = float(parts[16])
-                wall_clock = None
+                wall_clock = float("nan")
             else:
-                pause_duration = 0.0
-                wall_clock = None
+                pause_duration = float("nan")
+                wall_clock = float("nan")
 
             iteration = int(episode / episodes_per_iteration) + 1
             df_list.append(
@@ -180,7 +179,7 @@ class SimulationLogsIO:
                     steps,
                     x,
                     y,
-                    yaw,
+                    heading,
                     steering_angle,
                     speed,
                     action,
@@ -203,13 +202,13 @@ class SimulationLogsIO:
             "steps",
             "x",
             "y",
-            "yaw",
+            "heading",
             "steering_angle",
             "speed",
             "action",
             "reward",
             "done",
-            "on_track",
+            "all_wheels_on_track",
             "progress",
             "closest_waypoint",
             "track_len",
@@ -1014,7 +1013,7 @@ class NewRewardUtils:
             "speed": df_row["speed"],
             "steps": df_row["steps"],
             "progress": df_row["progress"],
-            "heading": df_row["yaw"] * 180 / 3.14,
+            "heading": df_row["heading"] * 180 / 3.14,
             "closest_waypoints": closest_waypoints,
             "steering_angle": df_row["steering_angle"] * 180 / 3.14,
             "waypoints": waypoints,
