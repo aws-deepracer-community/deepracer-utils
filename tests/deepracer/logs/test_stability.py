@@ -377,6 +377,64 @@ class TestAnalyzeDroaTraining:
         assert pytest.approx(0.6521, rel=1e-3) == row1["rtf"]
 
 
+class TestRtfFromStringTypedColumns:
+    """Regression: _rtf_from_iteration must not crash when tstamp/wall_clock
+    are object-dtype (string) columns instead of float64.  This can happen
+    when the CSV column mapping produces string dtypes after loading."""
+
+    @staticmethod
+    def _assert_string_dtype(df: pd.DataFrame, col: str) -> None:
+        assert df[col].dtype == object or str(df[col].dtype).startswith("str"), (
+            f"Column '{col}' expected to be string/object dtype, got {df[col].dtype}"
+        )
+
+    def test_rtf_tolerates_string_columns(self):
+        """analyze() returns a float RTF even when tstamp/wall_clock are strings."""
+        df = pd.DataFrame(
+            {
+                "episode": [0, 0, 0],
+                "steps": [1, 2, 3],
+                "tstamp": ["0.1", "0.2", "0.3"],  # string dtype
+                "wall_clock": ["1000.0", "1001.0", "1002.0"],  # string dtype
+                "episode_status": ["in_progress", "in_progress", "finish"],
+                "worker": [0, 0, 0],
+                "iteration": [0, 0, 0],
+            }
+        )
+        # Confirm the columns are indeed string-typed
+        self._assert_string_dtype(df, "tstamp")
+        self._assert_string_dtype(df, "wall_clock")
+
+        analyzer = SimtraceStabilityAnalyzer(df)
+        result = analyzer.analyze()
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 1
+        # RTF should be computed without a TypeError.
+        # RTF = (0.3 - 0.1) / (1002.0 - 1000.0) = 0.2 / 2.0 = 0.1
+        assert result.iloc[0]["rtf"] is not None
+        assert result.iloc[0]["rtf"] == pytest.approx(0.1, rel=1e-3)
+
+    def test_rtf_tolerates_empty_wall_clock_strings(self):
+        """analyze() returns None for RTF when wall_clock contains empty strings."""
+        df = pd.DataFrame(
+            {
+                "episode": [0, 0, 0],
+                "steps": [1, 2, 3],
+                "tstamp": ["0.1", "0.2", "0.3"],
+                "wall_clock": ["", "", ""],  # empty strings, not NaN
+                "episode_status": ["in_progress", "in_progress", "finish"],
+                "worker": [0, 0, 0],
+                "iteration": [0, 0, 0],
+            }
+        )
+        analyzer = SimtraceStabilityAnalyzer(df)
+        result = analyzer.analyze()
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 1
+        # RTF should be None when wall_clock has no valid values
+        assert result.iloc[0]["rtf"] is None
+
+
 class TestAnalyzeEvalOnly:
     """Evaluation-only folders have no training simtrace."""
 

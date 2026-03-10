@@ -71,10 +71,17 @@ def _rtf_from_iteration(it_group: pd.DataFrame) -> float | None:
     Returns the ratio of simulated time to wall-clock time, or ``None`` when
     no valid ``wall_clock`` data is present.
     """
-    valid = it_group.dropna(subset=["wall_clock"]).sort_values("tstamp")
-    if len(valid) < 2:
+    tstamp_num = pd.to_numeric(it_group["tstamp"], errors="coerce")
+    wall_num = pd.to_numeric(it_group["wall_clock"], errors="coerce")
+    mask = tstamp_num.notna() & wall_num.notna()
+    tstamp_arr = tstamp_num[mask].to_numpy(dtype=np.float64)
+    wall_arr = wall_num[mask].to_numpy(dtype=np.float64)
+    order = np.argsort(tstamp_arr)
+    tstamp_arr = tstamp_arr[order]
+    wall_arr = wall_arr[order]
+    if len(tstamp_arr) < 2:
         return None
-    pairs = valid[["tstamp", "wall_clock"]].to_numpy()
+    pairs = np.column_stack([tstamp_arr, wall_arr])
     sim_sum = wall_sum = 0.0
     for i in range(1, len(pairs)):
         ps, pw = pairs[i - 1]
