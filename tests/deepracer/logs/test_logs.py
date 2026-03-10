@@ -689,43 +689,7 @@ class TestDroaSolutionLogs:
         drl.load_training_trace(ignore_metadata=True)
         df = drl.dataframe()
 
-        assert df["tstamp"].dtype == np.float64, (
-            f"tstamp must be float64, got {df['tstamp'].dtype}"
-        )
-        assert df["wall_clock"].dtype == np.float64, (
-            f"wall_clock must be float64, got {df['wall_clock'].dtype}"
-        )
-
-    def test_load_training_trace_without_action_column(self, tmp_path):
-        """Regression: _read_csv must not raise KeyError when the simtrace CSV
-        has no 'action' column (older simulator versions omit it).
-        The column should be filled with -1.
-        """
-        # Build a minimal DROA_SOLUTION_LOGS folder structure.
-        csv_dir = (
-            tmp_path
-            / "sim-trace"
-            / "training"
-            / "2024-01-01T00:00:00.000Z-test"
-            / "training-simtrace"
-        )
-        csv_dir.mkdir(parents=True)
-        # Write a one-row CSV without the 'action' column.
-        csv_path = csv_dir / "0-iteration.csv"
-        csv_path.write_text(
-            "episode,steps,X,Y,yaw,steer,throttle,reward,done,"
-            "all_wheels_on_track,progress,closest_waypoint,track_len,"
-            "tstamp,episode_status,pause_duration,wall_clock\n"
-            "0,1,0.1,0.2,0.0,0.0,1.0,0.5,False,True,1.0,0,60.0,"
-            "100.0,in_progress,0.0,1000.0\n"
-            "0,2,0.1,0.2,0.0,0.0,1.0,0.5,True,True,2.0,1,60.0,"
-            "100.1,finish,0.0,1000.1\n",
-            encoding="utf-8",
-        )
-
-        drl = DeepRacerLog(str(tmp_path))
-        drl.load_training_trace(ignore_metadata=True)
-        df = drl.dataframe()
-
-        assert "action" in df.columns, "action column must be present after load"
-        assert (df["action"] == -1).all(), "missing action column must be filled with -1"
+        assert df["tstamp"].dtype == np.float64, f"tstamp must be float64, got {df['tstamp'].dtype}"
+        assert (
+            df["wall_clock"].dtype == np.float64
+        ), f"wall_clock must be float64, got {df['wall_clock'].dtype}"

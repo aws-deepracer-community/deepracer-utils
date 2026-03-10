@@ -264,7 +264,6 @@ class TestRtfFromIteration:
         assert _rtf_from_iteration(group) is None
 
 
-
 # Integration tests: SimtraceStabilityAnalyzer with FSFileHandler
 # ---------------------------------------------------------------------------
 
@@ -762,9 +761,24 @@ class TestParseSimtraceBytesWallClockRange:
     def test_returns_first_and_last(self):
         data = _make_csv(
             [
-                {"episode": 0, "tstamp": 10.0, "episode_status": "in_progress", "wall_clock": 1000.0},
-                {"episode": 0, "tstamp": 10.1, "episode_status": "in_progress", "wall_clock": 1001.5},
-                {"episode": 0, "tstamp": 10.2, "episode_status": "in_progress", "wall_clock": 1003.0},
+                {
+                    "episode": 0,
+                    "tstamp": 10.0,
+                    "episode_status": "in_progress",
+                    "wall_clock": 1000.0,
+                },
+                {
+                    "episode": 0,
+                    "tstamp": 10.1,
+                    "episode_status": "in_progress",
+                    "wall_clock": 1001.5,
+                },
+                {
+                    "episode": 0,
+                    "tstamp": 10.2,
+                    "episode_status": "in_progress",
+                    "wall_clock": 1003.0,
+                },
             ],
             include_wall_clock=True,
         )
