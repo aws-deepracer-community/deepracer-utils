@@ -20,69 +20,17 @@ class DeepRacerLog:
     Methods are exposed to load training logs, evaluation logs or leaderboard submissions.
     """
 
-    # Column names we support in the CSV file.
-    _COL_NAMES = [
-        "episode",
-        "steps",
-        "x",
-        "y",
-        "heading",
-        "steering_angle",
-        "speed",
-        "action",
-        "reward",
-        "done",
-        "all_wheels_on_track",
-        "progress",
-        "closest_waypoint",
-        "track_len",
-        "tstamp",
-        "episode_status",
-        "pause_duration",
-    ]
-    # Additional obstacle_crash_counter column is added to the CSV file.
-    _COL_NAMES_NEW = [
-        "episode",
-        "steps",
-        "x",
-        "y",
-        "heading",
-        "steering_angle",
-        "speed",
-        "action",
-        "reward",
-        "done",
-        "all_wheels_on_track",
-        "progress",
-        "closest_waypoint",
-        "track_len",
-        "tstamp",
-        "episode_status",
-        "pause_duration",
-        "obstacle_crash_counter",
-    ]
-    # Additional optional wall_clock column (wall-clock timestamp per step).
-    _COL_NAMES_FULL = [
-        "episode",
-        "steps",
-        "x",
-        "y",
-        "heading",
-        "steering_angle",
-        "speed",
-        "action",
-        "reward",
-        "done",
-        "all_wheels_on_track",
-        "progress",
-        "closest_waypoint",
-        "track_len",
-        "tstamp",
-        "episode_status",
-        "pause_duration",
-        "obstacle_crash_counter",
-        "wall_clock",
-    ]
+    # Mapping from the column names used in the simtrace CSV files to the
+    # internal names used throughout this library.  Columns not listed here
+    # have identical names in both the CSV and the internal representation.
+    _CSV_TO_INTERNAL_COLUMNS = {
+        "X": "x",
+        "Y": "y",
+        "yaw": "heading",
+        "steer": "steering_angle",
+        "throttle": "speed",
+    }
+
     _HYPERPARAM_KEYS = [
         "batch_size",
         "beta_entropy",
@@ -150,37 +98,23 @@ class DeepRacerLog:
         self.df = None
 
     def _read_csv(self, path: str, splitRegex, type: LogType = LogType.TRAINING):
-        try:
-            csv_bytes = self.fh.get_file(path)
-            # Try the fullest column list first (includes optional wall_clock)
-            df = pd.read_csv(
-                BytesIO(csv_bytes), encoding="utf8", names=self._COL_NAMES_FULL, header=0
-            )
-            df = df.drop("obstacle_crash_counter", axis=1)
-        except pd.errors.ParserError:
-            try:
-                # Without wall_clock
-                df = pd.read_csv(
-                    BytesIO(csv_bytes), encoding="utf8", names=self._COL_NAMES_NEW, header=0
-                )
-                df = df.drop("obstacle_crash_counter", axis=1)
-            except pd.errors.ParserError:
-                try:
-                    df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES, header=0)
-                except pd.errors.ParserError:
-                    # Older logs don't have pause_duration, so we're handling this
-                    df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES[:-1], header=0)
+        csv_bytes = self.fh.get_file(path)
+        df = pd.read_csv(BytesIO(csv_bytes), encoding="utf8")
 
-        # Always ensure wall_clock column is present (NaN for traces that predate it)
+        # Rename from CSV column names to internal column names.
+        df = df.rename(columns=self._CSV_TO_INTERNAL_COLUMNS)
+
+        # Drop the obsolete obstacle counter column if present.
+        if "obstacle_crash_counter" in df.columns:
+            df = df.drop("obstacle_crash_counter", axis=1)
+
+        # Ensure wall_clock column is present (NaN for traces that predate it).
         if "wall_clock" not in df.columns:
             df["wall_clock"] = float("nan")
 
-        # Ensure critical numeric columns always have a numeric dtype.
-        # CSV column-count mismatches (e.g. an extra column added by a newer
-        # DeepRacer version) can cause pandas to silently shift column
-        # assignments, leaving numeric columns as object/string dtype.
-        for _col in ("tstamp", "wall_clock"):
-            df[_col] = pd.to_numeric(df[_col], errors="coerce")
+        # Ensure pause_duration column is present (NaN for very old traces).
+        if "pause_duration" not in df.columns:
+            df["pause_duration"] = float("nan")
 
         path_split = splitRegex.search(path)
         df["iteration"] = int(path_split.groups()[1])
@@ -193,7 +127,7 @@ class DeepRacerLog:
         if type == LogType.EVALUATION:
             df["stream"] = path_split.groups()[0]
 
-        if df.dtypes["action"].name == "object":
+        if not pd.api.types.is_numeric_dtype(df["action"]):
             df["action"] = -1
 
         return df
