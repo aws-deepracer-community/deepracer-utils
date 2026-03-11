@@ -22,13 +22,13 @@ class Constants:
         "steps",
         "x",
         "y",
-        "heading",
+        "yaw",
         "steering_angle",
         "speed",
         "action",
         "reward",
         "done",
-        "all_wheels_on_track",
+        "on_track",
         "progress",
         "closest_waypoint",
         "track_len",
@@ -136,7 +136,7 @@ class TestTrainingLogs:
         drl.load(ignore_metadata=True)
         df = drl.dataframe()
 
-        assert (44842, len(Constants.RAW_COLUMNS[:-2])) == df.shape
+        assert (44842, len(Constants.RAW_COLUMNS)) == df.shape
 
     def test_episode_analysis(self):
         drl = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
@@ -654,3 +654,146 @@ class TestDroaSolutionLogs:
 
         assert LogType.EVALUATION == drl.active
         assert (self._EXPECTED_EVAL_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+
+    def test_fs_load_training_trace_without_metadata_files(self):
+        """load_training_trace() must succeed even when model_metadata.json / hyperparameters.json
+        are absent — those files are optional."""
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_training_trace()  # ignore_metadata defaults to False
+        df = drl.dataframe()
+
+        assert (self._EXPECTED_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+        # Metadata is unavailable — accessors raise rather than return stale data.
+        with pytest.raises(Exception, match="Hyperparameters not yet loaded"):
+            drl.hyperparameters()
+        with pytest.raises(Exception, match="Action space not yet loaded"):
+            drl.action_space()
+
+    def test_fs_load_evaluation_trace_without_metadata_files(self):
+        """load_evaluation_trace() must succeed even when metadata files are absent."""
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_evaluation_trace()  # ignore_metadata defaults to False
+        df = drl.dataframe()
+
+        assert LogType.EVALUATION == drl.active
+        assert (self._EXPECTED_EVAL_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+
+    def test_tstamp_and_wall_clock_always_numeric(self):
+        """_read_csv must always produce float64 for tstamp and wall_clock.
+
+        The simtrace CSVs always have a header row.  _read_csv reads them
+        natively (no ``names=`` override) so pandas infers dtypes directly
+        from the data.  Both tstamp and wall_clock must be float64.
+        """
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert df["tstamp"].dtype == np.float64, f"tstamp must be float64, got {df['tstamp'].dtype}"
+        assert (
+            df["wall_clock"].dtype == np.float64
+        ), f"wall_clock must be float64, got {df['wall_clock'].dtype}"
+
+    def test_fs_load_robomaker_logs(self):
+        """load_robomaker_logs() must work for DROA_SOLUTION_LOGS.
+
+        The simulation log under logs/training/ uses the same SIM_TRACE_LOG
+        format as the console robomaker log, including the extra
+        obstacle_crash_counter field (index 17) that precedes wall_clock
+        (index 18).
+        """
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_robomaker_logs()
+
+        df = drl.dataframe()
+        assert df is not None
+        assert len(df) == self._EXPECTED_ROWS
+
+        # Hyperparameters and agent info must be parsed from the log header.
+        hp = drl.hyperparameters()
+        assert hp["num_episodes_between_training"] == 20
+        assert 3 == hp["num_epochs"]
+
+        an = drl.agent_and_network()
+        assert an["network"] == "DEEP_CONVOLUTIONAL_NETWORK_SHALLOW"
+        assert an["simapp_version"] == "6.0"
+
+        # wall_clock must be the actual unix timestamp, not the
+        # obstacle_crash_counter (which would be 0).
+        assert df["wall_clock"].max() > 1e9
+
+    def test_tar_load_robomaker_logs(self):
+        """load_robomaker_logs() must work for a DROA TarFileHandler."""
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_robomaker_logs()
+
+        df = drl.dataframe()
+        assert len(df) == self._EXPECTED_ROWS
+        assert drl.hyperparameters()["num_episodes_between_training"] == 20
+        assert df["wall_clock"].max() > 1e9
+
+
+class TestContinuousActionLogs:
+    """Tests for DROA logs with a continuous action space.
+
+    In continuous mode the ``action`` column contains a two-element array
+    string (e.g. ``[-25.0 1.33]``).  The library normalises it to ``-1``
+    (no discrete action index) while still preserving ``steering_angle``
+    and ``speed`` from the ``steer``/``throttle`` columns.
+    """
+
+    _SAMPLE_TAR = "./deepracer/logs/sample-continous-action-logs.tar.gz"
+    _EXPECTED_ROWS = 10693
+
+    @pytest.fixture(autouse=True)
+    def suppress_warnings(self):
+        warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
+        yield
+
+    def test_detect_droa_format(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        fh.determine_root_folder_type()
+        assert LogFolderType.DROA_SOLUTION_LOGS == fh.type
+
+    def test_load_training_trace(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert (self._EXPECTED_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+        assert np.all(Constants.RAW_COLUMNS == df.columns)
+
+    def test_action_is_minus_one_for_continuous_space(self):
+        """Continuous-action logs have no discrete action index → action must be -1."""
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert df["action"].unique().tolist() == [-1]
+
+    def test_steering_and_speed_preserved(self):
+        """steering_angle and speed must carry the raw continuous values."""
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert df["steering_angle"].dtype == np.float64
+        assert df["speed"].dtype == np.float64
+        # Sanity: steering spans a range wider than a single discrete value
+        assert df["steering_angle"].nunique() > 1
+        assert df["speed"].nunique() > 1
+
+    def test_load_robomaker_logs(self):
+        """load_robomaker_logs() must handle continuous action entries (action → -1)."""
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_robomaker_logs()
+        df = drl.dataframe()
+
+        assert len(df) == self._EXPECTED_ROWS
+        assert df["action"].unique().tolist() == [-1]
+        assert df["wall_clock"].max() > 1e9
