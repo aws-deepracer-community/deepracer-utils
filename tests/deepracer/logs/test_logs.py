@@ -136,7 +136,7 @@ class TestTrainingLogs:
         drl.load(ignore_metadata=True)
         df = drl.dataframe()
 
-        assert (44842, len(Constants.RAW_COLUMNS[:-2])) == df.shape
+        assert (44842, len(Constants.RAW_COLUMNS)) == df.shape
 
     def test_episode_analysis(self):
         drl = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
@@ -693,3 +693,42 @@ class TestDroaSolutionLogs:
         assert (
             df["wall_clock"].dtype == np.float64
         ), f"wall_clock must be float64, got {df['wall_clock'].dtype}"
+
+    def test_fs_load_robomaker_logs(self):
+        """load_robomaker_logs() must work for DROA_SOLUTION_LOGS.
+
+        The simulation log under logs/training/ uses the same SIM_TRACE_LOG
+        format as the console robomaker log, including the extra
+        obstacle_crash_counter field (index 17) that precedes wall_clock
+        (index 18).
+        """
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_robomaker_logs()
+
+        df = drl.dataframe()
+        assert df is not None
+        assert len(df) == self._EXPECTED_ROWS
+
+        # Hyperparameters and agent info must be parsed from the log header.
+        hp = drl.hyperparameters()
+        assert hp["num_episodes_between_training"] == 20
+        assert 3 == hp["num_epochs"]
+
+        an = drl.agent_and_network()
+        assert an["network"] == "DEEP_CONVOLUTIONAL_NETWORK_SHALLOW"
+        assert an["simapp_version"] == "6.0"
+
+        # wall_clock must be the actual unix timestamp, not the
+        # obstacle_crash_counter (which would be 0).
+        assert df["wall_clock"].max() > 1e9
+
+    def test_tar_load_robomaker_logs(self):
+        """load_robomaker_logs() must work for a DROA TarFileHandler."""
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_robomaker_logs()
+
+        df = drl.dataframe()
+        assert len(df) == self._EXPECTED_ROWS
+        assert drl.hyperparameters()["num_episodes_between_training"] == 20
+        assert df["wall_clock"].max() > 1e9

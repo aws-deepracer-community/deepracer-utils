@@ -162,7 +162,11 @@ class SimulationLogsIO:
             track_len = float(parts[13])
             tstamp = float(parts[14])
             episode_status = parts[15]
-            if len(parts) > 17:
+            if len(parts) > 18:
+                # DROA format: obstacle_crash_counter at index 17, wall_clock at index 18
+                pause_duration = float(parts[16])
+                wall_clock = float(parts[18])
+            elif len(parts) > 17:
                 pause_duration = float(parts[16])
                 wall_clock = float(parts[17])
             elif len(parts) > 16:
@@ -172,7 +176,7 @@ class SimulationLogsIO:
                 pause_duration = float("nan")
                 wall_clock = float("nan")
 
-            iteration = int(episode / episodes_per_iteration) + 1
+            iteration = int(episode / episodes_per_iteration)
             df_list.append(
                 (
                     iteration,

@@ -274,11 +274,20 @@ class DeepRacerLog:
         """
         self._block_duplicate_load(force)
 
-        if self.fh.type is not LogFolderType.CONSOLE_MODEL_WITH_LOGS:
-            raise Exception("Only supported with LogFolderType.CONSOLE_MODEL_WITH_LOGS")
+        if self.fh.type not in (
+            LogFolderType.CONSOLE_MODEL_WITH_LOGS,
+            LogFolderType.DROA_SOLUTION_LOGS,
+        ):
+            raise Exception(
+                "Only supported with LogFolderType.CONSOLE_MODEL_WITH_LOGS"
+                " or LogFolderType.DROA_SOLUTION_LOGS"
+            )
 
         if type == LogType.TRAINING:
-            raw_data = self.fh.get_file(self.fh.training_robomaker_log_path)
+            log_files = self.fh.list_files(
+                check_exist=True, filterexp=self.fh.training_robomaker_log_path
+            )
+            raw_data = self.fh.get_file(log_files[0])
 
             self._parse_robomaker_metadata(raw_data)
 
@@ -288,6 +297,8 @@ class DeepRacerLog:
                 TextIOWrapper(BytesIO(raw_data), encoding="utf-8")
             )
             self.df = SimulationLogsIO.convert_to_pandas(data, episodes_per_iteration)
+            self.df["worker"] = 0
+            self.df["unique_episode"] = self.df["episode"]
             self.active = LogType.TRAINING
 
         else:
@@ -321,6 +332,13 @@ class DeepRacerLog:
             self.active = type
 
     def _parse_robomaker_metadata(self, raw_data: bytes):
+        # DROA/ROS2 logs prefix every line with one or more "[node-name] " segments.
+        # Strip those so the pattern checks below work for both plain console logs
+        # and prefixed DROA simulation logs.
+        _prefix_re = re.compile(r"^\s*(?:\[[^\]]*\]\s+)+")
+
+        def _content(line: str) -> str:
+            return _prefix_re.sub("", line)
 
         outside_hyperparams = True
         hyperparameters_string = ""
@@ -328,12 +346,13 @@ class DeepRacerLog:
         data_wrapper = TextIOWrapper(BytesIO(raw_data), encoding="utf-8")
 
         for line in data_wrapper.readlines():
+            content = _content(line)
             if outside_hyperparams:
-                if "Using the following hyper-parameters" in line:
+                if "Using the following hyper-parameters" in content:
                     outside_hyperparams = False
             else:
-                hyperparameters_string += line
-                if "}" in line:
+                hyperparameters_string += content
+                if "}" in content:
                     self._hyperparameters = json.loads(hyperparameters_string)
                     break
 
@@ -343,18 +362,20 @@ class DeepRacerLog:
             raise Exception("Cound not load hyperparameters. Exiting.")
 
         for line in data_wrapper.readlines():
-            if "ction space from file: " in line:
-                self._action_space = json.loads(line.split("file: ")[1].replace("'", '"'))
+            content = _content(line)
+            if "ction space from file: " in content:
+                self._action_space = json.loads(content.split("file: ")[1].replace("'", '"'))
 
         data_wrapper.seek(0)
 
         regex = r"Sensor list (\[[\'a-zA-Z, _-]+\]), network ([a-zA-Z_]+), simapp_version ([\d.]+)"
         agent_and_network = {}
         for line in data_wrapper.readlines():
-            if " * /WORLD_NAME: " in line:
-                agent_and_network["world"] = line[:-1].split(" ")[-1]
-            elif "Sensor list ['" in line:
-                m = re.search(regex, line)
+            content = _content(line)
+            if " * /WORLD_NAME: " in content:
+                agent_and_network["world"] = content[:-1].split(" ")[-1]
+            elif "Sensor list ['" in content:
+                m = re.search(regex, content)
 
                 agent_and_network["sensor_list"] = json.loads(m.group(1).replace("'", '"'))
                 agent_and_network["network"] = m.group(2)
