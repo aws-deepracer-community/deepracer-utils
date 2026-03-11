@@ -730,6 +730,22 @@ class TestPrintSummary:
         out = capsys.readouterr().out
         assert "No simtrace data found" in out
 
+    def test_print_summary_includes_timing_when_wall_clock_available(self, capsys):
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-solution-logs")
+        log.load_training_trace(ignore_metadata=True)
+        SimtraceStabilityAnalyzer(log.df).print_summary()
+        out = capsys.readouterr().out
+        assert "OVERALL" in out
+        assert "train_s" in out
+        assert "policy_s" in out
+        assert "ratio" in out
+
+    def test_print_summary_no_timing_when_no_wall_clock(self, analyzer, capsys):
+        analyzer.print_summary()
+        out = capsys.readouterr().out
+        assert "OVERALL" in out
+        assert "train_s" not in out
+
 
 # ---------------------------------------------------------------------------
 # Tests for wall_clock_range returned by parse_simtrace_bytes
@@ -869,53 +885,3 @@ class TestAnalyzeTiming:
         assert df.empty
         for col in ("iteration", "train_time_s", "policy_time_s", "ratio"):
             assert col in df.columns
-
-
-# ---------------------------------------------------------------------------
-# Tests for SimtraceStabilityAnalyzer.print_timing_summary
-# ---------------------------------------------------------------------------
-
-
-class TestPrintTimingSummary:
-    @pytest.fixture
-    def droa_analyzer(self):
-        log = DeepRacerLog(model_folder=f"{BASE}/sample-droa-solution-logs")
-        log.load_training_trace(ignore_metadata=True)
-        return SimtraceStabilityAnalyzer(log.df)
-
-    @pytest.fixture
-    def drfc1_analyzer(self):
-        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
-        log.load_training_trace(ignore_metadata=True)
-        return SimtraceStabilityAnalyzer(log.df)
-
-    def test_prints_without_error(self, droa_analyzer, capsys):
-        droa_analyzer.print_timing_summary()
-        out = capsys.readouterr().out
-        assert "AVG" in out
-        assert "train_s" in out
-
-    def test_includes_iter_and_ratio(self, droa_analyzer, capsys):
-        droa_analyzer.print_timing_summary()
-        out = capsys.readouterr().out
-        assert "iter" in out
-        assert "ratio" in out
-
-    def test_no_wall_clock_prints_message(self, drfc1_analyzer, capsys):
-        drfc1_analyzer.print_timing_summary()
-        out = capsys.readouterr().out
-        assert "No timing data available" in out
-
-    def test_print_summary_includes_timing_when_wall_clock_available(self, droa_analyzer, capsys):
-        droa_analyzer.print_summary()
-        out = capsys.readouterr().out
-        # Both stability section and timing section should be present
-        assert "OVERALL" in out
-        assert "AVG" in out
-        assert "train_s" in out
-
-    def test_print_summary_no_timing_when_no_wall_clock(self, drfc1_analyzer, capsys):
-        drfc1_analyzer.print_summary()
-        out = capsys.readouterr().out
-        assert "OVERALL" in out
-        assert "train_s" not in out

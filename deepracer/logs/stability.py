@@ -296,9 +296,18 @@ class SimtraceStabilityAnalyzer:
         result["iteration"] = pd.array(result["iteration"], dtype=pd.Int64Dtype())
         if not has_stream:
             result["worker"] = pd.array(result["worker"], dtype=pd.Int64Dtype())
-        return result.sort_values(sort_cols, kind="stable", na_position="last").reset_index(
+        result = result.sort_values(sort_cols, kind="stable", na_position="last").reset_index(
             drop=True
-        )[base_cols]
+        )
+        timing_df = self.analyze_timing()
+        if not timing_df.empty:
+            result = result.merge(
+                timing_df[["iteration", "train_time_s", "policy_time_s", "ratio"]],
+                on="iteration",
+                how="left",
+            )
+            return result[base_cols + ["train_time_s", "policy_time_s", "ratio"]]
+        return result[base_cols]
 
     def print_summary(self) -> None:
         """Print a human-readable per-iteration stability summary.
@@ -314,10 +323,13 @@ class SimtraceStabilityAnalyzer:
             return
 
         has_stream = "stream" in df.columns
+        has_timing = "train_time_s" in df.columns
         header = (
             f"{'label':>20} {'steps':>8} {'avg_ms':>8} "
             f"{'max_ms':>8} {'p95_ms':>8} {'std_ms':>8} {'rtf':>7}"
         )
+        if has_timing:
+            header += f" {'train_s':>9} {'policy_s':>9} {'ratio':>7}"
         print(header)
         print("-" * len(header))
 
@@ -329,10 +341,20 @@ class SimtraceStabilityAnalyzer:
             iter_val = str(row["iteration"]) if pd.notna(row.get("iteration")) else "n/a"
             label = f"{key0}/{iter_val}"
             rtf = f"{row['rtf']:.3f}" if pd.notna(row.get("rtf")) else "n/a"
-            print(
+            line = (
                 f"{label:>20} {int(row['count']):>8d} {row['avg_ms']:>8.1f}"
                 f" {row['max_ms']:>8.1f} {row['p95_ms']:>8.1f} {row['std_ms']:>8.1f} {rtf:>7}"
             )
+            if has_timing:
+                train_s = (
+                    f"{row['train_time_s']:.1f}" if pd.notna(row.get("train_time_s")) else "n/a"
+                )
+                policy_s = (
+                    f"{row['policy_time_s']:.1f}" if pd.notna(row.get("policy_time_s")) else "n/a"
+                )
+                ratio = f"{row['ratio']:.2f}" if pd.notna(row.get("ratio")) else "n/a"
+                line += f" {train_s:>9} {policy_s:>9} {ratio:>7}"
+            print(line)
 
         print("-" * len(header))
         total_steps = int(df["count"].sum())
@@ -354,15 +376,19 @@ class SimtraceStabilityAnalyzer:
         overall_mean_p95 = float(df["p95_ms"].mean())
         rtf_vals = df["rtf"].dropna()
         overall_rtf = f"{rtf_vals.mean():.3f}" if not rtf_vals.empty else "n/a"
-        print(
+        overall_line = (
             f"{'OVERALL':>20} {total_steps:>8d} {wavg:>8.1f}"
             f" {overall_max:>8.1f} {overall_mean_p95:>8.1f} {wstd:>8.1f} {overall_rtf:>7}"
         )
-
-        timing_df = self.analyze_timing()
-        if not timing_df.empty:
-            print()
-            self.print_timing_summary()
+        if has_timing:
+            avg_train = df["train_time_s"].dropna().mean()
+            avg_policy = df["policy_time_s"].dropna().mean()
+            avg_ratio = df["ratio"].dropna().mean()
+            avg_train_s = f"{avg_train:.1f}" if pd.notna(avg_train) else "n/a"
+            avg_policy_s = f"{avg_policy:.1f}" if pd.notna(avg_policy) else "n/a"
+            avg_ratio_s = f"{avg_ratio:.2f}" if pd.notna(avg_ratio) else "n/a"
+            overall_line += f" {avg_train_s:>9} {avg_policy_s:>9} {avg_ratio_s:>7}"
+        print(overall_line)
 
     def analyze_timing(self) -> pd.DataFrame:
         """Per-iteration training time and policy update/evaluation time.
@@ -447,45 +473,6 @@ class SimtraceStabilityAnalyzer:
         )
 
         return result[base_cols]
-
-    def print_timing_summary(self) -> None:
-        """Print a human-readable per-iteration timing summary.
-
-        Shows Training Time, Policy Update and Evaluation Time, and their
-        ratio for each iteration.  Requires ``wall_clock`` data in the trace.
-        Uses worker 0 for the wall-clock timeline.
-        """
-        df = self.analyze_timing()
-        if df.empty:
-            print("No timing data available (wall_clock column required).")
-            return
-
-        header = f"{'iter':>6} {'train_s':>10} {'policy_s':>10} {'ratio':>8}"
-        print(header)
-        print("-" * len(header))
-
-        for _, row in df.iterrows():
-            iter_val = str(row["iteration"]) if pd.notna(row.get("iteration")) else "n/a"
-            train_s = f"{row['train_time_s']:.1f}" if pd.notna(row.get("train_time_s")) else "n/a"
-            policy_s = (
-                f"{row['policy_time_s']:.1f}" if pd.notna(row.get("policy_time_s")) else "n/a"
-            )
-            ratio = f"{row['ratio']:.2f}" if pd.notna(row.get("ratio")) else "n/a"
-            print(f"{iter_val:>6} {train_s:>10} {policy_s:>10} {ratio:>8}")
-
-        print("-" * len(header))
-        avg_train = df["train_time_s"].mean()
-        valid_policy = df["policy_time_s"].dropna()
-        avg_policy = valid_policy.mean() if not valid_policy.empty else None
-        valid_ratio = df["ratio"].dropna()
-        avg_ratio = valid_ratio.mean() if not valid_ratio.empty else None
-
-        avg_train_s = f"{avg_train:.1f}" if pd.notna(avg_train) else "n/a"
-        avg_policy_s = (
-            f"{avg_policy:.1f}" if avg_policy is not None and pd.notna(avg_policy) else "n/a"
-        )
-        avg_ratio_s = f"{avg_ratio:.2f}" if avg_ratio is not None and pd.notna(avg_ratio) else "n/a"
-        print(f"{'AVG':>6} {avg_train_s:>10} {avg_policy_s:>10} {avg_ratio_s:>8}")
 
     def analyze_episodes(self, iteration: int, worker: int = 0) -> pd.DataFrame:
         """Per-episode step-delta statistics for a single iteration and worker.
