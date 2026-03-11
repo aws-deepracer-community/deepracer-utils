@@ -732,3 +732,68 @@ class TestDroaSolutionLogs:
         assert len(df) == self._EXPECTED_ROWS
         assert drl.hyperparameters()["num_episodes_between_training"] == 20
         assert df["wall_clock"].max() > 1e9
+
+
+class TestContinuousActionLogs:
+    """Tests for DROA logs with a continuous action space.
+
+    In continuous mode the ``action`` column contains a two-element array
+    string (e.g. ``[-25.0 1.33]``).  The library normalises it to ``-1``
+    (no discrete action index) while still preserving ``steering_angle``
+    and ``speed`` from the ``steer``/``throttle`` columns.
+    """
+
+    _SAMPLE_TAR = "./deepracer/logs/sample-continous-action-logs.tar.gz"
+    _EXPECTED_ROWS = 10693
+
+    @pytest.fixture(autouse=True)
+    def suppress_warnings(self):
+        warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
+        yield
+
+    def test_detect_droa_format(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        fh.determine_root_folder_type()
+        assert LogFolderType.DROA_SOLUTION_LOGS == fh.type
+
+    def test_load_training_trace(self):
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert (self._EXPECTED_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+        assert np.all(Constants.RAW_COLUMNS == df.columns)
+
+    def test_action_is_minus_one_for_continuous_space(self):
+        """Continuous-action logs have no discrete action index → action must be -1."""
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert df["action"].unique().tolist() == [-1]
+
+    def test_steering_and_speed_preserved(self):
+        """steering_angle and speed must carry the raw continuous values."""
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert df["steering_angle"].dtype == np.float64
+        assert df["speed"].dtype == np.float64
+        # Sanity: steering spans a range wider than a single discrete value
+        assert df["steering_angle"].nunique() > 1
+        assert df["speed"].nunique() > 1
+
+    def test_load_robomaker_logs(self):
+        """load_robomaker_logs() must handle continuous action entries (action → -1)."""
+        fh = TarFileHandler(self._SAMPLE_TAR)
+        drl = DeepRacerLog(filehandler=fh)
+        drl.load_robomaker_logs()
+        df = drl.dataframe()
+
+        assert len(df) == self._EXPECTED_ROWS
+        assert df["action"].unique().tolist() == [-1]
+        assert df["wall_clock"].max() > 1e9
