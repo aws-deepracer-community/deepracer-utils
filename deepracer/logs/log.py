@@ -20,69 +20,17 @@ class DeepRacerLog:
     Methods are exposed to load training logs, evaluation logs or leaderboard submissions.
     """
 
-    # Column names we support in the CSV file.
-    _COL_NAMES = [
-        "episode",
-        "steps",
-        "x",
-        "y",
-        "heading",
-        "steering_angle",
-        "speed",
-        "action",
-        "reward",
-        "done",
-        "all_wheels_on_track",
-        "progress",
-        "closest_waypoint",
-        "track_len",
-        "tstamp",
-        "episode_status",
-        "pause_duration",
-    ]
-    # Additional obstacle_crash_counter column is added to the CSV file.
-    _COL_NAMES_NEW = [
-        "episode",
-        "steps",
-        "x",
-        "y",
-        "heading",
-        "steering_angle",
-        "speed",
-        "action",
-        "reward",
-        "done",
-        "all_wheels_on_track",
-        "progress",
-        "closest_waypoint",
-        "track_len",
-        "tstamp",
-        "episode_status",
-        "pause_duration",
-        "obstacle_crash_counter",
-    ]
-    # Additional optional wall_clock column (wall-clock timestamp per step).
-    _COL_NAMES_FULL = [
-        "episode",
-        "steps",
-        "x",
-        "y",
-        "heading",
-        "steering_angle",
-        "speed",
-        "action",
-        "reward",
-        "done",
-        "all_wheels_on_track",
-        "progress",
-        "closest_waypoint",
-        "track_len",
-        "tstamp",
-        "episode_status",
-        "pause_duration",
-        "obstacle_crash_counter",
-        "wall_clock",
-    ]
+    # Mapping from the column names used in the simtrace CSV files to the
+    # internal names used throughout this library.  Columns not listed here
+    # have identical names in both the CSV and the internal representation.
+    _CSV_TO_INTERNAL_COLUMNS = {
+        "X": "x",
+        "Y": "y",
+        "steer": "steering_angle",
+        "throttle": "speed",
+        "all_wheels_on_track": "on_track",
+    }
+
     _HYPERPARAM_KEYS = [
         "batch_size",
         "beta_entropy",
@@ -150,30 +98,23 @@ class DeepRacerLog:
         self.df = None
 
     def _read_csv(self, path: str, splitRegex, type: LogType = LogType.TRAINING):
-        try:
-            csv_bytes = self.fh.get_file(path)
-            # Try the fullest column list first (includes optional wall_clock)
-            df = pd.read_csv(
-                BytesIO(csv_bytes), encoding="utf8", names=self._COL_NAMES_FULL, header=0
-            )
-            df = df.drop("obstacle_crash_counter", axis=1)
-        except pd.errors.ParserError:
-            try:
-                # Without wall_clock
-                df = pd.read_csv(
-                    BytesIO(csv_bytes), encoding="utf8", names=self._COL_NAMES_NEW, header=0
-                )
-                df = df.drop("obstacle_crash_counter", axis=1)
-            except pd.errors.ParserError:
-                try:
-                    df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES, header=0)
-                except pd.errors.ParserError:
-                    # Older logs don't have pause_duration, so we're handling this
-                    df = pd.read_csv(BytesIO(csv_bytes), names=self._COL_NAMES[:-1], header=0)
+        csv_bytes = self.fh.get_file(path)
+        df = pd.read_csv(BytesIO(csv_bytes), encoding="utf8")
 
-        # Always ensure wall_clock column is present (NaN for traces that predate it)
+        # Rename from CSV column names to internal column names.
+        df = df.rename(columns=self._CSV_TO_INTERNAL_COLUMNS)
+
+        # Drop the obsolete obstacle counter column if present.
+        if "obstacle_crash_counter" in df.columns:
+            df = df.drop("obstacle_crash_counter", axis=1)
+
+        # Ensure wall_clock column is present (NaN for traces that predate it).
         if "wall_clock" not in df.columns:
             df["wall_clock"] = float("nan")
+
+        # Ensure pause_duration column is present (NaN for very old traces).
+        if "pause_duration" not in df.columns:
+            df["pause_duration"] = float("nan")
 
         path_split = splitRegex.search(path)
         df["iteration"] = int(path_split.groups()[1])
@@ -186,7 +127,7 @@ class DeepRacerLog:
         if type == LogType.EVALUATION:
             df["stream"] = path_split.groups()[0]
 
-        if df.dtypes["action"].name == "object":
+        if "action" not in df.columns or not pd.api.types.is_numeric_dtype(df["action"]):
             df["action"] = -1
 
         return df
@@ -425,25 +366,42 @@ class DeepRacerLog:
         data_wrapper.seek(0)
 
     def _parse_trace_metadata(self):
+        logger = logging.getLogger(__name__)
 
-        _ = self.fh.list_files(check_exist=True, filterexp=self.fh.model_metadata_path)
+        if self.fh.model_metadata_path is None:
+            logger.debug("model_metadata_path not configured for this handler; skipping.")
+        elif self.fh.list_files(check_exist=False, filterexp=self.fh.model_metadata_path):
+            try:
+                model_metadata: dict = json.load(
+                    TextIOWrapper(
+                        BytesIO(self.fh.get_file(self.fh.model_metadata_path)), encoding="utf-8"
+                    )
+                )
+                self._action_space = model_metadata["action_space"]
+                self._agent_and_network = {}
+                self._agent_and_network["sensor_list"] = model_metadata["sensor"]
+                self._agent_and_network["network"] = model_metadata["neural_network"]
+                self._agent_and_network["simapp_version"] = model_metadata["version"]
+            except (json.JSONDecodeError, KeyError) as e:
+                logger.warning("Could not parse model_metadata.json: %s", e)
+        else:
+            logger.warning(
+                "model_metadata.json not found; action space and agent/network info unavailable."
+            )
 
-        _ = self.fh.list_files(check_exist=True, filterexp=self.fh.hyperparameters_path)
-
-        model_metadata: dict = None
-        model_metadata = json.load(
-            TextIOWrapper(BytesIO(self.fh.get_file(self.fh.model_metadata_path)), encoding="utf-8")
-        )
-        self._action_space = model_metadata["action_space"]
-
-        self._agent_and_network = {}
-        self._agent_and_network["sensor_list"] = model_metadata["sensor"]
-        self._agent_and_network["network"] = model_metadata["neural_network"]
-        self._agent_and_network["simapp_version"] = model_metadata["version"]
-
-        self._hyperparameters = json.load(
-            TextIOWrapper(BytesIO(self.fh.get_file(self.fh.hyperparameters_path)), encoding="utf-8")
-        )
+        if self.fh.hyperparameters_path is None:
+            logger.debug("hyperparameters_path not configured for this handler; skipping.")
+        elif self.fh.list_files(check_exist=False, filterexp=self.fh.hyperparameters_path):
+            try:
+                self._hyperparameters = json.load(
+                    TextIOWrapper(
+                        BytesIO(self.fh.get_file(self.fh.hyperparameters_path)), encoding="utf-8"
+                    )
+                )
+            except json.JSONDecodeError as e:
+                logger.warning("Could not parse hyperparameters.json: %s", e)
+        else:
+            logger.warning("hyperparameters.json not found; hyperparameters unavailable.")
 
     def dataframe(self):
         """Method that provides the dataframe for analysis of this log."""
@@ -480,14 +438,29 @@ class DeepRacerLog:
 
     @property
     def stability(self) -> SimtraceStabilityAnalyzer:
-        """A :class:`~deepracer.logs.SimtraceStabilityAnalyzer` bound to this log's file handler.
+        """A :class:`~deepracer.logs.SimtraceStabilityAnalyzer` bound to the loaded trace.
 
-        Example::
+        The trace must be loaded before accessing this property.  Use whichever
+        load method matches the available log format::
 
+            log = DeepRacerLog("./my-model")
+            log.load_training_trace()
             df = log.stability.analyze()
-            df_eval = log.stability.analyze(LogType.EVALUATION)
+
+        For evaluation stability::
+
+            log.load_evaluation_trace()
+            df_eval = log.stability.analyze()
+
+        Raises:
+            RuntimeError: If no trace has been loaded yet.
         """
-        return SimtraceStabilityAnalyzer(self.fh)
+        if self.df is None:
+            raise RuntimeError(
+                "No trace loaded. Call load(), load_training_trace(), "
+                "load_evaluation_trace(), or load_robomaker_logs() first."
+            )
+        return SimtraceStabilityAnalyzer(self.df)
 
     def _block_duplicate_load(self, force: bool = False):
         if self.df is not None and not force:

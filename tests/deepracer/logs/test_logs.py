@@ -22,13 +22,13 @@ class Constants:
         "steps",
         "x",
         "y",
-        "heading",
+        "yaw",
         "steering_angle",
         "speed",
         "action",
         "reward",
         "done",
-        "all_wheels_on_track",
+        "on_track",
         "progress",
         "closest_waypoint",
         "track_len",
@@ -654,3 +654,42 @@ class TestDroaSolutionLogs:
 
         assert LogType.EVALUATION == drl.active
         assert (self._EXPECTED_EVAL_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+
+    def test_fs_load_training_trace_without_metadata_files(self):
+        """load_training_trace() must succeed even when model_metadata.json / hyperparameters.json
+        are absent — those files are optional."""
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_training_trace()  # ignore_metadata defaults to False
+        df = drl.dataframe()
+
+        assert (self._EXPECTED_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+        # Metadata is unavailable — accessors raise rather than return stale data.
+        with pytest.raises(Exception, match="Hyperparameters not yet loaded"):
+            drl.hyperparameters()
+        with pytest.raises(Exception, match="Action space not yet loaded"):
+            drl.action_space()
+
+    def test_fs_load_evaluation_trace_without_metadata_files(self):
+        """load_evaluation_trace() must succeed even when metadata files are absent."""
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_evaluation_trace()  # ignore_metadata defaults to False
+        df = drl.dataframe()
+
+        assert LogType.EVALUATION == drl.active
+        assert (self._EXPECTED_EVAL_ROWS, len(Constants.RAW_COLUMNS)) == df.shape
+
+    def test_tstamp_and_wall_clock_always_numeric(self):
+        """_read_csv must always produce float64 for tstamp and wall_clock.
+
+        The simtrace CSVs always have a header row.  _read_csv reads them
+        natively (no ``names=`` override) so pandas infers dtypes directly
+        from the data.  Both tstamp and wall_clock must be float64.
+        """
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        drl.load_training_trace(ignore_metadata=True)
+        df = drl.dataframe()
+
+        assert df["tstamp"].dtype == np.float64, f"tstamp must be float64, got {df['tstamp'].dtype}"
+        assert (
+            df["wall_clock"].dtype == np.float64
+        ), f"wall_clock must be float64, got {df['wall_clock'].dtype}"

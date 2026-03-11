@@ -18,7 +18,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import logging
 from datetime import datetime
-from decimal import Decimal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -155,22 +154,22 @@ class SimulationLogsIO:
             except ValueError:
                 action = -1
             reward = float(parts[8])
-            done = 0 if "False" in parts[9] else 1
-            all_wheels_on_track = parts[10]
+            done = "False" not in parts[9]
+            all_wheels_on_track = "False" not in parts[10]
             progress = float(parts[11])
             closest_waypoint = int(parts[12])
             track_len = float(parts[13])
-            tstamp = Decimal(parts[14])
+            tstamp = float(parts[14])
             episode_status = parts[15]
             if len(parts) > 17:
                 pause_duration = float(parts[16])
                 wall_clock = float(parts[17])
             elif len(parts) > 16:
                 pause_duration = float(parts[16])
-                wall_clock = None
+                wall_clock = float("nan")
             else:
-                pause_duration = 0.0
-                wall_clock = None
+                pause_duration = float("nan")
+                wall_clock = float("nan")
 
             iteration = int(episode / episodes_per_iteration) + 1
             df_list.append(

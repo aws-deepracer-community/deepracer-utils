@@ -44,7 +44,7 @@ dev = [
 test = [
     "tensorflow>=2.10.0",
     "coverage",
-    "opencv-python",
+    "opencv-python-headless",
     "Pillow",
     "pytest>=7.0.0",
 ]
