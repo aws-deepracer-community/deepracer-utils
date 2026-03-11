@@ -18,6 +18,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import logging
 from datetime import datetime
+import math
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1013,9 +1014,9 @@ class NewRewardUtils:
             "speed": df_row["speed"],
             "steps": df_row["steps"],
             "progress": df_row["progress"],
-            "heading": df_row["yaw"] * 180 / 3.14,
+            "heading": df_row["yaw"] * 180 / math.pi,
             "closest_waypoints": closest_waypoints,
-            "steering_angle": df_row["steering_angle"] * 180 / 3.14,
+            "steering_angle": df_row["steering_angle"] * 180 / math.pi,
             "waypoints": waypoints,
             "distance_from_center": gu.get_vector_length((closest_point - current_location)),
             "timestamp": df_row["tstamp"],
