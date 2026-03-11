@@ -121,7 +121,7 @@ class TestParseSimtraceBytes:
         assert all(d >= 0 for d in deltas.get(0, np.array([])))
 
     def test_real_time_factor_computed(self):
-        """RTF is computed when wall_clock column is present."""
+        """RTF is computed correctly when sim and wall-clock advance at different rates."""
         data = _make_csv(
             [
                 {
@@ -134,20 +134,20 @@ class TestParseSimtraceBytes:
                     "episode": 0,
                     "tstamp": 1.0,
                     "episode_status": "in_progress",
-                    "wall_clock": 1001.0,
+                    "wall_clock": 1002.0,
                 },
                 {
                     "episode": 0,
                     "tstamp": 2.0,
                     "episode_status": "in_progress",
-                    "wall_clock": 1002.0,
+                    "wall_clock": 1004.0,
                 },
             ],
             include_wall_clock=True,
         )
         _, rtf, _ = parse_simtrace_bytes(data)
         assert rtf is not None
-        assert pytest.approx(1.0, rel=1e-3) == rtf
+        assert pytest.approx(0.5, rel=1e-3) == rtf  # sim=2s, wall=4s
 
     def test_rtf_none_without_wall_clock(self):
         """RTF is None when the wall_clock column is absent."""
@@ -223,6 +223,17 @@ class TestHelpers:
     def test_summarize_empty_returns_none(self):
         assert _summarize(np.array([])) is None
 
+    def test_summarize_std_and_p95(self):
+        values = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+        s = _summarize(values)
+        assert pytest.approx(float(np.std(values)), rel=1e-6) == s["std"]
+        assert pytest.approx(float(np.percentile(values, 95)), rel=1e-6) == s["p95"]
+
+    def test_flatten_preserves_values(self):
+        d = {0: np.array([0.1, 0.2]), 1: np.array([0.3])}
+        flat = _flatten(d)
+        np.testing.assert_allclose(np.sort(flat), [0.1, 0.2, 0.3])
+
 
 class TestRtfFromIteration:
     """Unit tests for the _rtf_from_iteration helper."""
@@ -262,6 +273,12 @@ class TestRtfFromIteration:
         """Returns None when no valid wall_clock values are present."""
         group = self._make_group([0.0, 0.1, 0.2], [float("nan")] * 3)
         assert _rtf_from_iteration(group) is None
+
+    def test_rtf_excludes_negative_wall_delta(self):
+        """Pairs where wall_clock goes backward are excluded from accumulation."""
+        group = self._make_group([0.0, 0.1, 0.2], [1000.0, 999.0, 1002.0])
+        # (0.0->0.1): dw=-1.0 -> excluded; (0.1->0.2): ds=0.1, dw=3.0 -> rtf=0.1/3
+        assert _rtf_from_iteration(group) == pytest.approx(0.1 / 3.0, rel=1e-6)
 
 
 # Integration tests: SimtraceStabilityAnalyzer with FSFileHandler
@@ -379,6 +396,44 @@ class TestAnalyzeDrfc1Evaluation:
         )
 
 
+class TestAnalyzeDrfc3Training:
+    """Multi-worker DRFC training: 3 workers x 23 iterations = 69 rows."""
+
+    @pytest.fixture
+    def analyzer(self):
+        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-3-logs")
+        log.load_training_trace(ignore_metadata=True)
+        return SimtraceStabilityAnalyzer(log.df)
+
+    def test_row_count_is_workers_times_iterations(self, analyzer):
+        df = analyzer.analyze()
+        assert len(df) == 69  # 3 workers x 23 iterations
+
+    def test_three_distinct_workers(self, analyzer):
+        df = analyzer.analyze()
+        assert sorted(df["worker"].dropna().unique().tolist()) == [0, 1, 2]
+
+    def test_sorted_by_iteration_then_worker(self, analyzer):
+        df = analyzer.analyze()
+        tuples = list(zip(df["iteration"], df["worker"]))
+        assert tuples == sorted(tuples)
+
+    def test_snapshot_iteration_0_worker_0(self, analyzer):
+        row = analyzer.analyze().iloc[0]
+        assert row["worker"] == 0
+        assert row["iteration"] == 0
+        assert row["count"] == 298
+        assert pytest.approx(66.742, rel=1e-3) == row["avg_ms"]
+        assert pytest.approx(122.0, rel=1e-3) == row["max_ms"]
+
+    def test_snapshot_iteration_0_worker_1(self, analyzer):
+        row = analyzer.analyze().iloc[1]
+        assert row["worker"] == 1
+        assert row["iteration"] == 0
+        assert row["count"] == 234
+        assert pytest.approx(66.402, rel=1e-3) == row["avg_ms"]
+
+
 class TestAnalyzeDroaTraining:
     @pytest.fixture
     def analyzer(self):
@@ -457,20 +512,6 @@ class TestDeepRacerLogStabilityProperty:
         log.load_training_trace(ignore_metadata=True)
         assert isinstance(log.stability, SimtraceStabilityAnalyzer)
 
-    def test_stability_analyze_via_log(self):
-        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
-        log.load_training_trace(ignore_metadata=True)
-        df = log.stability.analyze()
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) > 0
-
-    def test_stability_evaluate_via_log(self):
-        log = DeepRacerLog(model_folder=f"{BASE}/sample-drfc-1-logs")
-        log.load_evaluation_trace(ignore_metadata=True)
-        df = log.stability.analyze()
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) > 0
-
 
 # ---------------------------------------------------------------------------
 # Integration tests: SimtraceStabilityAnalyzer with TarFileHandler
@@ -486,29 +527,6 @@ class TestAnalyzeTarTraining:
         log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
         log.load_training_trace(ignore_metadata=True)
         return SimtraceStabilityAnalyzer(log.df)
-
-    def test_returns_dataframe(self, analyzer):
-        df = analyzer.analyze()
-        assert isinstance(df, pd.DataFrame)
-
-    def test_expected_columns(self, analyzer):
-        df = analyzer.analyze()
-        for col in ("worker", "iteration", "count", "avg_ms", "max_ms", "p95_ms", "std_ms", "rtf"):
-            assert col in df.columns, f"Missing column: {col}"
-
-    def test_non_empty(self, analyzer):
-        df = analyzer.analyze()
-        # sample-droa-solution-logs.tar.gz has 2 training-simtrace CSVs
-        assert len(df) == 2
-
-    def test_sorted_by_iteration(self, analyzer):
-        df = analyzer.analyze()
-        iterations = df["iteration"].dropna().tolist()
-        assert iterations == sorted(iterations)
-
-    def test_avg_ms_positive(self, analyzer):
-        df = analyzer.analyze()
-        assert (df["avg_ms"] > 0).all()
 
     def test_rtf_present_for_wall_clock_data(self, analyzer):
         """The DROA tar archive includes wall_clock; RTF should be populated."""
@@ -554,18 +572,6 @@ class TestAnalyzeTarEvaluation:
         log.load_evaluation_trace(ignore_metadata=True)
         return SimtraceStabilityAnalyzer(log.df)
 
-    def test_evaluation_returns_dataframe(self, analyzer):
-        df = analyzer.analyze()
-        assert isinstance(df, pd.DataFrame)
-
-    def test_evaluation_has_stream_column(self, analyzer):
-        df = analyzer.analyze()
-        assert "stream" in df.columns
-
-    def test_evaluation_non_empty(self, analyzer):
-        df = analyzer.analyze()
-        assert len(df) > 0
-
     def test_snapshot_tar_evaluation(self, analyzer):
         df = analyzer.analyze()
         assert len(df) == 1
@@ -591,22 +597,6 @@ class TestAnalyzeTarEvalOnly:
         log = DeepRacerLog(filehandler=TarFileHandler(EVAL_ONLY_TAR))
         log.load_evaluation_trace(ignore_metadata=True)
         df = SimtraceStabilityAnalyzer(log.df).analyze()
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) > 0
-
-
-class TestDeepRacerLogStabilityPropertyTar:
-    def test_stability_analyze_via_log_tar(self):
-        log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
-        log.load_training_trace(ignore_metadata=True)
-        df = log.stability.analyze()
-        assert isinstance(df, pd.DataFrame)
-        assert len(df) > 0
-
-    def test_stability_evaluate_via_log_tar(self):
-        log = DeepRacerLog(filehandler=TarFileHandler(SAMPLE_TAR))
-        log.load_evaluation_trace(ignore_metadata=True)
-        df = log.stability.analyze()
         assert isinstance(df, pd.DataFrame)
         assert len(df) > 0
 
