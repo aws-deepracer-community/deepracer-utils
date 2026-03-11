@@ -2,6 +2,7 @@ import glob
 import os
 import re
 import tarfile
+import threading
 from abc import ABC, abstractmethod
 from io import BytesIO
 
@@ -553,6 +554,7 @@ class TarFileHandler(FileHandler):
         """
         self.archive_path = archive_path
         self._tar = tarfile.open(archive_path, "r:gz")
+        self._lock = threading.Lock()
 
         # Detect a single top-level wrapper directory (e.g. "ACGVRmRuFNU9NkQ/")
         # and record it so we can strip it from all member paths.
@@ -615,8 +617,9 @@ class TarFileHandler(FileHandler):
             A bytes object containing the file contents.
         """
         full_key = self._prefix + key
-        f = self._tar.extractfile(self._tar.getmember(full_key))
-        return f.read()
+        with self._lock:
+            f = self._tar.extractfile(self._tar.getmember(full_key))
+            return f.read()
 
     def determine_root_folder_type(self) -> LogFolderType:
 
