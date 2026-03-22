@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.collections import PatchCollection
+from matplotlib.patches import Polygon as MplPolygon
 from matplotlib.patches import Rectangle
 from shapely.geometry import LineString
 
@@ -732,6 +733,222 @@ class PlottingUtils:
         plt.clf()
 
         # return fig
+
+    @staticmethod
+    def plot_laps(
+        sorted_idx,
+        df,
+        track: Track,
+        section_to_plot="episode",
+        single_plot=False,
+        style="classic",
+        **kwargs,
+    ):
+        """Plot n laps in the training, referenced by episode ids.
+
+        Arguments:
+        sorted_idx     - a datagram with ids to be plotted or a list of ids
+        df             - a datagram with all data
+        track          - track info for plotting
+        section_to_plot - what section of data to plot - episode/iteration
+        single_plot    - if True all ids share one subplot
+        style          - rendering style: 'classic' (scatter dots, default) or
+                         'modern' (physically-sized semi-transparent lines)
+
+        Additional keyword arguments accepted when style='modern':
+        car_width_m    - car width in metres (default: 0.175)
+        alpha          - per-episode opacity (default: 0.35)
+        color          - car path colour (default: 'green')
+        highlight_color - spine and marker colour (default: 'lime')
+        """
+        if style == "modern":
+            PlottingUtils._plot_laps_modern(
+                sorted_idx, df, track, section_to_plot, single_plot, **kwargs
+            )
+        else:
+            PlottingUtils.plot_selected_laps(sorted_idx, df, track, section_to_plot, single_plot)
+
+    @staticmethod
+    def _plot_laps_modern(
+        sorted_idx,
+        df,
+        track: Track,
+        section_to_plot="episode",
+        single_plot=False,
+        car_width_m=0.175,
+        alpha=0.35,
+        color="green",
+        highlight_color="lime",
+    ):
+        """Render laps as physically-sized semi-transparent lines (modern style).
+
+        Each episode is drawn as a thick semi-transparent line whose width
+        equals the real car footprint so that overlapping paths accumulate
+        alpha — revealing hotspots — and track utilisation is immediately
+        visible.
+
+        Visual design
+        -------------
+        - Figure / off-track background : ``#b0b0b0`` (light gray)
+        - Driving surface                : ``#484848`` (dark gray filled polygon)
+        - Inner / outer borders          : solid white, 1 inch (0.0254 m) wide
+        - Centre line                    : ``#c0c0c0`` dashed, 1 inch wide
+        - Car body                       : thick semi-transparent line, full car width
+        - Car spine                      : thin line in ``highlight_color``
+        - Start marker                   : filled dot in ``highlight_color``
+        - End marker                     : hollow dot in ``highlight_color``
+
+        Arguments:
+        sorted_idx      - a datagram with ids to be plotted or a list of ids
+        df              - a datagram with all data
+        track           - track info for plotting
+        section_to_plot - column used to group into subplots: 'episode',
+                          'unique_episode', or 'iteration'
+        single_plot     - if True all ids share one subplot
+        car_width_m     - car width in metres (DeepRacer default: 0.175)
+        alpha           - per-episode opacity; accumulates on overlap
+        color           - car path colour
+        highlight_color - spine and marker colour
+        """
+        ids = (
+            sorted_idx
+            if isinstance(sorted_idx, list)
+            else sorted_idx[section_to_plot].unique().tolist()
+        )
+        grid = [ids] if single_plot else ids
+        n_plots = len(grid)
+
+        # 'unique_episode' is globally unique across multi-worker runs; fall
+        # back to 'episode' when it is not present.
+        episode_col = "unique_episode" if "unique_episode" in df.columns else "episode"
+
+        fig = plt.figure(figsize=(16, n_plots * 10))
+        fig.patch.set_facecolor("#b0b0b0")
+
+        road_coords = np.array(track.road_poly.exterior.coords)
+
+        for j, indexes in enumerate(grid):
+            ax = fig.add_subplot(n_plots, 1, j + 1)
+
+            # 'adjustable=datalim' lets matplotlib grow the data window to
+            # maintain a 1:1 aspect ratio without overriding auto-scaled limits.
+            # Use update_datalim instead of set_xlim/set_ylim to avoid the
+            # "Ignoring fixed x limits" warning.
+            ax.set_aspect("equal", adjustable="datalim")
+            ax.set_facecolor("#b0b0b0")
+            ax.set_axis_off()
+
+            ax.update_datalim(road_coords)
+            ax.margins(0.05)
+            ax.autoscale_view()
+
+            # Driving surface
+            road_patch = MplPolygon(
+                road_coords, closed=True, facecolor="#484848", edgecolor="none", zorder=1
+            )
+            ax.add_patch(road_patch)
+
+            # Compute metres -> display-points conversion factor.
+            # Must call fig.canvas.draw() first to initialise the transform.
+            fig.canvas.draw()
+            p0 = ax.transData.transform([0.0, 0.0])
+            p1 = ax.transData.transform([1.0, 0.0])
+            px_per_m = float(np.linalg.norm(p1 - p0))
+            scale = px_per_m * 72.0 / fig.dpi
+
+            lw = car_width_m * 2 * scale  # full footprint = 2 × half-width
+            lw_spine = car_width_m * 0.2 * scale  # spine = 20 % of car width
+            border_lw = 2 * 0.0254 * scale  # 2-inch border (0.0254 m/inch)
+
+            # Inner and outer borders
+            for border in (track.inner_border, track.outer_border):
+                xs = list(border[:, 0]) + [border[0, 0]]
+                ys = list(border[:, 1]) + [border[0, 1]]
+                ax.plot(
+                    xs,
+                    ys,
+                    color="white",
+                    linewidth=border_lw,
+                    alpha=1.0,
+                    solid_capstyle="butt",
+                    solid_joinstyle="bevel",
+                    zorder=3,
+                )
+
+            # Centre line
+            cl = track.center_line
+            xs = list(cl[:, 0]) + [cl[0, 0]]
+            ys = list(cl[:, 1]) + [cl[0, 1]]
+            ax.plot(
+                xs,
+                ys,
+                color="#c0c0c0",
+                linewidth=border_lw,
+                alpha=1.0,
+                linestyle="dashed",
+                zorder=3,
+            )
+
+            if isinstance(indexes, int):
+                indexes = [indexes]
+
+            for idx in indexes:
+                section_data = df[df[section_to_plot] == idx]
+                for _, episode_data in section_data.groupby(episode_col, sort=True):
+                    x = episode_data["x"]
+                    y = episode_data["y"]
+
+                    # Thick semi-transparent body (accumulates on overlap)
+                    ax.plot(
+                        x,
+                        y,
+                        linewidth=lw,
+                        alpha=alpha,
+                        color=color,
+                        solid_capstyle="round",
+                        solid_joinstyle="round",
+                        zorder=4,
+                    )
+                    # Thin spine
+                    ax.plot(
+                        x,
+                        y,
+                        linewidth=lw_spine,
+                        alpha=alpha,
+                        color=highlight_color,
+                        solid_capstyle="round",
+                        solid_joinstyle="round",
+                        zorder=5,
+                    )
+                    # Start: filled dot (2× spine width for visibility)
+                    ax.plot(
+                        x.iloc[0],
+                        y.iloc[0],
+                        marker="o",
+                        markersize=lw_spine * 2,
+                        color=highlight_color,
+                        markerfacecolor=highlight_color,
+                        markeredgewidth=0,
+                        linestyle="none",
+                        zorder=6,
+                    )
+                    # End: hollow dot (1.6× spine width, slightly smaller than start)
+                    ax.plot(
+                        x.iloc[-1],
+                        y.iloc[-1],
+                        marker="o",
+                        markersize=lw_spine * 1.6,
+                        color=highlight_color,
+                        markerfacecolor="none",
+                        markeredgecolor=highlight_color,
+                        markeredgewidth=lw_spine * 0.6,
+                        linestyle="none",
+                        zorder=6,
+                    )
+
+        plt.tight_layout()
+        plt.show()
+        plt.clf()
 
     @staticmethod
     def plot_evaluations(evaluations, track: Track, graphed_value="speed", groupby_field="episode"):
