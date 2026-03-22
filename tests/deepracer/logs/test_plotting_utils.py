@@ -151,52 +151,50 @@ class TestPlottingUtilsModern:
 
     def test_modern_figure_background_color(self, track, episode_df):
         """Figure background should be the light-gray off-track color (#b0b0b0)."""
-        with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
-            PlottingUtils.plot_laps([0], episode_df, track, style="modern")
-            fig = plt.gcf()
-            assert np.allclose(fig.get_facecolor(), to_rgba(MODERN_BG_COLOR), atol=1e-3)
+        fig = PlottingUtils.plot_laps([0], episode_df, track, style="modern", return_fig=True)
+        assert np.allclose(fig.get_facecolor(), to_rgba(MODERN_BG_COLOR), atol=1e-3)
+        plt.close(fig)
 
     def test_modern_axes_background_color(self, track, episode_df):
         """Every axes background should be the light-gray off-track color (#b0b0b0)."""
-        with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
-            PlottingUtils.plot_laps([0, 1], episode_df, track, style="modern")
-            fig = plt.gcf()
-            for ax in fig.get_axes():
-                assert np.allclose(ax.get_facecolor(), to_rgba(MODERN_BG_COLOR), atol=1e-3)
+        fig = PlottingUtils.plot_laps([0, 1], episode_df, track, style="modern", return_fig=True)
+        for ax in fig.get_axes():
+            assert np.allclose(ax.get_facecolor(), to_rgba(MODERN_BG_COLOR), atol=1e-3)
+        plt.close(fig)
 
     def test_modern_road_patch_present(self, track, episode_df):
         """A filled MplPolygon representing the road surface must be added."""
-        with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
-            PlottingUtils.plot_laps([0], episode_df, track, style="modern")
-            ax = plt.gcf().get_axes()[0]
-            polygons = [p for p in ax.patches if isinstance(p, MplPolygon)]
-            assert len(polygons) >= 1
-            road_patch = polygons[0]
-            assert np.allclose(road_patch.get_facecolor(), to_rgba(MODERN_ROAD_COLOR), atol=1e-3)
+        fig = PlottingUtils.plot_laps([0], episode_df, track, style="modern", return_fig=True)
+        ax = fig.get_axes()[0]
+        polygons = [p for p in ax.patches if isinstance(p, MplPolygon)]
+        assert len(polygons) >= 1
+        road_patch = polygons[0]
+        assert np.allclose(road_patch.get_facecolor(), to_rgba(MODERN_ROAD_COLOR), atol=1e-3)
+        plt.close(fig)
 
     def test_modern_subplot_count_multi_plot(self, track, episode_df):
         """One subplot per episode when single_plot=False (the default)."""
         episodes = [0, 1, 2]
-        with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
-            PlottingUtils.plot_laps(episodes, episode_df, track, style="modern")
-            fig = plt.gcf()
-            assert len(fig.get_axes()) == len(episodes)
+        fig = PlottingUtils.plot_laps(episodes, episode_df, track, style="modern", return_fig=True)
+        assert len(fig.get_axes()) == len(episodes)
+        plt.close(fig)
 
     def test_modern_subplot_count_single_plot(self, track, episode_df):
         """Exactly one subplot when single_plot=True."""
-        with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
-            PlottingUtils.plot_laps([0, 1, 2], episode_df, track, style="modern", single_plot=True)
-            fig = plt.gcf()
-            assert len(fig.get_axes()) == 1
+        fig = PlottingUtils.plot_laps(
+            [0, 1, 2], episode_df, track, style="modern", single_plot=True, return_fig=True
+        )
+        assert len(fig.get_axes()) == 1
+        plt.close(fig)
 
     def test_modern_border_and_episode_lines_present(self, track, episode_df):
         """At least borders (inner + outer + centre) plus episode body/spine lines."""
-        with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
-            PlottingUtils.plot_laps([0], episode_df, track, style="modern")
-            ax = plt.gcf().get_axes()[0]
-            lines = ax.get_lines()
-            # 3 border/center lines  +  at least 4 per episode (body, spine, start, end)
-            assert len(lines) >= 7
+        fig = PlottingUtils.plot_laps([0], episode_df, track, style="modern", return_fig=True)
+        ax = fig.get_axes()[0]
+        lines = ax.get_lines()
+        # 3 border/center lines  +  at least 4 per episode (body, spine, start, end)
+        assert len(lines) >= 7
+        plt.close(fig)
 
     def test_modern_no_classic_delegation(self, track, episode_df):
         """plot_laps(style='modern') must NOT call plot_selected_laps."""
@@ -222,10 +220,11 @@ class TestPlottingUtilsModern:
         actual = str(tmp_path / "actual.png")
 
         plt.close("all")
-        with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
-            PlottingUtils.plot_laps(episode_ids, df, track, style="modern", single_plot=True)
-            fig = plt.gcf()
-            fig.savefig(actual, dpi=100)
+        fig = PlottingUtils.plot_laps(
+            episode_ids, df, track, style="modern", single_plot=True, return_fig=True
+        )
+        fig.savefig(actual, dpi=100)
+        plt.close(fig)
 
         result = compare_images(baseline, actual, tol=5)
         assert result is None, f"Modern layout image comparison failed: {result}"
