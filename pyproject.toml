@@ -28,13 +28,13 @@ dependencies = [
     "pandas>=1.3.0",
     "scikit-learn>=1.0.0",
     "joblib>=1.0.0",
+    "Pillow",
 ]
 
 [project.optional-dependencies]
 visualization = [
     "tensorflow>=2.10.0",
     "opencv-python-headless",
-    "Pillow",
 ]
 dev = [
     "check-manifest",
@@ -47,6 +47,8 @@ test = [
     "opencv-python-headless",
     "Pillow",
     "pytest>=7.0.0",
+    "ipython",
+    "ipywidgets",
 ]
 
 [project.urls]

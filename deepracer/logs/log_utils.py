@@ -716,7 +716,7 @@ class PlottingUtils:
 
         n_plots = len(grid)
 
-        fig = plt.figure(n_plots, figsize=(16, n_plots * 10))
+        fig = plt.figure(figsize=(16, n_plots * 10))
         for j, indexes in enumerate(grid):
             ax = fig.add_subplot(n_plots, 1, j + 1)
             ax.axis("equal")
@@ -762,7 +762,7 @@ class PlottingUtils:
         highlight_color - spine and marker colour (default: 'lime')
         """
         if style == "modern":
-            PlottingUtils._plot_laps_modern(
+            return PlottingUtils._plot_laps_modern(
                 sorted_idx, df, track, section_to_plot, single_plot, **kwargs
             )
         else:
@@ -779,6 +779,7 @@ class PlottingUtils:
         alpha=0.35,
         color="green",
         highlight_color="lime",
+        return_fig=False,
     ):
         """Render laps as physically-sized semi-transparent lines (modern style).
 
@@ -830,17 +831,19 @@ class PlottingUtils:
         for j, indexes in enumerate(grid):
             ax = fig.add_subplot(n_plots, 1, j + 1)
 
-            # 'adjustable=datalim' lets matplotlib grow the data window to
-            # maintain a 1:1 aspect ratio without overriding auto-scaled limits.
-            # Use update_datalim instead of set_xlim/set_ylim to avoid the
-            # "Ignoring fixed x limits" warning.
-            ax.set_aspect("equal", adjustable="datalim")
+            # Derive fixed axis limits from the track geometry + 10 % margin.
+            # Using adjustable='box' lets matplotlib shrink the axes box to
+            # honour the aspect ratio without touching the data limits, which
+            # avoids the "Ignoring fixed y limits" warning.
+            xmin, ymin = road_coords.min(axis=0)
+            xmax, ymax = road_coords.max(axis=0)
+            mx = (xmax - xmin) * 0.10
+            my = (ymax - ymin) * 0.10
+            ax.set_xlim(xmin - mx, xmax + mx)
+            ax.set_ylim(ymin - my, ymax + my)
+            ax.set_aspect("equal", adjustable="box")
             ax.set_facecolor("#b0b0b0")
             ax.set_axis_off()
-
-            ax.update_datalim(road_coords)
-            ax.margins(0.05)
-            ax.autoscale_view()
 
             # Driving surface
             road_patch = MplPolygon(
@@ -947,8 +950,10 @@ class PlottingUtils:
                     )
 
         plt.tight_layout()
+        if return_fig:
+            return fig
         plt.show()
-        plt.clf()
+        plt.close(fig)
 
     @staticmethod
     def plot_evaluations(evaluations, track: Track, graphed_value="speed", groupby_field="episode"):
@@ -1135,6 +1140,181 @@ class PlottingUtils:
     def _plot_line(ax, ob, color="cyan"):
         x, y = ob.xy
         ax.plot(x, y, color=color, alpha=0.7, linewidth=3, solid_capstyle="round", zorder=2)
+
+    @staticmethod
+    def save_laps_animation(
+        df,
+        track: Track,
+        section_to_plot="episode",
+        filename="animation.gif",
+        fps=1,
+    ):
+        """Render every episode/iteration as a frame and save as an animated GIF.
+
+        Requires ``Pillow`` (``pip install Pillow``) and ``ipywidgets``.
+
+        Arguments:
+        df              - full training DataFrame
+        track           - Track object
+        section_to_plot - column used to identify frames: 'episode',
+                          'unique_episode', or 'iteration'
+        filename        - output path (default 'animation.gif')
+        fps             - frames per second (default 1)
+        """
+        try:
+            import io
+            from PIL import Image as PilImage
+        except ImportError as exc:
+            raise ImportError(
+                "Pillow is required for save_laps_animation. " "Install it with: pip install Pillow"
+            ) from exc
+
+        try:
+            import ipywidgets as _w
+            from IPython.display import display as ipy_display
+
+            _has_widgets = True
+        except ImportError:
+            _has_widgets = False
+
+        all_ids = sorted(df[section_to_plot].unique().tolist())
+        n = len(all_ids)
+
+        if _has_widgets:
+            progress = _w.IntProgress(
+                value=0,
+                min=0,
+                max=n,
+                description="Rendering:",
+                layout=_w.Layout(width="400px"),
+            )
+            status = _w.Label(value="")
+            ipy_display(_w.HBox([progress, status]))
+
+        frames = []
+        for i, idx in enumerate(all_ids):
+            if _has_widgets:
+                status.value = f"{section_to_plot.capitalize()} {idx}  ({i + 1}/{n})"
+            fig = PlottingUtils._plot_laps_modern(
+                [idx], df, track, section_to_plot=section_to_plot, return_fig=True
+            )
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", bbox_inches="tight", facecolor=fig.get_facecolor())
+            plt.close(fig)
+            buf.seek(0)
+            frames.append(PilImage.open(buf).copy())
+            if _has_widgets:
+                progress.value = i + 1
+
+        duration_ms = int(1000 / fps)
+        frames[0].save(
+            filename,
+            save_all=True,
+            append_images=frames[1:],
+            loop=0,
+            duration=duration_ms,
+        )
+        if _has_widgets:
+            status.value = f"Saved {n} frames → '{filename}'"
+
+    @staticmethod
+    def plot_laps_navigator(df, track: Track, section_to_plot="episode", interval=1000):
+        """Interactive ipywidgets navigator to step through episodes one at a time.
+
+        Displays a Play button, Prev/Next buttons, a slider, a Save GIF button,
+        and the rendered lap image — updating in-place with no flicker.
+
+        Requires ``ipywidgets`` (``pip install ipywidgets``).
+
+        Arguments:
+        df              - full training DataFrame
+        track           - Track object
+        section_to_plot - 'episode', 'unique_episode', or 'iteration'
+        interval        - milliseconds between auto-play steps (default 1000)
+        """
+        try:
+            import io
+            import ipywidgets as widgets
+            from IPython.display import display as ipy_display
+        except ImportError as exc:
+            raise ImportError(
+                "ipywidgets is required for plot_laps_navigator. "
+                "Install it with: pip install ipywidgets"
+            ) from exc
+
+        all_ids = sorted(df[section_to_plot].unique().tolist())
+        n = len(all_ids)
+
+        if n == 0:
+            print(f"No data found for section_to_plot='{section_to_plot}'.")
+            return
+
+        play = widgets.Play(value=0, min=0, max=n - 1, step=1, interval=interval)
+        slider = widgets.IntSlider(
+            value=0,
+            min=0,
+            max=n - 1,
+            continuous_update=False,
+            layout=widgets.Layout(width="500px"),
+        )
+        widgets.jslink((play, "value"), (slider, "value"))
+
+        btn_prev = widgets.Button(description="◀ Prev", layout=widgets.Layout(width="90px"))
+        btn_next = widgets.Button(description="Next ▶", layout=widgets.Layout(width="90px"))
+        btn_save = widgets.Button(description="💾 Save GIF", layout=widgets.Layout(width="110px"))
+        label = widgets.Label(value="")
+
+        # Persistent image widget — updating its value swaps the image in-place
+        # with no blank frame, eliminating flicker.
+        img_widget = widgets.Image(format="png", layout=widgets.Layout(width="100%"))
+
+        def _draw(change=None):
+            pos = slider.value
+            idx = all_ids[pos]
+            label.value = f"{section_to_plot.capitalize()} {idx}  ({pos + 1} of {n})"
+            fig = PlottingUtils._plot_laps_modern(
+                [idx], df, track, section_to_plot=section_to_plot, return_fig=True
+            )
+            buf = io.BytesIO()
+            fig.savefig(buf, format="png", bbox_inches="tight", facecolor=fig.get_facecolor())
+            plt.close(fig)
+            buf.seek(0)
+            img_widget.value = buf.read()
+
+        def _prev(_):
+            if slider.value > 0:
+                slider.value -= 1
+
+        def _next(_):
+            if slider.value < n - 1:
+                slider.value += 1
+
+        def _save(_):
+            btn_save.disabled = True
+            btn_save.description = "Saving…"
+            PlottingUtils.save_laps_animation(
+                df,
+                track,
+                section_to_plot=section_to_plot,
+                filename=f"{section_to_plot}_animation.gif",
+                fps=1,
+            )
+            btn_save.description = "💾 Save GIF"
+            btn_save.disabled = False
+
+        btn_prev.on_click(_prev)
+        btn_next.on_click(_next)
+        btn_save.on_click(_save)
+        slider.observe(_draw, names="value")
+
+        controls = widgets.HBox([play, btn_prev, slider, btn_next, btn_save, label])
+        ipy_display(
+            widgets.VBox(
+                [controls, img_widget],
+                layout=widgets.Layout(overflow="hidden", width="90%"),
+            )
+        )
+        _draw()
 
 
 class EvaluationUtils:
