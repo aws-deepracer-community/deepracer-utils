@@ -5,9 +5,12 @@ import numpy as np
 import pytest
 from boto3.exceptions import PythonDeprecationWarning
 
+from unittest import mock
+
 from deepracer.logs import (
     AnalysisUtils,
     DeepRacerLog,
+    FSFileHandler,
     LogFolderType,
     LogType,
     S3FileHandler,
@@ -895,3 +898,39 @@ class TestVerboseFlag:
         drl.load(ignore_metadata=True)
         captured = capsys.readouterr()
         assert captured.out == ""
+
+
+class TestFSFileHandlerPathNormalization:
+    """Tests that FSFileHandler.list_files() normalises path separators.
+
+    On Windows, glob.glob() returns paths with backslash separators (``\\``).
+    The split regexes in FSFileHandler all use forward slashes, so without
+    normalisation ``re.search(split_regex, path)`` would return ``None`` and
+    ``DeepRacerLog._read_csv()`` would raise an ``AttributeError``.
+    """
+
+    _SAMPLE_DIR = "./deepracer/logs/sample-console-logs"
+
+    def test_list_files_returns_forward_slashes(self):
+        """list_files() must return paths with forward slashes even when glob
+        returns backslash-separated paths (simulating Windows behaviour)."""
+        fh = FSFileHandler(model_folder=self._SAMPLE_DIR)
+        backslash_paths = [
+            r"logs\sample-console-logs\training-simtrace\0-iteration.csv",
+            r"logs\sample-console-logs\training-simtrace\1-iteration.csv",
+        ]
+        with mock.patch("deepracer.logs.handler.glob.glob", return_value=backslash_paths):
+            result = fh.list_files(filterexp="dummy")
+        assert all("/" in p for p in result), "Expected forward slashes in returned paths"
+        assert all("\\" not in p for p in result), "Unexpected backslashes in returned paths"
+
+    def test_list_files_forward_slashes_unchanged(self):
+        """list_files() must leave forward-slash paths unchanged (non-Windows)."""
+        fh = FSFileHandler(model_folder=self._SAMPLE_DIR)
+        forward_paths = [
+            "logs/sample-console-logs/training-simtrace/0-iteration.csv",
+            "logs/sample-console-logs/training-simtrace/1-iteration.csv",
+        ]
+        with mock.patch("deepracer.logs.handler.glob.glob", return_value=forward_paths):
+            result = fh.list_files(filterexp="dummy")
+        assert result == forward_paths

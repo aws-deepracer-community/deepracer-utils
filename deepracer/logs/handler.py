@@ -83,6 +83,9 @@ class FSFileHandler(FileHandler):
         else:
             return_files = glob.glob(filterexp)
 
+        # Normalise to forward slashes so the split regexes work on all platforms.
+        return_files = [p.replace("\\", "/") for p in return_files]
+
         if len(return_files) > 0:
             return return_files
         else:
