@@ -12,7 +12,7 @@ from matplotlib.patches import Polygon as MplPolygon
 from matplotlib.testing.compare import compare_images
 from unittest import mock
 
-from deepracer.logs import PlottingUtils
+from deepracer.logs import AnalysisUtils, DeepRacerLog, PlottingUtils
 from deepracer.tracks import TrackIO
 
 _BASELINE_DIR = os.path.join(os.path.dirname(__file__), "baseline_images", "test_plotting_utils")
@@ -53,6 +53,21 @@ def episode_df():
                 }
             )
     return pd.DataFrame(rows)
+
+
+@pytest.fixture(scope="module")
+def real_df():
+    """Training DataFrame loaded from the sample-console-logs test dataset.
+
+    Returns a tuple of (df, episode_ids) where episode_ids are the 3 episodes
+    with the highest progress, suitable for use with the reinvent_base track.
+    """
+    drl = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
+    drl.load_training_trace(ignore_metadata=True)
+    df = drl.dataframe()
+    sim = AnalysisUtils.simulation_agg(df)
+    top3_ids = sim.nlargest(3, "progress")["episode"].tolist()
+    return df, top3_ids
 
 
 # ---------------------------------------------------------------------------
@@ -190,8 +205,11 @@ class TestPlottingUtilsModern:
                 PlottingUtils.plot_laps([0], episode_df, track, style="modern")
             no_classic.assert_not_called()
 
-    def test_modern_image_comparison(self, track, episode_df, tmp_path):
+    def test_modern_image_comparison(self, track, real_df, tmp_path):
         """Static pixel comparison of the modern layout against a committed baseline.
+
+        Uses real training data from the sample-console-logs test dataset (3 episodes
+        with highest progress on the reinvent_base track).
 
         The baseline (baseline_images/test_plotting_utils/test_modern_image_comparison.png)
         was generated once on the same platform and committed to the repository.
@@ -200,11 +218,12 @@ class TestPlottingUtilsModern:
         baseline = os.path.join(_BASELINE_DIR, "test_modern_image_comparison.png")
         assert os.path.exists(baseline), f"Baseline image not found: {baseline}"
 
+        df, episode_ids = real_df
         actual = str(tmp_path / "actual.png")
 
         plt.close("all")
         with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
-            PlottingUtils.plot_laps([0, 1, 2], episode_df, track, style="modern", single_plot=True)
+            PlottingUtils.plot_laps(episode_ids, df, track, style="modern", single_plot=True)
             fig = plt.gcf()
             fig.savefig(actual, dpi=100)
 
