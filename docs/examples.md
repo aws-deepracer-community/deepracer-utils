@@ -1,122 +1,191 @@
 # Examples
 
-In the lastest version of Deepracer Utils the foundation class to use is `DeepRacerLog`. This class will wrap around a model folder, either stored locally or in an S3 bucket. The class supports console logs, as well as DRfC logs for single and multiple workers.
-
+`DeepRacerLog` is the main entry point in deepracer-utils. It supports local folders, S3 buckets, and `.tar.gz` exports from the DeepRacer console via `TarFileHandler`.
 
 ## Training
 
-### Local
+### Local model folder (trace CSV)
 
-The basic example covers a model director downloaded from the console ~~or stored in a minio folder~~, and where the training simtrace files, the `model_metadata.json` and `hyperparameters.json` files are available.
+Use this when you have an extracted model folder with `sim-trace/` or `training-simtrace/` data.
 
-```
-from deepracer.logs import (AnalysisUtils, DeepRacerLog)
+```python
+from deepracer.logs import AnalysisUtils, DeepRacerLog
 
-drl = DeepRacerLog(model_folder='./deepracer/logs/sample-console-logs')
-drl.load_training_trace()
-df = drl.dataframe()
-
-simulation_agg = AnalysisUtils.simulation_agg(df)
-```
-
-You will end up with two objects:
-* `df` being a pandas dataframe which stores each and every step. This is the data to use if you want to plot the trajectory of the car, to see the distribution of actions and rewards.
-* `simulation_agg` is a dataframe which is aggregated to episode level, providing information such as episode duration, overall episode progress, distance travelled etc.
-
-### S3 Bucket
-
-If you have stored your models in an S3 bucket, then you need to configure a specific `S3FileHandler` to be used rather than the default `FSFileHandler`.
-
-```
-from deepracer.logs import (AnalysisUtils, DeepRacerLog, S3FileHandler)
-
-fh = S3FileHandler(bucket="<my_bucket>",
-                    prefix="<my_prefix>")
-drl = DeepRacerLog(filehandler=fh)
-drl.load_training_trace()
-df = drl.dataframe()
+log = DeepRacerLog(model_folder="./deepracer/logs/sample-console-logs")
+log.load_training_trace()
+df = log.dataframe()
 
 simulation_agg = AnalysisUtils.simulation_agg(df)
 ```
 
-Outcomes are the same as for the local model.
+`df` contains per-step data. `simulation_agg` is per-episode aggregated data.
 
-### Local S3 / Minio
+For continuous-action logs, the `action` column is set to `-1` (no discrete action index). The raw steering and speed values are still available in `steering_angle` and `speed`.
 
-If you use a local minio installation you need to add the `profile` and `s3_endpoint_url` parameters to be able to log into minio. Typical values are `minio` and `http://localhost:9000`.
+### Local `.tar.gz` export (new)
 
-```
-from deepracer.logs import (AnalysisUtils, DeepRacerLog, S3FileHandler)
+If you downloaded console logs as a `.tar.gz`, you can read them directly without extracting.
 
-fh = S3FileHandler(bucket="<my_bucket>", prefix="<my_prefix>",
-                   profile="<awscli_profile>", s3_endpoint_url="<minio_url>")
-drl = DeepRacerLog(filehandler=fh)
-drl.load_training_trace()
-df = drl.dataframe()
+```python
+from deepracer.logs import AnalysisUtils, DeepRacerLog, TarFileHandler
+
+fh = TarFileHandler("./deepracer/logs/sample-droa-solution-logs.tar.gz")
+log = DeepRacerLog(filehandler=fh)
+
+# New console/DROA archives may not include metadata files.
+log.load_training_trace(ignore_metadata=True)
+df = log.dataframe()
 
 simulation_agg = AnalysisUtils.simulation_agg(df)
 ```
 
-### Robomaker Logs
+### Auto-load shortcut
 
-Instead of loading in the trace logs one can also load in the Robomaker log. This should not have an impact on the output.
+`load()` picks the correct training loader based on detected folder type.
 
+```python
+from deepracer.logs import DeepRacerLog, TarFileHandler
+
+log = DeepRacerLog(filehandler=TarFileHandler("./my-model-logs.tar.gz"))
+log.load(ignore_metadata=True)
+df = log.dataframe()
 ```
-from deepracer.logs import (AnalysisUtils, DeepRacerLog, S3FileHandler)
 
-fh = S3FileHandler(bucket="<my_bucket>",
-                    prefix="<my_prefix>")
-drl = DeepRacerLog(filehandler=fh)
-drl.load_robomaker_logs()
-df = drl.dataframe()
+### Verbose output (new)
+
+Pass `verbose=True` to print helpful load progress to stdout.
+
+```python
+from deepracer.logs import DeepRacerLog, TarFileHandler
+
+log = DeepRacerLog(
+    filehandler=TarFileHandler("./my-model-logs.tar.gz"),
+    verbose=True,
+)
+log.load_training_trace(ignore_metadata=True)
+```
+
+Typical output:
+
+```text
+Folder type detected: DROA_SOLUTION_LOGS
+Loaded training trace: 846 steps, 40 episodes, 2 iterations
+```
+
+When `verbose=True`, load methods print a one-line summary:
+- `load_training_trace()` -> `Loaded training trace: ...`
+- `load_evaluation_trace()` -> `Loaded evaluation trace: ...`
+- `load_robomaker_logs()` -> `Loaded robomaker logs: ...`
+
+Each summary reports `steps`, `episodes`, and `iterations`.
+
+### S3 bucket
+
+```python
+from deepracer.logs import AnalysisUtils, DeepRacerLog, S3FileHandler
+
+fh = S3FileHandler(bucket="<my_bucket>", prefix="<my_prefix>")
+log = DeepRacerLog(filehandler=fh)
+log.load_training_trace()
+df = log.dataframe()
+
+simulation_agg = AnalysisUtils.simulation_agg(df)
+```
+
+### Local S3 / MinIO
+
+```python
+from deepracer.logs import AnalysisUtils, DeepRacerLog, S3FileHandler
+
+fh = S3FileHandler(
+    bucket="<my_bucket>",
+    prefix="<my_prefix>",
+    profile="<awscli_profile>",
+    s3_endpoint_url="<minio_url>",
+)
+log = DeepRacerLog(filehandler=fh)
+log.load_training_trace()
+df = log.dataframe()
+
+simulation_agg = AnalysisUtils.simulation_agg(df)
+```
+
+### Robomaker / simulation logs
+
+For console-style folders, you can also load training from the simulation log file.
+
+```python
+from deepracer.logs import AnalysisUtils, DeepRacerLog, TarFileHandler
+
+log = DeepRacerLog(filehandler=TarFileHandler("./my-model-logs.tar.gz"))
+log.load_robomaker_logs()
+df = log.dataframe()
 
 simulation_agg = AnalysisUtils.simulation_agg(df)
 ```
 
 ## Evaluation
 
-It is also possible to read in evaluation logs. Where training only contains one set of logs, evaluations can contain multiple logs, either as trace files or as Robomaker logs. The class will load in all the files that it finds, and separate them with a time-stamp in the `stream` column.
+Evaluation data can include multiple runs; they are separated with the `stream` column.
 
-```
-from deepracer.logs import (AnalysisUtils, DeepRacerLog, S3FileHandler)
+```python
+from deepracer.logs import AnalysisUtils, DeepRacerLog, TarFileHandler
 
-fh = S3FileHandler(bucket="<my_bucket>",
-                    prefix="<my_prefix>")
-drl = DeepRacerLog(filehandler=fh)
-drl.load_evaluation_trace()
-df = drl.dataframe()
+log = DeepRacerLog(filehandler=TarFileHandler("./my-model-logs.tar.gz"))
+log.load_evaluation_trace(ignore_metadata=True)
+df = log.dataframe()
 
-simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
 ```
 
-Note the additional parameters to enable proper aggregation of the data.
+### Evaluation-only archive (new)
 
-```
-from deepracer.logs import (AnalysisUtils, DeepRacerLog, S3FileHandler, LogType)
+Some exports contain only evaluation data. `load_evaluation_trace()` works the same way:
 
-fh = S3FileHandler(bucket="<my_bucket>",
-                    prefix="<my_prefix>")
-drl = DeepRacerLog(filehandler=fh)
-drl.load_robomaker_logs(type=LogType.EVALUATION)
-df = drl.dataframe()
+```python
+from deepracer.logs import DeepRacerLog, TarFileHandler
 
-simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+log = DeepRacerLog(filehandler=TarFileHandler("./sample-droa-eval-only.tar.gz"))
+log.load_evaluation_trace(ignore_metadata=True)
+df = log.dataframe()
 ```
 
-## Leaderboard Submissions
+### Evaluation from simulation logs
 
-Similarily to the Evaluation logs it is possible to load in leaderboard submissions through exporting the logs of a model to S3 in the console. In the case of such export all evaluations and leaderboard submissions are exported.
+```python
+from deepracer.logs import AnalysisUtils, DeepRacerLog, LogType, TarFileHandler
 
-Leaderboard submissions are only available as Robomaker logs.
+log = DeepRacerLog(filehandler=TarFileHandler("./my-model-logs.tar.gz"))
+log.load_robomaker_logs(type=LogType.EVALUATION)
+df = log.dataframe()
 
+simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
 ```
-from deepracer.logs import (AnalysisUtils, DeepRacerLog, S3FileHandler, LogType)
 
-fh = S3FileHandler(bucket="<my_bucket>",
-                    prefix="<my_prefix>")
-drl = DeepRacerLog(filehandler=fh)
-drl.load_robomaker_logs(type=LogType.LEADERBOARD)
-df = drl.dataframe()
+## Leaderboard submissions
 
-simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup='stream', is_eval=True)
+Leaderboard submissions are available through simulation log files.
+
+```python
+from deepracer.logs import AnalysisUtils, DeepRacerLog, LogType, TarFileHandler
+
+log = DeepRacerLog(filehandler=TarFileHandler("./my-model-logs.tar.gz"))
+log.load_robomaker_logs(type=LogType.LEADERBOARD)
+df = log.dataframe()
+
+simulation_agg = AnalysisUtils.simulation_agg(df, firstgroup="stream", is_eval=True)
+```
+
+## Stability analysis (new)
+
+You can analyze step timing stability from loaded simtrace data.
+
+```python
+from deepracer.logs import DeepRacerLog, TarFileHandler
+
+log = DeepRacerLog(filehandler=TarFileHandler("./my-model-logs.tar.gz"))
+log.load_training_trace(ignore_metadata=True)
+
+stability_df = log.stability.analyze()
+print(stability_df[["iteration", "avg_ms", "p95_ms", "rtf"]].head())
 ```
