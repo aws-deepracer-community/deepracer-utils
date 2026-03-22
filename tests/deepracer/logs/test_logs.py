@@ -829,9 +829,9 @@ class TestVerboseFlag:
     # ── load_training_trace verbose ───────────────────────────────────────────
 
     def test_load_training_trace_verbose_prints_summary(self, capsys):
-        drl = DeepRacerLog(self._SAMPLE_DIR)
-        capsys.readouterr()  # discard __init__ output (verbose=False here)
-        drl.load_training_trace(ignore_metadata=True, verbose=True)
+        drl = DeepRacerLog(self._SAMPLE_DIR, verbose=True)
+        capsys.readouterr()  # discard __init__ output
+        drl.load_training_trace(ignore_metadata=True)
         captured = capsys.readouterr()
         assert "Loaded training trace:" in captured.out
         assert "steps" in captured.out
@@ -848,9 +848,9 @@ class TestVerboseFlag:
     # ── load_evaluation_trace verbose ─────────────────────────────────────────
 
     def test_load_evaluation_trace_verbose_prints_summary(self, capsys):
-        drl = DeepRacerLog(self._SAMPLE_DIR)
-        capsys.readouterr()
-        drl.load_evaluation_trace(ignore_metadata=True, verbose=True)
+        drl = DeepRacerLog(self._SAMPLE_DIR, verbose=True)
+        capsys.readouterr()  # discard __init__ output
+        drl.load_evaluation_trace(ignore_metadata=True)
         captured = capsys.readouterr()
         assert "Loaded evaluation trace:" in captured.out
         assert "steps" in captured.out
@@ -867,9 +867,9 @@ class TestVerboseFlag:
     # ── load_robomaker_logs verbose ───────────────────────────────────────────
 
     def test_load_robomaker_logs_verbose_prints_summary(self, capsys):
-        drl = DeepRacerLog(self._CONSOLE_DIR)
-        capsys.readouterr()
-        drl.load_robomaker_logs(verbose=True)
+        drl = DeepRacerLog(self._CONSOLE_DIR, verbose=True)
+        capsys.readouterr()  # discard __init__ output
+        drl.load_robomaker_logs()
         captured = capsys.readouterr()
         assert "Loaded robomaker logs:" in captured.out
         assert "steps" in captured.out
@@ -886,9 +886,9 @@ class TestVerboseFlag:
     # ── load() shortcut verbose ───────────────────────────────────────────────
 
     def test_load_shortcut_verbose_passes_through(self, capsys):
-        drl = DeepRacerLog(self._SAMPLE_DIR)
-        capsys.readouterr()
-        drl.load(ignore_metadata=True, verbose=True)
+        drl = DeepRacerLog(self._SAMPLE_DIR, verbose=True)
+        capsys.readouterr()  # discard __init__ output
+        drl.load(ignore_metadata=True)
         captured = capsys.readouterr()
         assert "Loaded training trace:" in captured.out
 
