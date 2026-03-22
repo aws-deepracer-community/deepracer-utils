@@ -2,16 +2,20 @@ import matplotlib
 
 matplotlib.use("Agg")  # non-interactive backend must be set before pyplot is imported
 
+import os
 import numpy as np
 import pandas as pd
 import pytest
 import matplotlib.pyplot as plt
 from matplotlib.colors import to_rgba
 from matplotlib.patches import Polygon as MplPolygon
+from matplotlib.testing.compare import compare_images
 from unittest import mock
 
 from deepracer.logs import PlottingUtils
 from deepracer.tracks import TrackIO
+
+_BASELINE_DIR = os.path.join(os.path.dirname(__file__), "baseline_images", "test_plotting_utils")
 
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
@@ -185,3 +189,24 @@ class TestPlottingUtilsModern:
             with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
                 PlottingUtils.plot_laps([0], episode_df, track, style="modern")
             no_classic.assert_not_called()
+
+    def test_modern_image_comparison(self, track, episode_df, tmp_path):
+        """Static pixel comparison of the modern layout against a committed baseline.
+
+        The baseline (baseline_images/test_plotting_utils/test_modern_image_comparison.png)
+        was generated once on the same platform and committed to the repository.
+        A tolerance of 5 RMS pixel units accommodates minor anti-aliasing differences.
+        """
+        baseline = os.path.join(_BASELINE_DIR, "test_modern_image_comparison.png")
+        assert os.path.exists(baseline), f"Baseline image not found: {baseline}"
+
+        actual = str(tmp_path / "actual.png")
+
+        plt.close("all")
+        with mock.patch("matplotlib.pyplot.show"), mock.patch("matplotlib.pyplot.clf"):
+            PlottingUtils.plot_laps([0, 1, 2], episode_df, track, style="modern", single_plot=True)
+            fig = plt.gcf()
+            fig.savefig(actual, dpi=100)
+
+        result = compare_images(baseline, actual, tol=5)
+        assert result is None, f"Modern layout image comparison failed: {result}"
