@@ -797,3 +797,101 @@ class TestContinuousActionLogs:
         assert len(df) == self._EXPECTED_ROWS
         assert df["action"].unique().tolist() == [-1]
         assert df["wall_clock"].max() > 1e9
+
+
+class TestVerboseFlag:
+    """Tests for the verbose flag added to DeepRacerLog and its load methods."""
+
+    _SAMPLE_DIR = "./deepracer/logs/sample-droa-solution-logs"
+    _CONSOLE_DIR = "./deepracer/logs/sample-console-logs"
+
+    @pytest.fixture(autouse=True)
+    def suppress_warnings(self):
+        warnings.filterwarnings("ignore", category=PythonDeprecationWarning)
+        yield
+
+    # ── __init__ verbose ──────────────────────────────────────────────────────
+
+    def test_init_verbose_prints_folder_type(self, capsys):
+        DeepRacerLog(self._SAMPLE_DIR, verbose=True)
+        captured = capsys.readouterr()
+        assert "Folder type detected:" in captured.out
+        assert "DROA_SOLUTION_LOGS" in captured.out
+
+    def test_init_silent_by_default(self, capsys):
+        DeepRacerLog(self._SAMPLE_DIR)
+        captured = capsys.readouterr()
+        assert captured.out == ""
+
+    # ── load_training_trace verbose ───────────────────────────────────────────
+
+    def test_load_training_trace_verbose_prints_summary(self, capsys):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        capsys.readouterr()  # discard __init__ output (verbose=False here)
+        drl.load_training_trace(ignore_metadata=True, verbose=True)
+        captured = capsys.readouterr()
+        assert "Loaded training trace:" in captured.out
+        assert "steps" in captured.out
+        assert "episodes" in captured.out
+        assert "iterations" in captured.out
+
+    def test_load_training_trace_silent_by_default(self, capsys):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        capsys.readouterr()
+        drl.load_training_trace(ignore_metadata=True)
+        captured = capsys.readouterr()
+        assert captured.out == ""
+
+    # ── load_evaluation_trace verbose ─────────────────────────────────────────
+
+    def test_load_evaluation_trace_verbose_prints_summary(self, capsys):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        capsys.readouterr()
+        drl.load_evaluation_trace(ignore_metadata=True, verbose=True)
+        captured = capsys.readouterr()
+        assert "Loaded evaluation trace:" in captured.out
+        assert "steps" in captured.out
+        assert "episodes" in captured.out
+        assert "iterations" in captured.out
+
+    def test_load_evaluation_trace_silent_by_default(self, capsys):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        capsys.readouterr()
+        drl.load_evaluation_trace(ignore_metadata=True)
+        captured = capsys.readouterr()
+        assert captured.out == ""
+
+    # ── load_robomaker_logs verbose ───────────────────────────────────────────
+
+    def test_load_robomaker_logs_verbose_prints_summary(self, capsys):
+        drl = DeepRacerLog(self._CONSOLE_DIR)
+        capsys.readouterr()
+        drl.load_robomaker_logs(verbose=True)
+        captured = capsys.readouterr()
+        assert "Loaded robomaker logs:" in captured.out
+        assert "steps" in captured.out
+        assert "episodes" in captured.out
+        assert "iterations" in captured.out
+
+    def test_load_robomaker_logs_silent_by_default(self, capsys):
+        drl = DeepRacerLog(self._CONSOLE_DIR)
+        capsys.readouterr()
+        drl.load_robomaker_logs()
+        captured = capsys.readouterr()
+        assert captured.out == ""
+
+    # ── load() shortcut verbose ───────────────────────────────────────────────
+
+    def test_load_shortcut_verbose_passes_through(self, capsys):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        capsys.readouterr()
+        drl.load(ignore_metadata=True, verbose=True)
+        captured = capsys.readouterr()
+        assert "Loaded training trace:" in captured.out
+
+    def test_load_shortcut_silent_by_default(self, capsys):
+        drl = DeepRacerLog(self._SAMPLE_DIR)
+        capsys.readouterr()
+        drl.load(ignore_metadata=True)
+        captured = capsys.readouterr()
+        assert captured.out == ""

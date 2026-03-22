@@ -59,6 +59,7 @@ class DeepRacerLog:
         filehandler: FileHandler = None,
         simtrace_path=None,
         robomaker_log_path=None,
+        verbose: bool = False,
     ):
         """Initializes an object by pointing the class instance to a folder.
 
@@ -72,6 +73,8 @@ class DeepRacerLog:
                 an FSFileHandler pointing to the provided folder.
             simtrace_path (str): Deprecated. Use a custom file handler instead.
             robomaker_log_path (str): Deprecated. Use a custom file handler instead.
+            verbose (bool): If ``True``, print informational messages during
+                initialization and log loading. Defaults to ``False``.
 
         """
         self.model_folder = model_folder
@@ -94,6 +97,9 @@ class DeepRacerLog:
             self.fh = FSFileHandler(model_folder)
 
         self.fh.determine_root_folder_type()
+
+        if verbose:
+            print(f"Folder type detected: {self.fh.type.name}")
 
         self.df = None
 
@@ -132,24 +138,32 @@ class DeepRacerLog:
 
         return df
 
-    def load(self, force=False, ignore_metadata=None):
+    def load(self, force=False, ignore_metadata=None, verbose: bool = False):
         """Method that loads DeepRacer training trace logs into a dataframe.
 
         This method is trying to load logs based on folder type.
 
+        Args:
+            force:
+                Enables the reloading of logs. If ``False`` then loading will be
+                blocked if the dataframe is already populated.
+            ignore_metadata:
+                If ``True``, skip loading model metadata files.
+            verbose (bool): If ``True``, print a brief summary after loading
+                (total steps, episodes and iterations). Defaults to ``False``.
         """
         if self.fh.type == LogFolderType.CONSOLE_MODEL_WITH_LOGS:
-            self.load_robomaker_logs(force=force)
+            self.load_robomaker_logs(force=force, verbose=verbose)
         elif self.fh.type == LogFolderType.DROA_SOLUTION_LOGS:
-            self.load_training_trace(force=force, ignore_metadata=ignore_metadata)
+            self.load_training_trace(force=force, ignore_metadata=ignore_metadata, verbose=verbose)
         elif self.fh.type == LogFolderType.DRFC_MODEL_MULTIPLE_WORKERS:
-            self.load_training_trace(force=force, ignore_metadata=ignore_metadata)
+            self.load_training_trace(force=force, ignore_metadata=ignore_metadata, verbose=verbose)
         elif self.fh.type == LogFolderType.DRFC_MODEL_SINGLE_WORKERS:
-            self.load_training_trace(force=force, ignore_metadata=ignore_metadata)
+            self.load_training_trace(force=force, ignore_metadata=ignore_metadata, verbose=verbose)
         else:
             raise Exception("Unable to load logs from folder.")
 
-    def load_training_trace(self, force: bool = False, ignore_metadata: bool = False):
+    def load_training_trace(self, force: bool = False, ignore_metadata: bool = False, verbose: bool = False):
         """Method that loads DeepRacer training trace logs into a dataframe.
 
         The method will load in all available workers and iterations from one training run.
@@ -158,6 +172,8 @@ class DeepRacerLog:
             force:
                 Enables the reloading of logs. If `False` then loading will be blocked
                 if the dataframe is already populates.
+            verbose (bool): If ``True``, print a brief summary after loading
+                (total steps, episodes and iterations). Defaults to ``False``.
         """
         self._block_duplicate_load(force)
 
@@ -215,7 +231,12 @@ class DeepRacerLog:
         self.df = df.sort_values(["unique_episode", "steps"]).reset_index(drop=True)
         self.active = LogType.TRAINING
 
-    def load_evaluation_trace(self, force: bool = False, ignore_metadata: bool = False):
+        if verbose:
+            # Use unique_episode so the count is correct when multiple workers
+            # contributed episodes within the same iteration.
+            self._print_load_summary("training trace", episode_col="unique_episode")
+
+    def load_evaluation_trace(self, force: bool = False, ignore_metadata: bool = False, verbose: bool = False):
         """Method that loads DeepRacer evaluation trace logs into a dataframe.
 
         The method will load in all available evaluations found in a model folder.
@@ -224,6 +245,8 @@ class DeepRacerLog:
             force:
                 Enables the reloading of logs. If `False` then loading will be blocked
                 if the dataframe is already populates.
+            verbose (bool): If ``True``, print a brief summary after loading
+                (total steps, episodes and iterations). Defaults to ``False``.
         """
         self._block_duplicate_load(force)
 
@@ -258,7 +281,10 @@ class DeepRacerLog:
         self.df = df.sort_values(["stream", "episode", "steps"]).reset_index(drop=True)
         self.active = LogType.EVALUATION
 
-    def load_robomaker_logs(self, type: LogType = LogType.TRAINING, force: bool = False):
+        if verbose:
+            self._print_load_summary("evaluation trace")
+
+    def load_robomaker_logs(self, type: LogType = LogType.TRAINING, force: bool = False, verbose: bool = False):
         """Method that loads DeepRacer robomaker log into a dataframe.
 
         The method will load in all available workers and iterations from one training run.
@@ -271,6 +297,8 @@ class DeepRacerLog:
             force:
                 Enables the reloading of logs. If `False` then loading will be blocked
                 if the dataframe is already populates.
+            verbose (bool): If ``True``, print a brief summary after loading
+                (total steps, episodes and iterations). Defaults to ``False``.
         """
         self._block_duplicate_load(force)
 
@@ -330,6 +358,9 @@ class DeepRacerLog:
 
             self.df = pd.concat(dfs, ignore_index=True)
             self.active = type
+
+        if verbose:
+            self._print_load_summary("robomaker logs")
 
     def _parse_robomaker_metadata(self, raw_data: bytes):
         # DROA/ROS2 logs prefix every line with one or more "[node-name] " segments.
@@ -489,3 +520,17 @@ class DeepRacerLog:
                 "The dataframe has already been loaded, add force=True"
                 + " to your load method to load again"
             )
+
+    def _print_load_summary(self, label: str, episode_col: str = "episode"):
+        """Print a one-line load summary when verbose mode is enabled.
+
+        Args:
+            label: Human-readable name of the data that was loaded
+                (e.g. ``"training trace"``).
+            episode_col: Name of the column to use when counting distinct
+                episodes. Defaults to ``"episode"``.
+        """
+        steps = len(self.df)
+        episodes = self.df[episode_col].nunique()
+        iterations = self.df["iteration"].nunique()
+        print(f"Loaded {label}: {steps} steps, {episodes} episodes, {iterations} iterations")
